@@ -1,19 +1,19 @@
 # dependencies
 node_modules/
 
-# next build output
+# Next.js build output
 .next/
 out/
 
-# environment
+# environment variables
 .env*
+.env.local
 
 # logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS filesgit rm -r --cached .next
-
+# OS files
 .DS_Store
 Thumbs.db

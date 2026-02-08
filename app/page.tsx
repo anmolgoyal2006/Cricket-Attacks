@@ -24,9 +24,22 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
+            {/* Creator Badge */}
+            <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 mb-4">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-sm">AG</span>
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-purple-300 font-body">Created by</p>
+                <p className="text-sm font-display font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent -mt-0.5">
+                  Anmol Goyal
+                </p>
+              </div>
+            </div>
+            
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
               <Star className="w-4 h-4 text-amber-400 mr-2" />
-              <span className="text-sm text-amber-400 font-body font-semibold">Season 2024 Now Live</span>
+              <span className="text-sm text-amber-400 font-body font-semibold">Season 2026 Now Live</span>
             </div>
             
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-display font-black mb-6">

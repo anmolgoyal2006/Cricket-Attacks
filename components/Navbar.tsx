@@ -64,16 +64,25 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Profile */}
-          <button className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-200 group border border-amber-500/30">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm group-hover:scale-110 transition-transform">
-              P
+          {/* Creator Name */}
+          <div className="flex items-center space-x-3">
+            <div className="hidden lg:flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+              <span className="text-sm font-body text-gray-300">Created by</span>
+              <span className="ml-2 text-sm font-display font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                Anmol Goyal
+              </span>
             </div>
-            <div className="hidden sm:block text-left">
-              <div className="text-xs text-amber-400 font-body font-semibold">Player</div>
-              <div className="text-xs text-gray-400 -mt-0.5">1,245 🏆</div>
-            </div>
-          </button>
+            
+            <button className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-200 group border border-amber-500/30">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm group-hover:scale-110 transition-transform">
+                P
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-xs text-amber-400 font-body font-semibold">Player</div>
+                <div className="text-xs text-gray-400 -mt-0.5">1,245 🏆</div>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -98,6 +107,16 @@ export default function Navbar() {
               </Link>
             );
           })}
+        </div>
+        
+        {/* Mobile Creator Name */}
+        <div className="lg:hidden pb-3 flex justify-center">
+          <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+            <span className="text-xs font-body text-gray-300">by</span>
+            <span className="ml-1.5 text-xs font-display font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              Anmol Goyal
+            </span>
+          </div>
         </div>
       </div>
     </nav>

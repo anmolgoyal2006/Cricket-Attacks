@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# next build output
+.next/
+out/
+
+# environment
+.env*
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS filesgit rm -r --cached .next
+
+.DS_Store
+Thumbs.db

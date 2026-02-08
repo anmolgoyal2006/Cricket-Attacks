@@ -1,7 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/battle/page": "app/battle/page.js",
-  "/packs/page": "app/packs/page.js",
-  "/compare/page": "app/compare/page.js",
-  "/leaderboard/page": "app/leaderboard/page.js"
-}

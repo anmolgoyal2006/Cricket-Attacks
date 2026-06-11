@@ -39,6 +39,10 @@ app.get('/health', (_req, res) => {
 
 app.use('/api', routes);
 
+app.use('/api/*', (_req, res) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
 app.use(errorHandler);
 
 async function start() {

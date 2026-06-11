@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Player from '../models/Player';
-import User from '../models/User';
-import LeaderboardEntry from '../models/LeaderboardEntry';
 import { config } from '../config';
 
 dotenv.config();
@@ -296,10 +294,8 @@ async function seed() {
     await mongoose.connect(config.mongodbUri);
     console.log('Connected to MongoDB');
 
-    console.log('Clearing existing data...');
+    console.log('Clearing existing player data...');
     await Player.deleteMany({});
-    await User.deleteMany({});
-    await LeaderboardEntry.deleteMany({});
 
     console.log('Inserting players...');
     const players = await Player.insertMany(
@@ -307,43 +303,6 @@ async function seed() {
     );
     console.log(`Inserted ${players.length} players`);
 
-    const sampleUsers = [
-      { username: 'CricketKing', email: 'king@test.com', password: 'password123', coins: 5000, xp: 2500, trophies: 8945, battlesPlayed: 392, wins: 342, losses: 50, packsOpened: 150 },
-      { username: 'MasterBlaster', email: 'master@test.com', password: 'password123', coins: 4000, xp: 2000, trophies: 8312, battlesPlayed: 378, wins: 318, losses: 60, packsOpened: 120 },
-      { username: 'BowlEmOver', email: 'bowl@test.com', password: 'password123', coins: 3500, xp: 1800, trophies: 7823, battlesPlayed: 361, wins: 295, losses: 66, packsOpened: 100 },
-      { username: 'SixMachine', email: 'six@test.com', password: 'password123', coins: 3000, xp: 1600, trophies: 7234, battlesPlayed: 350, wins: 278, losses: 72, packsOpened: 90 },
-      { username: 'SpinDoctor', email: 'spin@test.com', password: 'password123', coins: 2500, xp: 1400, trophies: 6789, battlesPlayed: 332, wins: 256, losses: 76, packsOpened: 80 },
-    ];
-
-    const avatarMap: Record<string, string> = {
-      CricketKing: '👑', MasterBlaster: '🏆', BowlEmOver: '🥇', SixMachine: '💥', SpinDoctor: '🌀',
-    };
-
-    console.log('Creating sample users...');
-    for (const userData of sampleUsers) {
-      const user = await User.create({
-        ...userData,
-        ownedCards: players.slice(0, 10).map((p) => p._id),
-        dailyPackOpenedAt: null,
-      });
-
-      const winRate = userData.battlesPlayed > 0
-        ? Math.round((userData.wins / userData.battlesPlayed) * 100)
-        : 0;
-
-      await LeaderboardEntry.create({
-        user: user._id,
-        username: userData.username,
-        trophies: userData.trophies,
-        battlesPlayed: userData.battlesPlayed,
-        battlesWon: userData.wins,
-        winRate,
-        xp: userData.xp,
-        avatar: avatarMap[userData.username] || '🏏',
-      });
-    }
-
-    console.log('Sample users created: king@test.com, master@test.com, bowl@test.com, six@test.com, spin@test.com (password: password123)');
     console.log('Seed completed successfully!');
     process.exit(0);
   } catch (error) {

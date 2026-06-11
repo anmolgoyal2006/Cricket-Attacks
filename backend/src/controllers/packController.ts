@@ -47,7 +47,7 @@ export async function openPackHandler(req: AuthRequest, res: Response, next: Nex
     }
 
     const packConfigs: Record<string, { cost: number; name: string }> = {
-      basic: { cost: 200, name: 'Basic Pack' },
+      basic: { cost: 0, name: 'Daily Free Pack' },
       premium: { cost: 500, name: 'Premium Pack' },
       legendary: { cost: 1000, name: 'Legendary Pack' },
     };

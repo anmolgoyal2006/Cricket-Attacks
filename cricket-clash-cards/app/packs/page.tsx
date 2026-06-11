@@ -149,7 +149,7 @@ export default function PacksPage() {
                         Cricket Clash
                       </h2>
                       <p className="text-white/80 font-body text-center mb-6">
-                        Free Pack
+                        Daily Free Pack
                       </p>
                       
                       <div className="px-6 py-3 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40">
@@ -181,7 +181,7 @@ export default function PacksPage() {
                       className="px-10 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-lg shadow-2xl shadow-amber-500/50 hover:shadow-amber-500/70 transition-all flex items-center space-x-2"
                     >
                       <Sparkles className="w-5 h-5" />
-                      <span>Open Free Pack</span>
+                      <span>Free Daily Pack</span>
                     </motion.button>
 
                     <motion.button
@@ -191,7 +191,7 @@ export default function PacksPage() {
                       className="px-10 py-4 rounded-xl bg-gradient-to-r from-purple-500 to-blue-600 text-white font-display font-bold text-lg shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all flex items-center space-x-2"
                     >
                       <Sparkles className="w-5 h-5" />
-                      <span>Premium Pack (100 coins)</span>
+                      <span>Premium Pack (500 coins)</span>
                     </motion.button>
                   </div>
                 </motion.div>

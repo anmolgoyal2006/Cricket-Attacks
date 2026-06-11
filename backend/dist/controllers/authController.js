@@ -6,8 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.register = register;
 exports.login = login;
 exports.getMe = getMe;
+exports.claimCoins = claimCoins;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
+const Player_1 = __importDefault(require("../models/Player"));
 const config_1 = require("../config");
 const errors_1 = require("../utils/errors");
 const leaderboardService_1 = require("../services/leaderboardService");
@@ -46,7 +48,14 @@ async function register(req, res, next) {
                 ? 'Email already registered'
                 : 'Username already taken');
         }
-        const user = await User_1.default.create({ username, email, password });
+        const starterCards = await Player_1.default.aggregate([{ $sample: { size: 5 } }]);
+        const starterCardIds = starterCards.map((c) => c._id);
+        const user = await User_1.default.create({
+            username,
+            email,
+            password,
+            ownedCards: starterCardIds,
+        });
         await (0, leaderboardService_1.updateLeaderboardForUser)(user._id.toString());
         const token = generateToken(user._id.toString());
         res.status(201).json({
@@ -87,6 +96,24 @@ async function getMe(req, res, next) {
         }
         res.json({
             user: sanitizeUser(user),
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+async function claimCoins(req, res, next) {
+    try {
+        const user = await User_1.default.findById(req.userId);
+        if (!user) {
+            throw new errors_1.UnauthorizedError('User not found');
+        }
+        user.coins += 500;
+        await user.save();
+        res.json({
+            coins: user.coins,
+            user: sanitizeUser(user),
+            message: 'Claimed 500 coins successfully!',
         });
     }
     catch (error) {

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Player from '../models/Player';
 import { config } from '../config';
 import { AuthRequest } from '../middleware/auth';
 import { UnauthorizedError, ConflictError } from '../utils/errors';

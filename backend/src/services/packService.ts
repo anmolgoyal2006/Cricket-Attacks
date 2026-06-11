@@ -6,7 +6,7 @@ interface PackResult {
 }
 
 const PACK_CONFIG = {
-  basic: { cost: 200, cards: 3, rarities: { Common: 0.6, Rare: 0.25, Epic: 0.12, Legend: 0.03 } },
+  basic: { cost: 0, cards: 3, rarities: { Common: 0.6, Rare: 0.25, Epic: 0.12, Legend: 0.03 } },
   premium: { cost: 500, cards: 5, rarities: { Common: 0.3, Rare: 0.35, Epic: 0.25, Legend: 0.1 } },
   legendary: { cost: 1000, cards: 7, rarities: { Common: 0.1, Rare: 0.2, Epic: 0.4, Legend: 0.3 } },
 };

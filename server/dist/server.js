@@ -15,8 +15,20 @@ const rateLimiter_1 = require("./middleware/rateLimiter");
 const socket_1 = require("./socket");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
+const allowedOrigins = [
+    config_1.config.frontendUrl.replace(/\/$/, ''),
+    'http://localhost:3000',
+    'http://localhost:5173',
+];
 app.use((0, cors_1.default)({
-    origin: config_1.config.frontendUrl,
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+    },
     credentials: true,
 }));
 app.use(express_1.default.json({ limit: '10mb' }));

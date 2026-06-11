@@ -149,7 +149,7 @@ export async function fetchPlayerStats(playerId: number): Promise<any> {
 }
 
 // Live Matches API Helpers
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Player {
   // Extract stats from Cricbuzz API response
   const bat = cricbuzzData?.bat || {};
@@ -267,7 +267,7 @@ function calculateOverallRating(bat: any, bowl: any): number {
 
 export async function getLiveMatches(): Promise<LiveMatchesResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/cricbuzz/live`, {
+    const response = await fetch(`${API_BASE_URL}/cricbuzz/live`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -301,7 +301,7 @@ export async function getLiveMatches(): Promise<LiveMatchesResponse> {
 
 export async function getUpcomingMatches(): Promise<UpcomingMatchesResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/cricbuzz/upcoming`, {
+    const response = await fetch(`${API_BASE_URL}/cricbuzz/upcoming`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

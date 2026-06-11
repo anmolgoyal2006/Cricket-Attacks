@@ -1,0 +1,103 @@
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import { config } from '../config';
+import { AuthRequest } from '../middleware/auth';
+import { UnauthorizedError, ConflictError } from '../utils/errors';
+import { updateLeaderboardForUser } from '../services/leaderboardService';
+
+function generateToken(userId: string): string {
+  return jwt.sign({ userId }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn,
+  } as jwt.SignOptions);
+}
+
+function sanitizeUser(user: any) {
+  return {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    displayName: user.username,
+    trophies: user.trophies,
+    level: user.level,
+    coins: user.coins,
+    stats: {
+      battlesPlayed: user.battlesPlayed,
+      battlesWon: user.wins,
+      totalPacksOpened: user.packsOpened,
+      totalCardsCollected: user.ownedCards?.length || 0,
+    },
+    dailyPackOpenedAt: user.dailyPackOpenedAt,
+    createdAt: user.createdAt,
+  };
+}
+
+export async function register(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { username, email, password } = req.body;
+
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existingUser) {
+      throw new ConflictError(
+        existingUser.email === email
+          ? 'Email already registered'
+          : 'Username already taken'
+      );
+    }
+
+    const user = await User.create({ username, email, password });
+    await updateLeaderboardForUser(user._id.toString());
+
+    const token = generateToken(user._id.toString());
+
+    res.status(201).json({
+      token,
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function login(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const token = generateToken(user._id.toString());
+
+    res.json({
+      token,
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMe(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    res.json({
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+}

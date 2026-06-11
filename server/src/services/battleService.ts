@@ -165,11 +165,13 @@ export function playRound(
     }
   }
 
+  const cc = computerCard && typeof computerCard.toObject === 'function' ? computerCard.toObject() : computerCard;
+
   return {
     roundNumber,
     attribute,
     playerCard: { name: (playerCard as any).name, stat: playerStat, attribute },
-    computerCard: { ...computerCard, stat: computerStat, attribute },
+    computerCard: { ...cc, stat: computerStat, attribute },
     winner,
     playerScore,
     computerScore,

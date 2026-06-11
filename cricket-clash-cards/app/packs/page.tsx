@@ -21,7 +21,7 @@ export default function PacksPage() {
     setIsOpening(true);
     
     try {
-      const data = await packsApi.openPack('free');
+      const data = await packsApi.openPack('basic');
       
       setTimeout(() => {
         setRevealedCards(data.results);
@@ -235,7 +235,7 @@ export default function PacksPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
                 {revealedCards.map((result: any, index: number) => (
                   <motion.div
-                    key={result.cardId}
+                    key={result._id}
                     initial={{ opacity: 0, rotateY: 180, scale: 0.5 }}
                     animate={{ opacity: 1, rotateY: 0, scale: 1 }}
                     transition={{ delay: index * 0.2, duration: 0.8, type: "spring", stiffness: 100 }}
@@ -244,7 +244,7 @@ export default function PacksPage() {
                       <PlayerCard
                         player={{
                           id: index,
-                          name: result.cardName,
+                          name: result.name,
                           role: '',
                           country: '',
                           batting: 0,

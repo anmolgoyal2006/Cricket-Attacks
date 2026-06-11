@@ -67,24 +67,25 @@ async function playRoundHandler(req, res, next) {
         if (battle.status === 'completed') {
             throw new errors_1.BadRequestError('Battle is already completed');
         }
-        const aiCards = battle.aiSquad.filter((ai) => !battle.rounds.some((r) => r.computerCardName === ai.name));
+        const aiCards = battle.aiSquad.filter((ai) => !battle.rounds.some((r) => (r.aiId ? r.aiId === ai.aiId : r.computerCardName === ai.name)));
         if (aiCards.length === 0) {
             throw new errors_1.BadRequestError('No AI cards remaining');
         }
         const result = (0, battleService_1.playRound)(battle, aiCards, playerCardId);
         if (result.computerCard) {
-            battle.aiSquad = battle.aiSquad.map((ai) => {
-                if (ai.name === result.computerCard.name && !battle.rounds.some((r) => r.computerCardName === ai.name)) {
-                    return { ...ai, used: true };
-                }
-                return ai;
-            });
+            battle.aiSquad = battle.aiSquad.map((ai) => ({
+                ...ai,
+                used: result.computerCard.aiId
+                    ? ai.aiId === result.computerCard.aiId || ai.used
+                    : ai.name === result.computerCard.name || ai.used,
+            }));
         }
         const roundResult = {
             roundNumber: result.roundNumber,
             playerCardId: new mongoose_1.default.Types.ObjectId(playerCardId),
             playerCardName: result.playerCard.name,
             playerStat: result.playerCard.stat,
+            aiId: result.computerCard.aiId,
             computerCardName: result.computerCard.name,
             computerStat: result.computerCard.stat,
             winner: result.winner,

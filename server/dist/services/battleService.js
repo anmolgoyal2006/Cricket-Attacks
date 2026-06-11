@@ -21,6 +21,7 @@ function generateAISquad(playerCards) {
     const playerAvg = playerCards.reduce((sum, c) => sum + getMainStat(c), 0) / playerCards.length;
     const difficulty = Math.max(60, Math.min(95, playerAvg + Math.floor(Math.random() * 15) - 5));
     return roles.map((role, i) => ({
+        aiId: `ai_${i}`,
         name: aiNames[Math.floor(Math.random() * aiNames.length)],
         role,
         stat: role === 'Bowler'

@@ -72,7 +72,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
     }
 
     const aiCards = battle.aiSquad.filter(
-      (ai: any) => !battle.rounds.some((r: any) => r.computerCardName === ai.name)
+      (ai: any) => !battle.rounds.some((r: any) => (r.aiId ? r.aiId === ai.aiId : r.computerCardName === ai.name))
     );
 
     if (aiCards.length === 0) {
@@ -82,12 +82,12 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
     const result = playRound(battle, aiCards, playerCardId);
 
     if (result.computerCard) {
-      battle.aiSquad = battle.aiSquad.map((ai: any) => {
-        if (ai.name === result.computerCard.name && !battle.rounds.some((r: any) => r.computerCardName === ai.name)) {
-          return { ...ai, used: true };
-        }
-        return ai;
-      });
+      battle.aiSquad = battle.aiSquad.map((ai: any) => ({
+        ...ai,
+        used: result.computerCard.aiId
+          ? ai.aiId === result.computerCard.aiId || ai.used
+          : ai.name === result.computerCard.name || ai.used,
+      }));
     }
 
     const roundResult: any = {
@@ -95,6 +95,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
       playerCardId: new mongoose.Types.ObjectId(playerCardId),
       playerCardName: result.playerCard.name,
       playerStat: result.playerCard.stat,
+      aiId: result.computerCard.aiId,
       computerCardName: result.computerCard.name,
       computerStat: result.computerCard.stat,
       winner: result.winner as 'player' | 'computer' | 'tie',

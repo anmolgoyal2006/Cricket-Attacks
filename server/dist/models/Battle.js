@@ -39,6 +39,7 @@ const roundResultSchema = new mongoose_1.Schema({
     playerCardId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Player' },
     playerCardName: { type: String, required: true },
     playerStat: { type: Number, required: true },
+    aiId: { type: String },
     computerCardName: { type: String, required: true },
     computerStat: { type: Number, required: true },
     winner: {
@@ -62,6 +63,7 @@ const battleSchema = new mongoose_1.Schema({
     ],
     aiSquad: [
         {
+            aiId: String,
             name: String,
             role: String,
             stat: Number,

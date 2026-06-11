@@ -13,5 +13,5 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://cricket-clash-cards.netlify.app
+        sync: false
     healthCheckPath: /health

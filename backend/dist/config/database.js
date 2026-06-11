@@ -6,16 +6,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectDatabase = connectDatabase;
 const mongoose_1 = __importDefault(require("mongoose"));
 const index_1 = require("./index");
+const MONGOOSE_OPTIONS = {
+    tls: true,
+    tlsAllowInvalidCertificates: true,
+    serverSelectionTimeoutMS: 10000,
+};
 async function connectDatabase() {
     try {
-        await mongoose_1.default.connect(index_1.config.mongodbUri);
+        await mongoose_1.default.connect(index_1.config.mongodbUri, MONGOOSE_OPTIONS);
         console.log('Connected to MongoDB Atlas');
     }
     catch (error) {
         console.error('MongoDB connection error:', error);
         console.log('Server will start without database — retrying in 5s...');
         setTimeout(() => {
-            mongoose_1.default.connect(index_1.config.mongodbUri).catch((err) => {
+            mongoose_1.default.connect(index_1.config.mongodbUri, MONGOOSE_OPTIONS).catch((err) => {
                 console.error('MongoDB retry failed:', err);
             });
         }, 5000);
@@ -25,7 +30,7 @@ async function connectDatabase() {
     });
     mongoose_1.default.connection.on('disconnected', () => {
         console.log('MongoDB disconnected, reconnecting...');
-        mongoose_1.default.connect(index_1.config.mongodbUri).catch((err) => {
+        mongoose_1.default.connect(index_1.config.mongodbUri, MONGOOSE_OPTIONS).catch((err) => {
             console.error('MongoDB reconnection failed:', err);
         });
     });

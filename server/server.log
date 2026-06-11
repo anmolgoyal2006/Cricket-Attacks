@@ -9,3 +9,22 @@ Socket connected: anmol1974 (ibKms7mqsaCK7UnDAAAB)
 [0mGET /api/cricbuzz/live [32m200[0m 2.288 ms - 66[0m
 [0mGET /api/api/cricbuzz/live [33m404[0m 5.888 ms - 160[0m
 [0mGET /api/api/cricbuzz/live [33m404[0m 2.325 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 5.305 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.776 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.259 ms - 160[0m
+[0mGET /api/auth/me [36m304[0m 153.309 ms - -[0m
+Socket connected: anmol1974 (yYfLCO27AwImDlUWAAAD)
+[0mGET /api/api/cricbuzz/live [33m404[0m 2.860 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.012 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.785 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.774 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.770 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.088 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.663 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.635 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.723 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 1.011 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.649 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.508 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.418 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 0.367 ms - 160[0m

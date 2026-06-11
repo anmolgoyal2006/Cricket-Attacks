@@ -170,7 +170,7 @@ export default function ComparePage() {
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 appearance-none cursor-pointer font-body text-lg"
             >
               {players.map(player => (
-                <option key={player._id} value={player._id} className="bg-cricket-stadium">
+                <option key={player._id} value={player._id} className="bg-gray-900 text-white">
                   {player.name} - {player.country}
                 </option>
               ))}
@@ -208,7 +208,7 @@ export default function ComparePage() {
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 appearance-none cursor-pointer font-body text-lg"
             >
               {players.map(player => (
-                <option key={player._id} value={player._id} className="bg-cricket-stadium">
+                <option key={player._id} value={player._id} className="bg-gray-900 text-white">
                   {player.name} - {player.country}
                 </option>
               ))}

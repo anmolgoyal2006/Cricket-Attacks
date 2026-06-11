@@ -93,9 +93,9 @@ export default function LeaderboardPage() {
               onChange={e => { setSeason(e.target.value ? Number(e.target.value) : undefined); setPage(0); }}
               className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white font-body outline-none focus:border-amber-500/50"
             >
-              <option value="">All Seasons</option>
+              <option value="" className="bg-gray-900 text-white">All Seasons</option>
               {seasons.map(s => (
-                <option key={s._id} value={s.seasonNumber}>Season {s.seasonNumber}</option>
+                <option key={s._id} value={s.seasonNumber} className="bg-gray-900 text-white">Season {s.seasonNumber}</option>
               ))}
             </select>
 
@@ -105,9 +105,9 @@ export default function LeaderboardPage() {
               onChange={e => { setTierFilter(e.target.value); setPage(0); }}
               className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white font-body outline-none focus:border-amber-500/50"
             >
-              <option value="">All Tiers</option>
+              <option value="" className="bg-gray-900 text-white">All Tiers</option>
               {TIER_ORDER.map(t => (
-                <option key={t} value={t}>{getTierIcon(t)} {t}</option>
+                <option key={t} value={t} className="bg-gray-900 text-white">{getTierIcon(t)} {t}</option>
               ))}
             </select>
           </div>

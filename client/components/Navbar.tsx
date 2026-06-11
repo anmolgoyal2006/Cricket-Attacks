@@ -37,7 +37,7 @@ export default function Navbar() {
           </Link>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -47,7 +47,7 @@ export default function Navbar() {
                   key={item.href}
                   href={user ? item.href : '/login'}
                   className={cn(
-                    "px-4 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200",
+                    "px-3 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200",
                     "flex items-center space-x-2 group relative",
                     isActive
                       ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 shadow-lg shadow-amber-500/20"
@@ -114,7 +114,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden pb-3 pt-1 flex space-x-2 overflow-x-auto scrollbar-hide">
+        <div className="md:hidden pb-3 pt-1 flex overflow-x-auto scrollbar-hide gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;

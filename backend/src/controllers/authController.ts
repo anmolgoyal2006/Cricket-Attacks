@@ -48,7 +48,15 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       );
     }
 
-    const user = await User.create({ username, email, password });
+    const starterCards = await Player.aggregate([{ $sample: { size: 5 } }]);
+    const starterCardIds = starterCards.map((c) => c._id);
+
+    const user = await User.create({
+      username,
+      email,
+      password,
+      ownedCards: starterCardIds,
+    });
     await updateLeaderboardForUser(user._id.toString());
 
     const token = generateToken(user._id.toString());
@@ -96,6 +104,26 @@ export async function getMe(req: AuthRequest, res: Response, next: NextFunction)
 
     res.json({
       user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function claimCoins(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    user.coins += 500;
+    await user.save();
+
+    res.json({
+      coins: user.coins,
+      user: sanitizeUser(user),
+      message: 'Claimed 500 coins successfully!',
     });
   } catch (error) {
     next(error);

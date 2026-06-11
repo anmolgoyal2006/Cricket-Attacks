@@ -29,11 +29,14 @@ router.get('/live', async (req, res) => {
       timestamp: result.timestamp,
     });
   } catch (error) {
-    console.error('Error in live matches route:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in live matches route:', message);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch live matches',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message,
+      data: [],
+      cached: false,
+      timestamp: Date.now(),
     });
   }
 });
@@ -54,11 +57,14 @@ router.get('/upcoming', async (req, res) => {
       timestamp: result.timestamp,
     });
   } catch (error) {
-    console.error('Error in upcoming matches route:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in upcoming matches route:', message);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch upcoming matches',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message,
+      data: [],
+      cached: false,
+      timestamp: Date.now(),
     });
   }
 });

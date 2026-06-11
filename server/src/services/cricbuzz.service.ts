@@ -67,7 +67,8 @@ class CricbuzzService {
 
       return result;
     } catch (error) {
-      console.error('Error fetching live matches from Cricbuzz API:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error fetching live matches from Cricbuzz API:', message);
       
       // Return cached data if available, even if expired
       if (this.liveMatchesCache) {
@@ -78,12 +79,7 @@ class CricbuzzService {
         };
       }
 
-      // Return empty array if no cache available
-      return {
-        matches: [],
-        cached: false,
-        timestamp: Date.now(),
-      };
+      throw new Error(`Cricbuzz API error: ${message}`);
     }
   }
 
@@ -123,7 +119,8 @@ class CricbuzzService {
 
       return result;
     } catch (error) {
-      console.error('Error fetching upcoming matches from Cricbuzz API:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error fetching upcoming matches from Cricbuzz API:', message);
       
       // Return cached data if available, even if expired
       if (this.upcomingMatchesCache) {
@@ -134,12 +131,7 @@ class CricbuzzService {
         };
       }
 
-      // Return empty array if no cache available
-      return {
-        matches: [],
-        cached: false,
-        timestamp: Date.now(),
-      };
+      throw new Error(`Cricbuzz API error: ${message}`);
     }
   }
 

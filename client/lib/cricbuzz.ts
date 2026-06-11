@@ -44,6 +44,7 @@ export interface LiveMatchesResponse {
   data: CricbuzzLiveMatch[];
   cached: boolean;
   timestamp: number;
+  error?: string;
 }
 
 export interface UpcomingMatchesResponse {
@@ -51,6 +52,7 @@ export interface UpcomingMatchesResponse {
   data: CricbuzzUpcomingMatch[];
   cached: boolean;
   timestamp: number;
+  error?: string;
 }
 
 // Player Stats Types (existing)
@@ -146,7 +148,8 @@ export async function fetchPlayerStats(playerId: number): Promise<any> {
   }
 }
 
-// Convert Cricbuzz response to our Player format
+// Live Matches API Helpers
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Player {
   // Extract stats from Cricbuzz API response
   const bat = cricbuzzData?.bat || {};
@@ -262,9 +265,6 @@ function calculateOverallRating(bat: any, bowl: any): number {
   return Math.floor(battingRating * 0.6 + bowlingRating * 0.3 + 75 * 0.1);
 }
 
-// Live Matches API Helpers
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
 export async function getLiveMatches(): Promise<LiveMatchesResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/cricbuzz/live`, {
@@ -272,11 +272,17 @@ export async function getLiveMatches(): Promise<LiveMatchesResponse> {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'no-store', // Always fetch fresh data
+      cache: 'no-store',
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      let errorBody = '';
+      try {
+        errorBody = JSON.stringify(await response.json());
+      } catch {
+        errorBody = await response.text().catch(() => '');
+      }
+      throw new Error(`API error: ${response.status} - ${errorBody}`);
     }
 
     const data = await response.json();
@@ -288,6 +294,7 @@ export async function getLiveMatches(): Promise<LiveMatchesResponse> {
       data: [],
       cached: false,
       timestamp: Date.now(),
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -299,11 +306,17 @@ export async function getUpcomingMatches(): Promise<UpcomingMatchesResponse> {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'no-store', // Always fetch fresh data
+      cache: 'no-store',
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      let errorBody = '';
+      try {
+        errorBody = JSON.stringify(await response.json());
+      } catch {
+        errorBody = await response.text().catch(() => '');
+      }
+      throw new Error(`API error: ${response.status} - ${errorBody}`);
     }
 
     const data = await response.json();
@@ -315,6 +328,7 @@ export async function getUpcomingMatches(): Promise<UpcomingMatchesResponse> {
       data: [],
       cached: false,
       timestamp: Date.now(),
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

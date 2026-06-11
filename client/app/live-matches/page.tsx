@@ -20,10 +20,10 @@ export default function LiveMatchesPage() {
         setMatches(response.data);
         setError(null);
       } else {
-        setError('Failed to fetch live matches');
+        setError(response.error || 'Failed to fetch live matches');
       }
     } catch (err) {
-      setError('An error occurred while fetching matches');
+      setError(err instanceof Error ? err.message : 'An error occurred while fetching matches');
       console.error(err);
     } finally {
       setLoading(false);

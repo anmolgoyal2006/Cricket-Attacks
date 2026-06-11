@@ -15,8 +15,5 @@
   "dependencies": {
     "concurrently": "^9.1.2",
     "tailwindcss-animate": "^1.0.7"
-  },
-  "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.15.8"
   }
 }

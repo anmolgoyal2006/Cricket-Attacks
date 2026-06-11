@@ -41,15 +41,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await authApi.getMe();
       setUser(data.user);
-    } catch {
-      localStorage.removeItem('token');
-      setUser(null);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+      // Only clear user state if the token was removed (indicating a 401 Unauthorized from api.ts)
+      if (!localStorage.getItem('token')) {
+        localStorage.removeItem('user');
+        setUser(null);
+      }
     }
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const cachedUser = localStorage.getItem('user');
+    
     if (token) {
+      if (cachedUser) {
+        try {
+          setUser(JSON.parse(cachedUser));
+        } catch {
+          // ignore
+        }
+      }
       refreshUser().finally(() => {
         setLoading(false);
         connectSocket(token);
@@ -66,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const data = await authApi.login({ email, password });
     localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
     connectSocket(data.token);
   };
@@ -73,12 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (username: string, email: string, password: string) => {
     const data = await authApi.register({ username, email, password });
     localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
     connectSocket(data.token);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     disconnectSocket();
   };

@@ -98,9 +98,37 @@ const userSchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    draws: {
+        type: Number,
+        default: 0,
+    },
+    eloRating: {
+        type: Number,
+        default: 1000,
+    },
+    highestElo: {
+        type: Number,
+        default: 1000,
+    },
+    rankTier: {
+        type: String,
+        default: 'Bronze',
+    },
     dailyPackOpenedAt: {
         type: Date,
         default: null,
+    },
+    dailyRewardClaimedAt: {
+        type: Date,
+        default: null,
+    },
+    battleStreak: {
+        type: Number,
+        default: 0,
+    },
+    longestStreak: {
+        type: Number,
+        default: 0,
     },
 }, {
     timestamps: true,
@@ -111,6 +139,9 @@ const userSchema = new mongoose_1.Schema({
         },
     },
 });
+userSchema.index({ eloRating: -1 });
+userSchema.index({ wins: -1 });
+userSchema.index({ rankTier: 1, eloRating: -1 });
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password'))
         return next();

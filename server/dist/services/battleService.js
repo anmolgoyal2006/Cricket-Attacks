@@ -1,16 +1,52 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ATTRIBUTES = void 0;
 exports.startBattle = startBattle;
 exports.playRound = playRound;
 exports.calculateRewards = calculateRewards;
-function getMainStat(player) {
-    if (player.role === 'Batsman' || player.role === 'Wicketkeeper-Batsman') {
-        return player.batting;
+exports.ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
     }
-    if (player.role === 'Bowler') {
-        return player.bowling;
+    return a;
+}
+function getAttributeValue(card, attr) {
+    return card[attr] ?? 80;
+}
+function clamp(val, min = 60, max = 99) {
+    return Math.max(min, Math.min(max, val));
+}
+function roleBaseStats(role, difficulty) {
+    const rnd = () => Math.floor(Math.random() * 10) - 5;
+    if (role === 'Batsman' || role === 'Wicketkeeper-Batsman') {
+        return {
+            batting: clamp(difficulty + rnd()),
+            bowling: clamp(20 + Math.floor(difficulty * 0.25) + rnd(), 15, 55),
+            fielding: clamp(65 + Math.floor(difficulty * 0.2) + rnd()),
+            captaincy: clamp(50 + Math.floor(difficulty * 0.3) + rnd()),
+            pressure: clamp(60 + Math.floor(difficulty * 0.3) + rnd()),
+        };
     }
-    return Math.round((player.batting + player.bowling) / 2);
+    if (role === 'Bowler') {
+        return {
+            batting: clamp(15 + Math.floor(difficulty * 0.25) + rnd(), 10, 55),
+            bowling: clamp(difficulty + rnd()),
+            fielding: clamp(60 + Math.floor(difficulty * 0.2) + rnd()),
+            captaincy: clamp(45 + Math.floor(difficulty * 0.3) + rnd()),
+            pressure: clamp(65 + Math.floor(difficulty * 0.3) + rnd()),
+        };
+    }
+    // All-rounder
+    return {
+        batting: clamp(difficulty - 10 + rnd()),
+        bowling: clamp(difficulty - 10 + rnd()),
+        fielding: clamp(70 + Math.floor(difficulty * 0.15) + rnd()),
+        captaincy: clamp(55 + Math.floor(difficulty * 0.25) + rnd()),
+        pressure: clamp(65 + Math.floor(difficulty * 0.25) + rnd()),
+    };
 }
 function generateAISquad(playerCards) {
     const roles = ['Batsman', 'Bowler', 'All-rounder', 'Batsman', 'Bowler'];
@@ -18,38 +54,50 @@ function generateAISquad(playerCards) {
         'Shaheen Afridi', 'Mitchell Starc', 'Trent Boult', 'Kagiso Rabada', 'Rashid Khan',
         'David Warner', 'Quinton de Kock', 'AB de Villiers',
     ];
-    const playerAvg = playerCards.reduce((sum, c) => sum + getMainStat(c), 0) / playerCards.length;
+    const playerAvg = playerCards.reduce((sum, c) => {
+        const attrSum = exports.ATTRIBUTES.reduce((s, a) => s + getAttributeValue(c, a), 0);
+        return sum + (attrSum / exports.ATTRIBUTES.length);
+    }, 0) / playerCards.length;
     const difficulty = Math.max(60, Math.min(95, playerAvg + Math.floor(Math.random() * 15) - 5));
-    return roles.map((role, i) => ({
-        aiId: `ai_${i}`,
-        name: aiNames[Math.floor(Math.random() * aiNames.length)],
-        role,
-        stat: role === 'Bowler'
-            ? Math.max(60, Math.min(99, difficulty + Math.floor(Math.random() * 10) - 5))
-            : Math.max(60, Math.min(99, difficulty + Math.floor(Math.random() * 10) - 5)),
-    }));
+    return roles.map((role, i) => {
+        const base = roleBaseStats(role, difficulty);
+        const avg = Math.round(exports.ATTRIBUTES.reduce((s, a) => s + base[a], 0) / exports.ATTRIBUTES.length);
+        return {
+            aiId: `ai_${i}`,
+            name: aiNames[Math.floor(Math.random() * aiNames.length)],
+            role,
+            ...base,
+            overall: avg,
+        };
+    });
 }
 function startBattle(playerCards) {
     const aiCards = generateAISquad(playerCards);
+    const attributeOrder = shuffleArray(exports.ATTRIBUTES);
     const playerHand = playerCards.map((card) => {
-        const stat = getMainStat(card);
+        const avg = Math.round(exports.ATTRIBUTES.reduce((s, a) => s + getAttributeValue(card, a), 0) / exports.ATTRIBUTES.length);
         return {
             userCardId: card._id.toString(),
             name: card.name,
             role: card.role,
-            stat,
+            batting: card.batting,
+            bowling: card.bowling,
+            fielding: card.fielding,
+            captaincy: card.captaincy ?? 70,
+            pressure: card.pressure ?? 70,
+            overall: avg,
         };
     });
-    return { aiCards, playerHand };
+    return { aiCards, playerHand, attributeOrder };
 }
 function playRound(battle, aiCards, playerCardId) {
     const roundNumber = battle.rounds.length + 1;
     const playerCard = battle.playerSquad.find((c) => c.toString() === playerCardId || c._id?.toString() === playerCardId);
     const aiIndex = Math.floor(Math.random() * aiCards.length);
     const computerCard = aiCards.splice(aiIndex, 1)[0];
-    const playerPlayer = playerCard;
-    const playerStat = getMainStat(playerPlayer);
-    const computerStat = computerCard.stat;
+    const attribute = battle.attributeOrder[roundNumber - 1] || exports.ATTRIBUTES[roundNumber - 1] || 'batting';
+    const playerStat = getAttributeValue(playerCard, attribute);
+    const computerStat = getAttributeValue(computerCard, attribute);
     let winner;
     if (playerStat > computerStat) {
         winner = 'player';
@@ -85,8 +133,9 @@ function playRound(battle, aiCards, playerCardId) {
     }
     return {
         roundNumber,
-        playerCard: { name: playerPlayer.name, stat: playerStat },
-        computerCard,
+        attribute,
+        playerCard: { name: playerCard.name, stat: playerStat, attribute },
+        computerCard: { ...computerCard, stat: computerStat, attribute },
         winner,
         playerScore,
         computerScore,

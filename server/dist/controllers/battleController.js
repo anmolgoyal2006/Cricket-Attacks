@@ -31,11 +31,12 @@ async function startPvE(req, res, next) {
                 throw new errors_1.BadRequestError('You do not own all selected cards');
             }
         }
-        const { aiCards, playerHand } = (0, battleService_1.startBattle)(playerCards);
+        const { aiCards, playerHand, attributeOrder } = (0, battleService_1.startBattle)(playerCards);
         const battle = await Battle_1.default.create({
             user: user._id,
             playerSquad: squadCardIds,
             aiSquad: aiCards,
+            attributeOrder,
             playerScore: 0,
             computerScore: 0,
             type: 'pve',
@@ -45,6 +46,7 @@ async function startPvE(req, res, next) {
             battleId: battle._id,
             playerCards: playerHand,
             aiCards,
+            attributeOrder,
             currentRound: 0,
             totalRounds: 5,
         });
@@ -85,6 +87,7 @@ async function playRoundHandler(req, res, next) {
             playerCardId: new mongoose_1.default.Types.ObjectId(playerCardId),
             playerCardName: result.playerCard.name,
             playerStat: result.playerCard.stat,
+            attribute: result.attribute,
             aiId: result.computerCard.aiId,
             computerCardName: result.computerCard.name,
             computerStat: result.computerCard.stat,

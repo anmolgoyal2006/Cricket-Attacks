@@ -80,6 +80,18 @@ const playerSchema = new mongoose_1.Schema({
         min: 0,
         max: 100,
     },
+    captaincy: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+    },
+    pressure: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+    },
     overall: {
         type: Number,
         required: true,

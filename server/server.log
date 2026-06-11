@@ -1,0 +1,11 @@
+Cricbuzz routes loaded
+Connected to MongoDB Atlas
+Server running on http://localhost:5000
+WebSocket running on ws://localhost:5000
+Environment: development
+[0mGET /api/cricbuzz/live [32m200[0m 3601.059 ms - 67[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 13.779 ms - 160[0m
+Socket connected: anmol1974 (ibKms7mqsaCK7UnDAAAB)
+[0mGET /api/cricbuzz/live [32m200[0m 2.288 ms - 66[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 5.888 ms - 160[0m
+[0mGET /api/api/cricbuzz/live [33m404[0m 2.325 ms - 160[0m

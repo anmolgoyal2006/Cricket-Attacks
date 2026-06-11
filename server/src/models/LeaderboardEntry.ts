@@ -3,11 +3,17 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ILeaderboardEntry extends Document {
   user: mongoose.Types.ObjectId;
   username: string;
+  eloRating: number;
+  rankTier: string;
   trophies: number;
   battlesPlayed: number;
   battlesWon: number;
+  battlesLost: number;
+  battlesDrawn: number;
   winRate: number;
   xp: number;
+  streak: number;
+  season: number;
   avatar: string;
   updatedAt: Date;
 }
@@ -25,6 +31,14 @@ const leaderboardEntrySchema = new Schema<ILeaderboardEntry>(
       type: String,
       required: true,
     },
+    eloRating: {
+      type: Number,
+      default: 1000,
+    },
+    rankTier: {
+      type: String,
+      default: 'Bronze',
+    },
     trophies: {
       type: Number,
       default: 0,
@@ -37,6 +51,14 @@ const leaderboardEntrySchema = new Schema<ILeaderboardEntry>(
       type: Number,
       default: 0,
     },
+    battlesLost: {
+      type: Number,
+      default: 0,
+    },
+    battlesDrawn: {
+      type: Number,
+      default: 0,
+    },
     winRate: {
       type: Number,
       default: 0,
@@ -44,6 +66,14 @@ const leaderboardEntrySchema = new Schema<ILeaderboardEntry>(
     xp: {
       type: Number,
       default: 0,
+    },
+    streak: {
+      type: Number,
+      default: 0,
+    },
+    season: {
+      type: Number,
+      default: 1,
     },
     avatar: {
       type: String,
@@ -55,7 +85,9 @@ const leaderboardEntrySchema = new Schema<ILeaderboardEntry>(
   }
 );
 
-leaderboardEntrySchema.index({ trophies: -1 });
+leaderboardEntrySchema.index({ season: 1, eloRating: -1 });
+leaderboardEntrySchema.index({ season: 1, winRate: -1 });
+leaderboardEntrySchema.index({ eloRating: -1 });
 leaderboardEntrySchema.index({ winRate: -1 });
 
 export default mongoose.model<ILeaderboardEntry>('LeaderboardEntry', leaderboardEntrySchema);

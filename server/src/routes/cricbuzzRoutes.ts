@@ -1,7 +1,17 @@
 import { Router } from 'express';
 import cricbuzzService from '../services/cricbuzz.service';
 
+console.log('Cricbuzz routes loaded');
+
 const router = Router();
+
+/**
+ * GET /api/cricbuzz/test
+ * Health check for Cricbuzz routes
+ */
+router.get('/test', (_req, res) => {
+  res.json({ success: true, message: 'Cricbuzz routes working' });
+});
 
 /**
  * GET /api/cricbuzz/live

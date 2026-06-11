@@ -136,9 +136,48 @@ export const battlesApi = {
 
 // Leaderboard API
 export const leaderboardApi = {
-  get: (limit?: number) =>
-    api<{ leaderboard: any[] }>(`/leaderboard${limit ? `?limit=${limit}` : ''}`, {
-      auth: false,
-    }),
-  getMyRank: () => api<{ rank: number; username: string; trophies: number; battlesWon: number; battlesPlayed: number; winRate: number }>('/leaderboard/my-rank'),
+  get: (limit?: number, season?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+    if (season) params.set('season', season.toString());
+    const qs = params.toString();
+    return api<{ leaderboard: any[] }>(`/leaderboard${qs ? `?${qs}` : ''}`, { auth: false });
+  },
+  getMyRank: (season?: number) => {
+    const qs = season ? `?season=${season}` : '';
+    return api<any>(`/leaderboard/my-rank${qs}`);
+  },
+};
+
+// Profile API
+export const profileApi = {
+  getMyProfile: () => api<{ profile: any }>('/profile/me'),
+  getProfile: (id: string) => api<{ profile: any; recentMatches: any[]; recentBattles: any[] }>(`/profile/${id}`),
+};
+
+// Match History API
+export const historyApi = {
+  get: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api<{ matches: any[]; pagination: any }>(`/history${query}`);
+  },
+  getByUser: (userId: string, params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api<{ matches: any[]; pagination: any }>(`/history/user/${userId}${query}`);
+  },
+};
+
+// Season API
+export const seasonApi = {
+  getCurrent: () => api<{ season: any }>('/seasons/current', { auth: false }),
+  getHistory: () => api<{ seasons: any[] }>('/seasons/history', { auth: false }),
+};
+
+// Ranked Battle API
+export const rankedApi = {
+  completeBattle: (data: { battleId: string; opponentId: string; playerScore: number; opponentScore: number; isDraw: boolean }) =>
+    api<{ winner: string; eloChange: number; newElo: number; newTier: string; playerScore: number; opponentScore: number; rewards: any }>(
+      '/ranked/complete',
+      { method: 'POST', body: data }
+    ),
 };

@@ -39,23 +39,35 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.setupBattleRooms = setupBattleRooms;
 const mongoose_1 = __importDefault(require("mongoose"));
 const Battle_1 = __importDefault(require("../models/Battle"));
+const MatchHistory_1 = __importDefault(require("../models/MatchHistory"));
 const leaderboardService_1 = require("../services/leaderboardService");
+const eloService_1 = require("../services/eloService");
+const rewardsService_1 = require("../services/rewardsService");
 const ROUND_TIMEOUT = 30000;
 const TOTAL_ROUNDS = 5;
+const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
 const activeBattles = new Map();
-function getCardStat(card) {
-    if (card.role === 'Batsman' || card.role === 'Wicketkeeper-Batsman')
-        return card.batting || card.stat || 80;
-    if (card.role === 'Bowler')
-        return card.bowling || card.stat || 80;
-    return Math.round(((card.batting || 80) + (card.bowling || 80)) / 2);
+function getAttr(card, attr) {
+    return card[attr] ?? 80;
 }
 function createPvPCard(card) {
     return {
         userCardId: card._id || card.userCardId,
         name: card.name,
         role: card.role,
-        stat: getCardStat(card),
+        batting: card.batting ?? getAttr(card, 'batting'),
+        bowling: card.bowling ?? getAttr(card, 'bowling'),
+        fielding: card.fielding ?? getAttr(card, 'fielding'),
+        captaincy: card.captaincy ?? 70,
+        pressure: card.pressure ?? 80,
     };
 }
 function setupBattleRooms(io) {
@@ -71,12 +83,15 @@ function setupBattleRooms(io) {
         }
         const p1Card = battle.player1Choice;
         const p2Card = battle.player2Choice;
+        const attribute = battle.attributeOrder[battle.round - 1] || 'batting';
+        const p1Stat = getAttr(p1Card, attribute);
+        const p2Stat = getAttr(p2Card, attribute);
         let winner;
-        if (p1Card.stat > p2Card.stat) {
+        if (p1Stat > p2Stat) {
             winner = 'player1';
             battle.player1Score++;
         }
-        else if (p2Card.stat > p1Card.stat) {
+        else if (p2Stat > p1Stat) {
             winner = 'player2';
             battle.player2Score++;
         }
@@ -85,8 +100,9 @@ function setupBattleRooms(io) {
         }
         const roundResult = {
             roundNumber: battle.round,
-            player1Card: { name: p1Card.name, stat: p1Card.stat },
-            player2Card: { name: p2Card.name, stat: p2Card.stat },
+            attribute,
+            player1Card: { name: p1Card.name, stat: p1Stat },
+            player2Card: { name: p2Card.name, stat: p2Stat },
             winner,
             player1Score: battle.player1Score,
             player2Score: battle.player2Score,
@@ -103,6 +119,7 @@ function setupBattleRooms(io) {
             io.to(battle.battleId).emit('battle:round-start', {
                 round: battle.round,
                 totalRounds: TOTAL_ROUNDS,
+                attribute: battle.attributeOrder[battle.round - 1] || 'batting',
             });
         }
     }
@@ -142,91 +159,238 @@ function setupBattleRooms(io) {
         }
         const player1Won = overallWinner === 'player1';
         const player2Won = overallWinner === 'player2';
-        const p1Reward = player1Won ? { coins: 150, xp: 75, trophies: 30 } : overallWinner === 'tie' ? { coins: 75, xp: 40, trophies: 15 } : { coins: 30, xp: 20, trophies: 5 };
-        const p2Reward = player2Won ? { coins: 150, xp: 75, trophies: 30 } : overallWinner === 'tie' ? { coins: 75, xp: 40, trophies: 15 } : { coins: 30, xp: 20, trophies: 5 };
+        const isDraw = overallWinner === 'tie';
         try {
-            const mongoBattle = await Battle_1.default.create({
-                user: new mongoose_1.default.Types.ObjectId(battle.player1.userId),
-                playerSquad: battle.player1.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
-                aiSquad: battle.player2.cards.map((c) => ({ name: c.name, role: c.role, stat: c.stat })),
-                rounds: battle.roundHistory.map((r) => ({
-                    roundNumber: r.roundNumber,
-                    playerCardId: r.player1Card ? battle.player1.cards[0]?.userCardId : undefined,
-                    playerCardName: r.player1Card?.name || '',
-                    playerStat: r.player1Card?.stat || 0,
-                    computerCardName: r.player2Card?.name || '',
-                    computerStat: r.player2Card?.stat || 0,
-                    winner: r.winner === 'player1' ? 'player' : r.winner === 'player2' ? 'computer' : 'tie',
-                })),
-                playerScore: battle.player1Score,
-                computerScore: battle.player2Score,
-                winner: player1Won ? 'player' : player2Won ? 'computer' : 'tie',
-                type: 'pvp',
-                status: 'completed',
-            });
-            const mongoBattle2 = await Battle_1.default.create({
-                user: new mongoose_1.default.Types.ObjectId(battle.player2.userId),
-                playerSquad: battle.player2.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
-                aiSquad: battle.player1.cards.map((c) => ({ name: c.name, role: c.role, stat: c.stat })),
-                rounds: battle.roundHistory.map((r) => ({
-                    roundNumber: r.roundNumber,
-                    playerCardId: r.player2Card ? battle.player2.cards[0]?.userCardId : undefined,
-                    playerCardName: r.player2Card?.name || '',
-                    playerStat: r.player2Card?.stat || 0,
-                    computerCardName: r.player1Card?.name || '',
-                    computerStat: r.player1Card?.stat || 0,
-                    winner: r.winner === 'player2' ? 'player' : r.winner === 'player1' ? 'computer' : 'tie',
-                })),
-                playerScore: battle.player2Score,
-                computerScore: battle.player1Score,
-                winner: player2Won ? 'player' : player1Won ? 'computer' : 'tie',
-                type: 'pvp',
-                status: 'completed',
-            });
-            battle.mongoId = mongoBattle._id.toString();
-            const UserModel = await Promise.resolve().then(() => __importStar(require('../models/User'))).then((m) => m.default);
-            await UserModel.findByIdAndUpdate(battle.player1.userId, {
-                $inc: {
-                    coins: p1Reward.coins,
-                    xp: p1Reward.xp,
-                    trophies: player1Won ? p1Reward.trophies : 0,
-                    battlesPlayed: 1,
-                    wins: player1Won ? 1 : 0,
-                    losses: player2Won ? 1 : 0,
-                },
-            });
-            await UserModel.findByIdAndUpdate(battle.player2.userId, {
-                $inc: {
-                    coins: p2Reward.coins,
-                    xp: p2Reward.xp,
-                    trophies: player2Won ? p2Reward.trophies : 0,
-                    battlesPlayed: 1,
-                    wins: player2Won ? 1 : 0,
-                    losses: player1Won ? 1 : 0,
-                },
-            });
-            await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player1.userId);
-            await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player2.userId);
+            const UserModel = (await Promise.resolve().then(() => __importStar(require('../models/User')))).default;
+            const [player1Doc, player2Doc] = await Promise.all([
+                UserModel.findById(battle.player1.userId),
+                UserModel.findById(battle.player2.userId),
+            ]);
+            if (player1Doc && player2Doc) {
+                const eloResult = (0, eloService_1.calculateElo)(player1Doc.eloRating, player2Doc.eloRating, player1Won ? 1 : isDraw ? 0.5 : 0, player2Won ? 1 : isDraw ? 0.5 : 0);
+                const p1NewTier = (0, eloService_1.getTier)(eloResult.newRatingA);
+                const p2NewTier = (0, eloService_1.getTier)(eloResult.newRatingB);
+                const p1Streak = player1Won ? (player1Doc.battleStreak || 0) + 1 : 0;
+                const p2Streak = player2Won ? (player2Doc.battleStreak || 0) + 1 : 0;
+                const p1Rewards = (0, rewardsService_1.getWinRewards)(player1Won, isDraw, p1Streak);
+                const p2Rewards = (0, rewardsService_1.getWinRewards)(player2Won, isDraw, p2Streak);
+                await Promise.all([
+                    UserModel.findByIdAndUpdate(battle.player1.userId, {
+                        $set: {
+                            eloRating: eloResult.newRatingA,
+                            rankTier: p1NewTier,
+                            battleStreak: p1Streak,
+                            highestElo: Math.max(player1Doc.highestElo || 1000, eloResult.newRatingA),
+                        },
+                        $inc: {
+                            coins: p1Rewards.coins,
+                            xp: p1Rewards.xp,
+                            battlesPlayed: 1,
+                            wins: player1Won ? 1 : 0,
+                            losses: player2Won ? 1 : 0,
+                            draws: isDraw ? 1 : 0,
+                        },
+                    }),
+                    UserModel.findByIdAndUpdate(battle.player2.userId, {
+                        $set: {
+                            eloRating: eloResult.newRatingB,
+                            rankTier: p2NewTier,
+                            battleStreak: p2Streak,
+                            highestElo: Math.max(player2Doc.highestElo || 1000, eloResult.newRatingB),
+                        },
+                        $inc: {
+                            coins: p2Rewards.coins,
+                            xp: p2Rewards.xp,
+                            battlesPlayed: 1,
+                            wins: player2Won ? 1 : 0,
+                            losses: player1Won ? 1 : 0,
+                            draws: isDraw ? 1 : 0,
+                        },
+                    }),
+                ]);
+                const mongoBattle = await Battle_1.default.create({
+                    user: new mongoose_1.default.Types.ObjectId(battle.player1.userId),
+                    attributeOrder: battle.attributeOrder,
+                    playerSquad: battle.player1.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
+                    aiSquad: battle.player2.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
+                    rounds: battle.roundHistory.map((r) => ({
+                        roundNumber: r.roundNumber,
+                        playerCardId: r.player1Card ? battle.player1.cards[0]?.userCardId : undefined,
+                        playerCardName: r.player1Card?.name || '',
+                        playerStat: r.player1Card?.stat || 0,
+                        attribute: r.attribute || 'batting',
+                        computerCardName: r.player2Card?.name || '',
+                        computerStat: r.player2Card?.stat || 0,
+                        winner: r.winner === 'player1' ? 'player' : r.winner === 'player2' ? 'computer' : 'tie',
+                    })),
+                    playerScore: battle.player1Score,
+                    computerScore: battle.player2Score,
+                    winner: player1Won ? 'player' : player2Won ? 'computer' : 'tie',
+                    type: 'pvp',
+                    status: 'completed',
+                });
+                await Battle_1.default.create({
+                    user: new mongoose_1.default.Types.ObjectId(battle.player2.userId),
+                    attributeOrder: battle.attributeOrder,
+                    playerSquad: battle.player2.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
+                    aiSquad: battle.player1.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
+                    rounds: battle.roundHistory.map((r) => ({
+                        roundNumber: r.roundNumber,
+                        playerCardId: r.player2Card ? battle.player2.cards[0]?.userCardId : undefined,
+                        playerCardName: r.player2Card?.name || '',
+                        playerStat: r.player2Card?.stat || 0,
+                        attribute: r.attribute || 'batting',
+                        computerCardName: r.player1Card?.name || '',
+                        computerStat: r.player1Card?.stat || 0,
+                        winner: r.winner === 'player2' ? 'player' : r.winner === 'player1' ? 'computer' : 'tie',
+                    })),
+                    playerScore: battle.player2Score,
+                    computerScore: battle.player1Score,
+                    winner: player2Won ? 'player' : player1Won ? 'computer' : 'tie',
+                    type: 'pvp',
+                    status: 'completed',
+                });
+                battle.mongoId = mongoBattle._id.toString();
+                await Promise.all([
+                    MatchHistory_1.default.create({
+                        user: new mongoose_1.default.Types.ObjectId(battle.player1.userId),
+                        opponentId: new mongoose_1.default.Types.ObjectId(battle.player2.userId),
+                        opponentName: battle.player2.username,
+                        result: player1Won ? 'win' : isDraw ? 'draw' : 'loss',
+                        eloChange: eloResult.changeA,
+                        eloBefore: player1Doc.eloRating,
+                        eloAfter: eloResult.newRatingA,
+                        playerScore: battle.player1Score,
+                        opponentScore: battle.player2Score,
+                        attributeOrder: battle.attributeOrder,
+                        type: 'ranked',
+                        season: 1,
+                    }),
+                    MatchHistory_1.default.create({
+                        user: new mongoose_1.default.Types.ObjectId(battle.player2.userId),
+                        opponentId: new mongoose_1.default.Types.ObjectId(battle.player1.userId),
+                        opponentName: battle.player1.username,
+                        result: player2Won ? 'win' : isDraw ? 'draw' : 'loss',
+                        eloChange: eloResult.changeB,
+                        eloBefore: player2Doc.eloRating,
+                        eloAfter: eloResult.newRatingB,
+                        playerScore: battle.player2Score,
+                        opponentScore: battle.player1Score,
+                        attributeOrder: battle.attributeOrder,
+                        type: 'ranked',
+                        season: 1,
+                    }),
+                ]);
+                await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player1.userId);
+                await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player2.userId);
+                io.to(battle.battleId).emit('battle:over', {
+                    winner: overallWinner,
+                    player1Score: battle.player1Score,
+                    player2Score: battle.player2Score,
+                    player1Rewards: { ...p1Rewards, eloChange: eloResult.changeA, newElo: eloResult.newRatingA, newTier: p1NewTier },
+                    player2Rewards: { ...p2Rewards, eloChange: eloResult.changeB, newElo: eloResult.newRatingB, newTier: p2NewTier },
+                    roundHistory: battle.roundHistory,
+                });
+                return;
+            }
+            // fallback for missing user docs (same as before)
+            await fallbackBattleSave(io, battle, player1Won, player2Won, isDraw);
         }
         catch (err) {
             console.error('Failed to persist PvP battle:', err);
+            try {
+                await fallbackBattleSave(io, battle, player1Won, player2Won, isDraw);
+            }
+            catch (fallbackErr) {
+                console.error('Fallback also failed:', fallbackErr);
+            }
         }
         io.to(battle.battleId).emit('battle:over', {
             winner: overallWinner,
             player1Score: battle.player1Score,
             player2Score: battle.player2Score,
-            player1Rewards: p1Reward,
-            player2Rewards: p2Reward,
+            player1Rewards: (0, rewardsService_1.getWinRewards)(player1Won, isDraw, 0),
+            player2Rewards: (0, rewardsService_1.getWinRewards)(player2Won, isDraw, 0),
             roundHistory: battle.roundHistory,
         });
         setTimeout(() => {
             activeBattles.delete(battle.battleId);
         }, 60000);
     }
+    async function fallbackBattleSave(io, battle, player1Won, player2Won, isDraw) {
+        const UserModel = (await Promise.resolve().then(() => __importStar(require('../models/User')))).default;
+        const p1Reward = player1Won ? { coins: 150, xp: 75 } : isDraw ? { coins: 75, xp: 40 } : { coins: 30, xp: 20 };
+        const p2Reward = player2Won ? { coins: 150, xp: 75 } : isDraw ? { coins: 75, xp: 40 } : { coins: 30, xp: 20 };
+        const mongoBattle = await Battle_1.default.create({
+            user: new mongoose_1.default.Types.ObjectId(battle.player1.userId),
+            attributeOrder: battle.attributeOrder,
+            playerSquad: battle.player1.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
+            aiSquad: battle.player2.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
+            rounds: battle.roundHistory.map((r) => ({
+                roundNumber: r.roundNumber,
+                playerCardId: r.player1Card ? battle.player1.cards[0]?.userCardId : undefined,
+                playerCardName: r.player1Card?.name || '',
+                playerStat: r.player1Card?.stat || 0,
+                attribute: r.attribute || 'batting',
+                computerCardName: r.player2Card?.name || '',
+                computerStat: r.player2Card?.stat || 0,
+                winner: r.winner === 'player1' ? 'player' : r.winner === 'player2' ? 'computer' : 'tie',
+            })),
+            playerScore: battle.player1Score,
+            computerScore: battle.player2Score,
+            winner: player1Won ? 'player' : player2Won ? 'computer' : 'tie',
+            type: 'pvp',
+            status: 'completed',
+        });
+        const mongoBattle2 = await Battle_1.default.create({
+            user: new mongoose_1.default.Types.ObjectId(battle.player2.userId),
+            attributeOrder: battle.attributeOrder,
+            playerSquad: battle.player2.cards.map((c) => new mongoose_1.default.Types.ObjectId(c.userCardId)),
+            aiSquad: battle.player1.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
+            rounds: battle.roundHistory.map((r) => ({
+                roundNumber: r.roundNumber,
+                playerCardId: r.player2Card ? battle.player2.cards[0]?.userCardId : undefined,
+                playerCardName: r.player2Card?.name || '',
+                playerStat: r.player2Card?.stat || 0,
+                attribute: r.attribute || 'batting',
+                computerCardName: r.player1Card?.name || '',
+                computerStat: r.player1Card?.stat || 0,
+                winner: r.winner === 'player2' ? 'player' : r.winner === 'player1' ? 'computer' : 'tie',
+            })),
+            playerScore: battle.player2Score,
+            computerScore: battle.player1Score,
+            winner: player2Won ? 'player' : player1Won ? 'computer' : 'tie',
+            type: 'pvp',
+            status: 'completed',
+        });
+        battle.mongoId = mongoBattle._id.toString();
+        await UserModel.findByIdAndUpdate(battle.player1.userId, {
+            $inc: {
+                coins: p1Reward.coins,
+                xp: p1Reward.xp,
+                battlesPlayed: 1,
+                wins: player1Won ? 1 : 0,
+                losses: player2Won ? 1 : 0,
+            },
+        });
+        await UserModel.findByIdAndUpdate(battle.player2.userId, {
+            $inc: {
+                coins: p2Reward.coins,
+                xp: p2Reward.xp,
+                battlesPlayed: 1,
+                wins: player2Won ? 1 : 0,
+                losses: player1Won ? 1 : 0,
+            },
+        });
+        await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player1.userId);
+        await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player2.userId);
+    }
     return {
         initializeBattle(socket, io, battleId, player1Data, player2Data) {
+            const attributeOrder = shuffleArray(ATTRIBUTES);
             const battle = {
                 battleId,
+                attributeOrder,
                 player1: {
                     ...player1Data,
                     cards: player1Data.cards.map(createPvPCard),
@@ -251,6 +415,8 @@ function setupBattleRooms(io) {
                 battleId,
                 round: 1,
                 totalRounds: TOTAL_ROUNDS,
+                attribute: attributeOrder[0] || 'batting',
+                attributeOrder,
             });
             return battle;
         },
@@ -319,9 +485,28 @@ function setupBattleRooms(io) {
                             try {
                                 const UserModel = (await Promise.resolve().then(() => __importStar(require('../models/User')))).default;
                                 const winnerUserId = winner === 'player1' ? battle.player1.userId : battle.player2.userId;
-                                await UserModel.findByIdAndUpdate(winnerUserId, {
-                                    $inc: { coins: 100, xp: 50, trophies: 20, battlesPlayed: 1, wins: 1 },
-                                });
+                                const loserUserId = winner === 'player1' ? battle.player2.userId : battle.player1.userId;
+                                const [winnerDoc, loserDoc] = await Promise.all([
+                                    UserModel.findById(winnerUserId),
+                                    UserModel.findById(loserUserId),
+                                ]);
+                                if (winnerDoc && loserDoc) {
+                                    const eloResult = (0, eloService_1.calculateElo)(winnerDoc.eloRating, loserDoc.eloRating, 1, 0);
+                                    const newTier = (0, eloService_1.getTier)(eloResult.newRatingA);
+                                    await UserModel.findByIdAndUpdate(winnerUserId, {
+                                        $set: { eloRating: eloResult.newRatingA, rankTier: newTier, battleStreak: (winnerDoc.battleStreak || 0) + 1 },
+                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                                    });
+                                    await UserModel.findByIdAndUpdate(loserUserId, {
+                                        $set: { eloRating: eloResult.newRatingB, rankTier: (0, eloService_1.getTier)(eloResult.newRatingB), battleStreak: 0 },
+                                        $inc: { battlesPlayed: 1, losses: 1 },
+                                    });
+                                }
+                                else {
+                                    await UserModel.findByIdAndUpdate(winnerUserId, {
+                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                                    });
+                                }
                                 await (0, leaderboardService_1.updateLeaderboardForUser)(winnerUserId);
                             }
                             catch (err) {
@@ -361,6 +546,8 @@ function setupBattleRooms(io) {
                 battleId: battle.battleId,
                 round: battle.round,
                 totalRounds: TOTAL_ROUNDS,
+                attribute: battle.attributeOrder[battle.round - 1] || 'batting',
+                attributeOrder: battle.attributeOrder,
                 player1Score: battle.player1Score,
                 player2Score: battle.player2Score,
                 roundHistory: battle.roundHistory,

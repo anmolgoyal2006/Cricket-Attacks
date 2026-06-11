@@ -46,6 +46,14 @@ const leaderboardEntrySchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    eloRating: {
+        type: Number,
+        default: 1000,
+    },
+    rankTier: {
+        type: String,
+        default: 'Bronze',
+    },
     trophies: {
         type: Number,
         default: 0,
@@ -58,6 +66,14 @@ const leaderboardEntrySchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    battlesLost: {
+        type: Number,
+        default: 0,
+    },
+    battlesDrawn: {
+        type: Number,
+        default: 0,
+    },
     winRate: {
         type: Number,
         default: 0,
@@ -66,6 +82,14 @@ const leaderboardEntrySchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    streak: {
+        type: Number,
+        default: 0,
+    },
+    season: {
+        type: Number,
+        default: 1,
+    },
     avatar: {
         type: String,
         default: '🏏',
@@ -73,7 +97,9 @@ const leaderboardEntrySchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
-leaderboardEntrySchema.index({ trophies: -1 });
+leaderboardEntrySchema.index({ season: 1, eloRating: -1 });
+leaderboardEntrySchema.index({ season: 1, winRate: -1 });
+leaderboardEntrySchema.index({ eloRating: -1 });
 leaderboardEntrySchema.index({ winRate: -1 });
 exports.default = mongoose_1.default.model('LeaderboardEntry', leaderboardEntrySchema);
 //# sourceMappingURL=LeaderboardEntry.js.map

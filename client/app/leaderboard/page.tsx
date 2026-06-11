@@ -2,36 +2,61 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, TrendingUp, Zap, Award, Loader2 } from 'lucide-react';
-import { leaderboardApi } from '@/lib/api';
+import { Trophy, Medal, TrendingUp, Loader2, Users, ChevronLeft, ChevronRight, Crown, Shield, Swords } from 'lucide-react';
+import { leaderboardApi, seasonApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import RankBadge from '@/components/RankBadge';
+import Link from 'next/link';
+
+const TIER_ORDER = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master'];
+
+function getTierIcon(tier: string) {
+  const icons: Record<string, string> = {
+    Bronze: '🟤', Silver: '🥈', Gold: '🥇', Platinum: '💎', Diamond: '🔷', Master: '👑',
+  };
+  return icons[tier] || '🟤';
+}
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [myRank, setMyRank] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [season, setSeason] = useState<number | undefined>(undefined);
+  const [seasons, setSeasons] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [tierFilter, setTierFilter] = useState<string>('');
+  const LIMIT = 20;
+
+  useEffect(() => {
+    seasonApi.getHistory().then(d => setSeasons(d.seasons || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
         const [lbData, rankData] = await Promise.all([
-          leaderboardApi.get(10),
-          user ? leaderboardApi.getMyRank() : Promise.resolve(null),
+          leaderboardApi.get(LIMIT, season),
+          user ? leaderboardApi.getMyRank(season) : Promise.resolve(null),
         ]);
         setLeaderboard(lbData.leaderboard || []);
         setMyRank(rankData);
       } catch {
-        // silent
+        setLeaderboard([]);
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [user]);
+  }, [user, season]);
 
-  const topThree = leaderboard.slice(0, 3);
-  const restOfLeaders = leaderboard.slice(3);
+  const filtered = tierFilter
+    ? leaderboard.filter(e => e.rankTier === tierFilter)
+    : leaderboard;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / 10));
+  const paged = filtered.slice(page * 10, (page + 1) * 10);
 
   const getRankGradient = (rank: number) => {
     switch (rank) {
@@ -42,216 +67,171 @@ export default function LeaderboardPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6"
-          >
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 mb-6">
             <Trophy className="w-4 h-4 text-amber-400 mr-2" />
-            <span className="text-sm text-amber-400 font-body font-semibold">Global Rankings</span>
-          </motion.div>
-          
+            <span className="text-sm text-amber-400 font-body font-semibold">ELO Rankings</span>
+          </div>
           <h1 className="text-5xl font-display font-black gradient-text mb-4">Leaderboard</h1>
-          <p className="text-xl text-gray-300 font-body">Top Cricket Clash Cards players worldwide</p>
+          <p className="text-xl text-gray-300 font-body">Top Cricket Clash players by ELO rating</p>
+        </motion.div>
+
+        {/* Filters */}
+        <div className="glass rounded-2xl p-4 mb-8">
+          <div className="flex flex-wrap items-center gap-4">
+            <Users className="w-5 h-5 text-gray-400" />
+            {/* Season Filter */}
+            <select
+              value={season ?? ''}
+              onChange={e => { setSeason(e.target.value ? Number(e.target.value) : undefined); setPage(0); }}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white font-body outline-none focus:border-amber-500/50"
+            >
+              <option value="">All Seasons</option>
+              {seasons.map(s => (
+                <option key={s._id} value={s.seasonNumber}>Season {s.seasonNumber}</option>
+              ))}
+            </select>
+
+            {/* Tier Filter */}
+            <select
+              value={tierFilter}
+              onChange={e => { setTierFilter(e.target.value); setPage(0); }}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white font-body outline-none focus:border-amber-500/50"
+            >
+              <option value="">All Tiers</option>
+              {TIER_ORDER.map(t => (
+                <option key={t} value={t}>{getTierIcon(t)} {t}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Top 3 Podium */}
-        <div className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            {topThree.length > 0 && (
-              <>
-                {/* Second Place */}
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="order-2 md:order-1"
-                >
-                  <div className="glass rounded-2xl p-6 border-2 border-gray-400/50 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-300/10 to-gray-500/10" />
-                    <div className="relative">
-                      <div className="text-6xl text-center mb-4">{topThree[1]?.avatar || '🥈'}</div>
-                      <div className="text-center mb-4">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 mb-3 shadow-lg">
-                          <span className="text-2xl font-display font-black text-white">2</span>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+          </div>
+        ) : paged.length === 0 ? (
+          <div className="glass rounded-2xl p-12 text-center">
+            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-display font-bold text-white mb-2">No entries yet</h2>
+            <p className="text-gray-400 font-body">Play ranked matches to climb the leaderboard</p>
+          </div>
+        ) : (
+          <>
+            {/* Leaderboard List */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10 hidden md:grid md:grid-cols-12 gap-4 text-xs text-gray-400 font-body uppercase tracking-wider">
+                <div className="col-span-1">Rank</div>
+                <div className="col-span-4">Player</div>
+                <div className="col-span-2 text-center">ELO</div>
+                <div className="col-span-1 text-center">Tier</div>
+                <div className="col-span-1 text-center">W</div>
+                <div className="col-span-1 text-center">L</div>
+                <div className="col-span-1 text-center">D</div>
+                <div className="col-span-1 text-center">Streak</div>
+              </div>
+              <div className="divide-y divide-white/10">
+                {paged.map((entry: any, index: number) => {
+                  const displayRank = page * 10 + index + 1;
+                  const isYou = user && entry.userId === user.id;
+                  return (
+                    <Link key={entry._id || index} href={`/profile/${entry.userId}`}>
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={`grid grid-cols-2 md:grid-cols-12 gap-4 items-center p-4 transition-all hover:bg-white/5 cursor-pointer ${isYou ? 'bg-amber-500/10 border-l-2 border-l-amber-400' : ''}`}
+                      >
+                        <div className="col-span-1 flex items-center gap-2">
+                          {displayRank <= 3 ? (
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getRankGradient(displayRank)} flex items-center justify-center`}>
+                              {displayRank === 1 ? <Crown className="w-4 h-4 text-white" /> :
+                               displayRank === 2 ? <Medal className="w-4 h-4 text-white" /> :
+                               <Medal className="w-4 h-4 text-white" />}
+                            </div>
+                          ) : (
+                            <span className="w-8 h-8 flex items-center justify-center text-sm font-display font-bold text-gray-400">
+                              #{displayRank}
+                            </span>
+                          )}
                         </div>
-                        <h3 className="text-2xl font-display font-bold text-white mb-1">{topThree[1]?.username || '---'}</h3>
-                        <p className="text-sm text-gray-400 font-body">Silver Champion</p>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Battles Won</span>
-                          <span className="text-lg font-display font-bold text-white">{topThree[1]?.battlesWon || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Trophies</span>
-                          <div className="flex items-center space-x-2">
-                            <Trophy className="w-4 h-4 text-amber-400" />
-                            <span className="text-lg font-display font-bold text-amber-400">{topThree[1]?.trophies?.toLocaleString() || 0}</span>
+                        <div className="col-span-4 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-lg">
+                            {entry.avatar || getTierIcon(entry.rankTier)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-display font-bold text-white truncate">{entry.username}</p>
+                            {isYou && <span className="text-[10px] text-amber-400 font-body">You</span>}
                           </div>
                         </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Win Rate</span>
-                          <span className="text-lg font-display font-bold text-green-400">{topThree[1]?.winRate || 0}%</span>
+                        <div className="col-span-2 text-center">
+                          <span className="text-lg font-display font-bold text-amber-400">{entry.eloRating}</span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                        <div className="col-span-1 text-center">
+                          <span className="text-xs">{getTierIcon(entry.rankTier)}</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className="text-sm font-display font-bold text-green-400">{entry.battlesWon || 0}</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className="text-sm font-display font-bold text-red-400">{entry.battlesLost || 0}</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className="text-sm font-display font-bold text-amber-400">{entry.battlesDrawn || 0}</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className={`text-sm font-display font-bold ${(entry.streak || 0) > 0 ? 'text-purple-400' : 'text-gray-400'}`}>
+                            {(entry.streak || 0) > 0 ? `🔥${entry.streak}` : '-'}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* First Place */}
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="order-1 md:order-2 md:-mt-8"
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-6">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page <= 0}
+                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-all"
                 >
-                  <div className="glass rounded-2xl p-8 border-2 border-amber-400/50 relative overflow-hidden stadium-glow">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 to-orange-600/10" />
-                    <div className="relative">
-                      <div className="text-7xl text-center mb-4">{topThree[0]?.avatar || '👑'}</div>
-                      <div className="text-center mb-6">
-                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 mb-3 shadow-2xl shadow-amber-500/50 animate-pulse-glow">
-                          <Trophy className="w-10 h-10 text-white" />
-                        </div>
-                        <h3 className="text-3xl font-display font-black text-amber-400 mb-1">{topThree[0]?.username || '---'}</h3>
-                        <p className="text-sm text-gray-300 font-body">Gold Champion</p>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20">
-                          <span className="text-sm text-gray-300 font-body">Battles Won</span>
-                          <span className="text-xl font-display font-bold text-white">{topThree[0]?.battlesWon || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20">
-                          <span className="text-sm text-gray-300 font-body">Trophies</span>
-                          <div className="flex items-center space-x-2">
-                            <Trophy className="w-5 h-5 text-amber-400" />
-                            <span className="text-xl font-display font-bold text-amber-400">{topThree[0]?.trophies?.toLocaleString() || 0}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20">
-                          <span className="text-sm text-gray-300 font-body">Win Rate</span>
-                          <span className="text-xl font-display font-bold text-green-400">{topThree[0]?.winRate || 0}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Third Place */}
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="order-3"
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm text-gray-400 font-body">Page {page + 1} of {totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-all"
                 >
-                  <div className="glass rounded-2xl p-6 border-2 border-orange-600/50 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-600/10 to-orange-800/10" />
-                    <div className="relative">
-                      <div className="text-6xl text-center mb-4">{topThree[2]?.avatar || '🥉'}</div>
-                      <div className="text-center mb-4">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-600 to-orange-800 mb-3 shadow-lg">
-                          <span className="text-2xl font-display font-black text-white">3</span>
-                        </div>
-                        <h3 className="text-2xl font-display font-bold text-white mb-1">{topThree[2]?.username || '---'}</h3>
-                        <p className="text-sm text-gray-400 font-body">Bronze Champion</p>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Battles Won</span>
-                          <span className="text-lg font-display font-bold text-white">{topThree[2]?.battlesWon || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Trophies</span>
-                          <div className="flex items-center space-x-2">
-                            <Trophy className="w-4 h-4 text-amber-400" />
-                            <span className="text-lg font-display font-bold text-amber-400">{topThree[2]?.trophies?.toLocaleString() || 0}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-white/5">
-                          <span className="text-sm text-gray-400 font-body">Win Rate</span>
-                          <span className="text-lg font-display font-bold text-green-400">{topThree[2]?.winRate || 0}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              </>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
             )}
-          </div>
-        </div>
-
-        {/* Rest of Leaderboard */}
-        <div className="glass rounded-2xl p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-display font-bold text-white mb-2">Top 10 Rankings</h2>
-            <p className="text-gray-400 font-body">Compete to climb the ranks</p>
-          </div>
-
-          <div className="space-y-3">
-            {restOfLeaders.map((entry, index) => (
-              <motion.div
-                key={entry.rank}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getRankGradient(entry.rank)} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                    <span className="text-xl font-display font-black text-white">{entry.rank}</span>
-                  </div>
-                  <div className="text-4xl">{entry.avatar}</div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-display font-bold text-white group-hover:text-amber-400 transition-colors">{entry.username}</h3>
-                    <p className="text-sm text-gray-400 font-body">{entry.battlesWon} battles won</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-6">
-                  <div className="text-right">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Trophy className="w-4 h-4 text-amber-400" />
-                      <span className="text-lg font-display font-bold text-amber-400">{entry.trophies.toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm text-gray-400 font-body">trophies</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <TrendingUp className="w-4 h-4 text-green-400" />
-                      <span className="text-lg font-display font-bold text-green-400">{entry.winRate}%</span>
-                    </div>
-                    <p className="text-sm text-gray-400 font-body">win rate</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Your Rank */}
-        {user && myRank && (
+        {user && myRank && myRank.rank && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 glass rounded-2xl p-6 border-2 border-blue-500/50"
+            transition={{ delay: 0.4 }}
+            className="mt-8 glass rounded-2xl p-6 border-2 border-amber-500/50"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getRankGradient(myRank.rank)} flex items-center justify-center shadow-lg`}>
                   <span className="text-xl font-display font-black text-white">{myRank.rank}</span>
                 </div>
                 <div>
@@ -259,20 +239,18 @@ export default function LeaderboardPage() {
                   <p className="text-sm text-gray-400 font-body">Keep battling to climb higher!</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-6">
-                <div className="text-right">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Trophy className="w-4 h-4 text-amber-400" />
-                    <span className="text-lg font-display font-bold text-amber-400">{myRank.trophies?.toLocaleString() || 0}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 font-body">trophies</p>
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-xs text-gray-400 font-body">ELO</p>
+                  <p className="text-lg font-display font-bold text-amber-400">{myRank.eloRating}</p>
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
-                    <span className="text-lg font-display font-bold text-green-400">{myRank.winRate || 0}%</span>
-                  </div>
-                  <p className="text-sm text-gray-400 font-body">win rate</p>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400 font-body">Tier</p>
+                  <p className="text-lg font-display font-bold text-white">{getTierIcon(myRank.rankTier)} {myRank.rankTier}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400 font-body">Wins</p>
+                  <p className="text-lg font-display font-bold text-green-400">{myRank.wins}</p>
                 </div>
               </div>
             </div>

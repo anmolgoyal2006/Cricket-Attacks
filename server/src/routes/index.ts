@@ -6,6 +6,10 @@ import packRoutes from './packRoutes';
 import battleRoutes from './battleRoutes';
 import leaderboardRoutes from './leaderboardRoutes';
 import cricbuzzRoutes from './cricbuzzRoutes';
+import rankedRoutes from './rankedRoutes';
+import profileRoutes from './profileRoutes';
+import historyRoutes from './historyRoutes';
+import seasonRoutes from './seasonRoutes';
 
 const router = Router();
 
@@ -16,6 +20,10 @@ router.use('/packs', packRoutes);
 router.use('/battles', battleRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/cricbuzz', cricbuzzRoutes);
+router.use('/ranked', rankedRoutes);
+router.use('/profile', profileRoutes);
+router.use('/history', historyRoutes);
+router.use('/seasons', seasonRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

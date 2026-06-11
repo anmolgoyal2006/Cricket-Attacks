@@ -14,7 +14,14 @@ export interface IUser extends Document {
   battlesPlayed: number;
   wins: number;
   losses: number;
+  draws: number;
+  eloRating: number;
+  highestElo: number;
+  rankTier: string;
   dailyPackOpenedAt: Date | null;
+  dailyRewardClaimedAt: Date | null;
+  battleStreak: number;
+  longestStreak: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -81,9 +88,37 @@ const userSchema = new Schema<IUser>(
       type: Number,
       default: 0,
     },
+    draws: {
+      type: Number,
+      default: 0,
+    },
+    eloRating: {
+      type: Number,
+      default: 1000,
+    },
+    highestElo: {
+      type: Number,
+      default: 1000,
+    },
+    rankTier: {
+      type: String,
+      default: 'Bronze',
+    },
     dailyPackOpenedAt: {
       type: Date,
       default: null,
+    },
+    dailyRewardClaimedAt: {
+      type: Date,
+      default: null,
+    },
+    battleStreak: {
+      type: Number,
+      default: 0,
+    },
+    longestStreak: {
+      type: Number,
+      default: 0,
     },
   },
   {
@@ -96,6 +131,10 @@ const userSchema = new Schema<IUser>(
     },
   }
 );
+
+userSchema.index({ eloRating: -1 });
+userSchema.index({ wins: -1 });
+userSchema.index({ rankTier: 1, eloRating: -1 });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

@@ -1,16 +1,36 @@
 import { Server } from 'socket.io';
 import { AuthenticatedSocket } from './auth';
 import { BattleRoomHandlers } from './types';
+import User from '../models/User';
+
+const BASE_ELO_RANGE = 100;
+const MAX_ELO_RANGE = 500;
+const EXPAND_INTERVAL = 5000;
 
 interface QueueEntry {
   socket: AuthenticatedSocket;
   userId: string;
   username: string;
+  eloRating: number;
   joinedAt: Date;
   squad: any[];
 }
 
 const queue: QueueEntry[] = [];
+
+function findMatch(entry: QueueEntry): QueueEntry | null {
+  const waitTime = Date.now() - entry.joinedAt.getTime();
+  const eloRange = Math.min(MAX_ELO_RANGE, BASE_ELO_RANGE + Math.floor(waitTime / EXPAND_INTERVAL) * 50);
+
+  for (const candidate of queue) {
+    if (candidate.userId === entry.userId) continue;
+    const diff = Math.abs(candidate.eloRating - entry.eloRating);
+    if (diff <= eloRange) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
 export function setupMatchmaking(
   io: Server,
@@ -20,16 +40,19 @@ export function setupMatchmaking(
     if (queue.length < 2) return;
 
     const player1 = queue.shift()!;
-    const player2Index = queue.findIndex(
-      (p) => p.userId !== player1.userId
-    );
+    const player2 = findMatch(player1);
 
-    if (player2Index === -1) {
+    if (!player2) {
       queue.unshift(player1);
       return;
     }
 
-    const player2 = queue.splice(player2Index, 1)[0];
+    const p2Idx = queue.findIndex((p) => p.userId === player2.userId);
+    if (p2Idx === -1) {
+      queue.unshift(player1);
+      return;
+    }
+    queue.splice(p2Idx, 1);
 
     const battleId = `pvp_${player1.userId}_${player2.userId}_${Date.now()}`;
 
@@ -65,21 +88,26 @@ export function setupMatchmaking(
 
     io.to(battleId).emit('matchmaking:found', {
       battleId,
-      opponent1: { username: player2.username, userId: player2.userId },
-      opponent2: { username: player1.username, userId: player1.userId },
+      opponent1: { username: player2.username, userId: player2.userId, eloRating: player2.eloRating },
+      opponent2: { username: player1.username, userId: player1.userId, eloRating: player1.eloRating },
     });
 
     startBattleCountdown(io, battleId);
   }, 2000);
 
   return {
-    joinQueue(socket: AuthenticatedSocket, squad: any[]) {
+    async joinQueue(socket: AuthenticatedSocket, squad: any[]) {
       const existing = queue.find((e) => e.userId === socket.userId);
+      const user = await User.findById(socket.userId).lean();
+      const eloRating = user?.eloRating || 1000;
+
       if (existing) {
         existing.squad = squad;
+        existing.eloRating = eloRating;
         socket.emit('matchmaking:waiting', {
           position: queue.indexOf(existing) + 1,
           queueSize: queue.length,
+          eloRange: BASE_ELO_RANGE,
         });
         return;
       }
@@ -88,6 +116,7 @@ export function setupMatchmaking(
         socket,
         userId: socket.userId!,
         username: socket.username!,
+        eloRating,
         joinedAt: new Date(),
         squad,
       });
@@ -95,6 +124,8 @@ export function setupMatchmaking(
       socket.emit('matchmaking:waiting', {
         position: queue.length,
         queueSize: queue.length,
+        eloRating,
+        eloRange: BASE_ELO_RANGE,
       });
     },
 

@@ -10,6 +10,24 @@ import Link from 'next/link';
 
 type GamePhase = 'selection' | 'battle' | 'result';
 
+const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+
+const ATTRIBUTE_LABELS: Record<string, string> = {
+  batting: 'Batting',
+  bowling: 'Bowling',
+  fielding: 'Fielding',
+  captaincy: 'Captaincy',
+  pressure: 'Pressure',
+};
+
+const ATTRIBUTE_COLORS: Record<string, string> = {
+  batting: 'text-amber-400 border-amber-500/50 bg-amber-500/10',
+  bowling: 'text-blue-400 border-blue-500/50 bg-blue-500/10',
+  fielding: 'text-green-400 border-green-500/50 bg-green-500/10',
+  captaincy: 'text-purple-400 border-purple-500/50 bg-purple-500/10',
+  pressure: 'text-red-400 border-red-500/50 bg-red-500/10',
+};
+
 interface BattleCard {
   userCardId: string;
   cardId: string;
@@ -17,6 +35,9 @@ interface BattleCard {
   role: string;
   batting: number;
   bowling: number;
+  fielding: number;
+  captaincy: number;
+  pressure: number;
   overall: number;
   stat?: number;
 }
@@ -41,6 +62,8 @@ export default function BattlePage() {
   const [battleId, setBattleId] = useState<string | null>(null);
   const [playerHand, setPlayerHand] = useState<BattleCard[]>([]);
   const [aiHand, setAiHand] = useState<any[]>([]);
+  const [attributeOrder, setAttributeOrder] = useState<string[]>([]);
+  const [currentAttribute, setCurrentAttribute] = useState('');
   const [currentRound, setCurrentRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(5);
   const [playerScore, setPlayerScore] = useState(0);
@@ -81,6 +104,9 @@ export default function BattlePage() {
         role: card.role,
         batting: card.batting,
         bowling: card.bowling,
+        fielding: card.fielding,
+        captaincy: card.captaincy ?? 70,
+        pressure: card.pressure ?? 80,
         overall: card.overall,
       }]);
     }
@@ -109,6 +135,8 @@ export default function BattlePage() {
       setBattleId(data.battleId);
       setPlayerHand(data.playerCards);
       setAiHand(data.aiCards);
+      setAttributeOrder(data.attributeOrder);
+      setCurrentAttribute(data.attributeOrder?.[0] || 'batting');
       setCurrentRound(data.currentRound + 1);
       setTotalRounds(data.totalRounds);
       setPlayerScore(0);
@@ -172,7 +200,9 @@ export default function BattlePage() {
     setPlayerHand(prev => prev.filter(c => c.userCardId !== selectedPlayerCard?.userCardId));
     setSelectedPlayerCard(null);
     setSelectedComputerCard(null);
-    setCurrentRound(prev => prev + 1);
+    const nextRoundNum = currentRound + 1;
+    setCurrentRound(nextRoundNum);
+    setCurrentAttribute(attributeOrder[nextRoundNum - 1] || 'batting');
     setBattleState('choosing');
   };
 
@@ -182,6 +212,8 @@ export default function BattlePage() {
     setBattleId(null);
     setPlayerHand([]);
     setAiHand([]);
+    setAttributeOrder([]);
+    setCurrentAttribute('');
     setBattleState('choosing');
     setCurrentRound(1);
     setPlayerScore(0);
@@ -409,6 +441,11 @@ export default function BattlePage() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-amber-400 font-body mb-2">Round {currentRound}/{totalRounds}</p>
+                  {currentAttribute && (
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold mb-2 inline-block border ${ATTRIBUTE_COLORS[currentAttribute] || 'text-amber-400 border-amber-500/50 bg-amber-500/10'}`}>
+                      {ATTRIBUTE_LABELS[currentAttribute] || currentAttribute}
+                    </div>
+                  )}
                   <Swords className="w-12 h-12 text-amber-400 mx-auto" />
                 </div>
                 <div className="text-center">
@@ -427,10 +464,11 @@ export default function BattlePage() {
                   Your Hand ({playerHand.length} cards)
                 </h3>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {playerHand.map((card) => {
                     const isSelected = selectedPlayerCard?.userCardId === card.userCardId;
                     const isDisabled = battleState !== 'choosing';
+                    const attrIcons: Record<string, string> = { batting: 'text-amber-400', bowling: 'text-blue-400', fielding: 'text-green-400', captaincy: 'text-purple-400', pressure: 'text-red-400' };
                     return (
                       <motion.div
                         key={card.userCardId}
@@ -440,14 +478,23 @@ export default function BattlePage() {
                           isSelected ? 'ring-4 ring-blue-500 rounded-2xl' : ''
                         }`}
                       >
-                        <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center p-2">
-                          <div className="text-center">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-2">
-                              <span className="text-white font-bold text-sm">{card.name.split(' ').map(n => n[0]).join('')}</span>
-                            </div>
-                            <p className="text-xs font-display font-bold text-white">{card.name}</p>
-                            <p className="text-xs text-gray-400 font-body">{card.role}</p>
-                            <p className="text-xl font-display font-bold text-amber-400">{getCardMainStat(card)}</p>
+                        <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-1">
+                            <span className="text-white font-bold text-xs">{card.name.split(' ').map(n => n[0]).join('')}</span>
+                          </div>
+                          <p className="text-[10px] font-display font-bold text-white leading-tight text-center">{card.name}</p>
+                          <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
+                          <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
+                            {ATTRIBUTES.map((attr) => {
+                              const val = (card as any)[attr] ?? 80;
+                              const isActive = attr === currentAttribute;
+                              return (
+                                <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'}`}>
+                                  <span className={`text-[8px] font-body ${attrIcons[attr] || 'text-gray-400'}`}>{attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}</span>
+                                  <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </motion.div>
@@ -468,7 +515,7 @@ export default function BattlePage() {
                   Computer Hand ({aiHand.length} cards)
                 </h3>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {aiHand.map((card, index) => {
                     const isRevealed = selectedComputerCard?.name === card.name;
                     return (
@@ -480,17 +527,29 @@ export default function BattlePage() {
                         className={isRevealed ? 'ring-4 ring-red-500 rounded-2xl' : ''}
                       >
                         {isRevealed ? (
-                          <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-red-500/30 flex items-center justify-center p-2">
-                            <div className="text-center">
-                              <p className="text-xs font-display font-bold text-white">{selectedComputerCard?.name}</p>
-                              <p className="text-xl font-display font-bold text-red-400">{selectedComputerCard?.stat}</p>
+                          <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-red-500/30 flex flex-col items-center justify-center p-1.5">
+                            <p className="text-[10px] font-display font-bold text-white text-center">{selectedComputerCard?.name}</p>
+                            <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
+                            <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
+                              {ATTRIBUTES.map((attr) => {
+                                const val = card[attr] ?? 80;
+                                const isActive = attr === currentAttribute;
+                                return (
+                                  <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-red-500/20 ring-1 ring-red-500/50' : 'bg-white/5'}`}>
+                                    <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
+                                      {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
+                                    </span>
+                                    <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         ) : (
                           <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-red-500/30 flex items-center justify-center">
                             <div className="text-center">
-                              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-2">
-                                <Swords className="w-8 h-8 text-red-400" />
+                              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-2">
+                                <Swords className="w-6 h-6 text-red-400" />
                               </div>
                               <p className="text-xs text-gray-500 font-body">Hidden</p>
                             </div>
@@ -512,7 +571,12 @@ export default function BattlePage() {
                   className="glass rounded-2xl p-8 mb-8"
                 >
                   <div className="text-center mb-6">
-                    <h3 className="text-3xl font-display font-bold text-white mb-4">{getRoundWinnerText()}</h3>
+                    <h3 className="text-3xl font-display font-bold text-white mb-2">{getRoundWinnerText()}</h3>
+                    {currentAttribute && (
+                      <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold mb-4 border ${ATTRIBUTE_COLORS[currentAttribute] || 'text-amber-400 border-amber-500/50 bg-amber-500/10'}`}>
+                        {ATTRIBUTE_LABELS[currentAttribute] || currentAttribute}
+                      </div>
+                    )}
                     <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-6">
                       <div>
                         <p className="text-sm text-gray-400 font-body mb-2">Your Card</p>
@@ -520,6 +584,7 @@ export default function BattlePage() {
                           <p className="text-lg font-display font-bold text-white">{selectedPlayerCard.name}</p>
                           <p className="text-sm text-gray-400 font-body">{selectedPlayerCard.role}</p>
                           <p className="text-2xl font-display font-black text-blue-400 mt-2">{getCardMainStat(selectedPlayerCard)}</p>
+                          {currentAttribute && <p className="text-[10px] text-gray-500 font-body">({ATTRIBUTE_LABELS[currentAttribute]})</p>}
                         </div>
                       </div>
                       <div>
@@ -547,7 +612,7 @@ export default function BattlePage() {
               )}
             </AnimatePresence>
 
-            {roundHistory.length > 0 && battleState !== 'roundResult' && (
+                {roundHistory.length > 0 && battleState !== 'roundResult' && (
               <div className="glass rounded-2xl p-6">
                 <h3 className="text-xl font-display font-bold text-white mb-4">Round History</h3>
                 <div className="space-y-2">
@@ -630,29 +695,33 @@ export default function BattlePage() {
             <div className="glass rounded-2xl p-6 mb-8">
               <h3 className="text-xl font-display font-bold text-white mb-4">Match Summary</h3>
               <div className="space-y-3">
-                {roundHistory.map((round, index) => (
-                  <div key={index} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-amber-400 font-body font-semibold">Round {index + 1}</span>
-                      <span className={`text-sm font-display font-bold ${
-                        round.winner === 'player' ? 'text-green-400' :
-                        round.winner === 'computer' ? 'text-red-400' : 'text-gray-400'
-                      }`}>
-                        {round.winner === 'player' ? 'You Won' : round.winner === 'computer' ? 'Computer Won' : 'Tie'}
-                      </span>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-blue-400 font-body">{round.playerCard.name}</span>
-                        <span className="text-white font-display font-bold">{round.playerStat}</span>
+                {roundHistory.map((round, index) => {
+                  const attr = attributeOrder?.[index] || '';
+                  return (
+                    <div key={index} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-amber-400 font-body font-semibold">Round {index + 1}</span>
+                        {attr && <span className={`text-[10px] px-2 py-0.5 rounded-full border ${ATTRIBUTE_COLORS[attr] || ''}`}>{ATTRIBUTE_LABELS[attr] || attr}</span>}
+                        <span className={`text-sm font-display font-bold ${
+                          round.winner === 'player' ? 'text-green-400' :
+                          round.winner === 'computer' ? 'text-red-400' : 'text-gray-400'
+                        }`}>
+                          {round.winner === 'player' ? 'You Won' : round.winner === 'computer' ? 'Computer Won' : 'Tie'}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-red-400 font-body">{round.computerCard.name}</span>
-                        <span className="text-white font-display font-bold">{round.computerStat}</span>
+                      <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-blue-400 font-body">{round.playerCard.name}</span>
+                          <span className="text-white font-display font-bold">{round.playerStat}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-red-400 font-body">{round.computerCard.name}</span>
+                          <span className="text-white font-display font-bold">{round.computerStat}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

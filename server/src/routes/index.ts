@@ -5,6 +5,7 @@ import collectionRoutes from './collectionRoutes';
 import packRoutes from './packRoutes';
 import battleRoutes from './battleRoutes';
 import leaderboardRoutes from './leaderboardRoutes';
+import cricbuzzRoutes from './cricbuzzRoutes';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use('/user-cards', collectionRoutes);
 router.use('/packs', packRoutes);
 router.use('/battles', battleRoutes);
 router.use('/leaderboard', leaderboardRoutes);
+router.use('/cricbuzz', cricbuzzRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

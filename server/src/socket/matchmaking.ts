@@ -123,11 +123,6 @@ function startBattleCountdown(io: Server, battleId: string) {
 
     if (countdown < 0) {
       clearInterval(interval);
-      io.to(battleId).emit('battle:start', {
-        battleId,
-        round: 1,
-        totalRounds: 5,
-      });
     }
   }, 1000);
 }

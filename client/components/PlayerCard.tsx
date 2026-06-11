@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from '@/lib/utils';
-import { TrendingUp, Target, Shield } from 'lucide-react';
+import { TrendingUp, Target, Shield, Crown, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface PlayerCardPlayer {
@@ -13,6 +13,8 @@ interface PlayerCardPlayer {
   batting: number;
   bowling: number;
   fielding: number;
+  captaincy?: number;
+  pressure?: number;
   overall: number;
   specialty: string;
   rarity: 'Common' | 'Rare' | 'Epic' | 'Legend';
@@ -117,21 +119,31 @@ export default function PlayerCard({ player, onClick, className, animate = false
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/10">
-              <TrendingUp className="w-4 h-4 text-amber-400 mb-1" />
-              <span className="text-xs text-gray-400 font-body">BAT</span>
-              <span className="text-lg font-display font-bold text-white">{player.batting}</span>
+          <div className="grid grid-cols-5 gap-1">
+            <div className="flex flex-col items-center p-1 rounded-lg bg-white/5 border border-white/10">
+              <TrendingUp className="w-3 h-3 text-amber-400 mb-0.5" />
+              <span className="text-[10px] text-gray-400 font-body">BAT</span>
+              <span className="text-sm font-display font-bold text-white">{player.batting}</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/10">
-              <Target className="w-4 h-4 text-blue-400 mb-1" />
-              <span className="text-xs text-gray-400 font-body">BOWL</span>
-              <span className="text-lg font-display font-bold text-white">{player.bowling}</span>
+            <div className="flex flex-col items-center p-1 rounded-lg bg-white/5 border border-white/10">
+              <Target className="w-3 h-3 text-blue-400 mb-0.5" />
+              <span className="text-[10px] text-gray-400 font-body">BOWL</span>
+              <span className="text-sm font-display font-bold text-white">{player.bowling}</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/10">
-              <Shield className="w-4 h-4 text-green-400 mb-1" />
-              <span className="text-xs text-gray-400 font-body">FIELD</span>
-              <span className="text-lg font-display font-bold text-white">{player.fielding}</span>
+            <div className="flex flex-col items-center p-1 rounded-lg bg-white/5 border border-white/10">
+              <Shield className="w-3 h-3 text-green-400 mb-0.5" />
+              <span className="text-[10px] text-gray-400 font-body">FLD</span>
+              <span className="text-sm font-display font-bold text-white">{player.fielding}</span>
+            </div>
+            <div className="flex flex-col items-center p-1 rounded-lg bg-white/5 border border-white/10">
+              <Crown className="w-3 h-3 text-purple-400 mb-0.5" />
+              <span className="text-[10px] text-gray-400 font-body">CAP</span>
+              <span className="text-sm font-display font-bold text-white">{player.captaincy ?? 70}</span>
+            </div>
+            <div className="flex flex-col items-center p-1 rounded-lg bg-white/5 border border-white/10">
+              <Zap className="w-3 h-3 text-red-400 mb-0.5" />
+              <span className="text-[10px] text-gray-400 font-body">PRE</span>
+              <span className="text-sm font-display font-bold text-white">{player.pressure ?? 80}</span>
             </div>
           </div>
         </div>

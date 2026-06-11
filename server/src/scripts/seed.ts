@@ -6,9 +6,9 @@ import { config } from '../config';
 dotenv.config();
 
 const playersData = [
-  {
-    id: 1, name: "Virat Kohli", role: "Batsman", country: "India",
-    batting: 96, bowling: 25, fielding: 92, overall: 95,
+  // Each player: batting, bowling, fielding, captaincy, pressure → overall = avg of all 5
+  { id: 1, name: "Virat Kohli", role: "Batsman", country: "India",
+    batting: 96, bowling: 25, fielding: 92, captaincy: 88, pressure: 90, overall: 78,
     specialty: "Chase Master", rarity: "Legend",
     image: "https://via.placeholder.com/300x400/1e3a8a/ffffff?text=VK",
     formats: {
@@ -20,9 +20,8 @@ const playersData = [
       bilateral: { matches: 230, runs: 11053, avg: 56.6, sr: 94.2, hundreds: 39, fifties: 53, wickets: 4, economy: 6.21 }
     }
   },
-  {
-    id: 2, name: "Rohit Sharma", role: "Batsman", country: "India",
-    batting: 94, bowling: 28, fielding: 85, overall: 93,
+  { id: 2, name: "Rohit Sharma", role: "Batsman", country: "India",
+    batting: 94, bowling: 28, fielding: 85, captaincy: 82, pressure: 85, overall: 75,
     specialty: "Hitman", rarity: "Legend",
     image: "https://via.placeholder.com/300x400/0f766e/ffffff?text=RS",
     formats: {
@@ -34,9 +33,8 @@ const playersData = [
       bilateral: { matches: 219, runs: 8399, avg: 45.6, sr: 88.9, hundreds: 21, fifties: 42, wickets: 8, economy: 5.29 }
     }
   },
-  {
-    id: 3, name: "Babar Azam", role: "Batsman", country: "Pakistan",
-    batting: 93, bowling: 20, fielding: 88, overall: 91,
+  { id: 3, name: "Babar Azam", role: "Batsman", country: "Pakistan",
+    batting: 93, bowling: 20, fielding: 88, captaincy: 78, pressure: 82, overall: 72,
     specialty: "Consistency King", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/16a34a/ffffff?text=BA",
     formats: {
@@ -48,9 +46,8 @@ const playersData = [
       bilateral: { matches: 95, runs: 4517, avg: 58.2, sr: 90.1, hundreds: 16, fifties: 23, wickets: 0, economy: 0 }
     }
   },
-  {
-    id: 4, name: "Steve Smith", role: "Batsman", country: "Australia",
-    batting: 92, bowling: 32, fielding: 86, overall: 90,
+  { id: 4, name: "Steve Smith", role: "Batsman", country: "Australia",
+    batting: 92, bowling: 32, fielding: 86, captaincy: 85, pressure: 88, overall: 77,
     specialty: "Test Legend", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/dc2626/ffffff?text=SS",
     formats: {
@@ -62,9 +59,8 @@ const playersData = [
       bilateral: { matches: 117, runs: 3508, avg: 40.3, sr: 86.9, hundreds: 8, fifties: 19, wickets: 24, economy: 5.3 }
     }
   },
-  {
-    id: 5, name: "Joe Root", role: "Batsman", country: "England",
-    batting: 91, bowling: 35, fielding: 84, overall: 89,
+  { id: 5, name: "Joe Root", role: "Batsman", country: "England",
+    batting: 91, bowling: 35, fielding: 84, captaincy: 80, pressure: 84, overall: 75,
     specialty: "Anchor", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/1e40af/ffffff?text=JR",
     formats: {
@@ -76,9 +72,8 @@ const playersData = [
       bilateral: { matches: 128, runs: 4561, avg: 45.1, sr: 86.2, hundreds: 12, fifties: 26, wickets: 25, economy: 5.4 }
     }
   },
-  {
-    id: 6, name: "Kane Williamson", role: "Batsman", country: "New Zealand",
-    batting: 90, bowling: 30, fielding: 87, overall: 88,
+  { id: 6, name: "Kane Williamson", role: "Batsman", country: "New Zealand",
+    batting: 90, bowling: 30, fielding: 87, captaincy: 92, pressure: 88, overall: 77,
     specialty: "Captain Cool", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/0891b2/ffffff?text=KW",
     formats: {
@@ -90,9 +85,8 @@ const playersData = [
       bilateral: { matches: 122, runs: 4377, avg: 44.6, sr: 80.8, hundreds: 9, fifties: 30, wickets: 32, economy: 5.1 }
     }
   },
-  {
-    id: 7, name: "Jasprit Bumrah", role: "Bowler", country: "India",
-    batting: 35, bowling: 98, fielding: 82, overall: 94,
+  { id: 7, name: "Jasprit Bumrah", role: "Bowler", country: "India",
+    batting: 35, bowling: 98, fielding: 82, captaincy: 70, pressure: 92, overall: 75,
     specialty: "Yorker King", rarity: "Legend",
     image: "https://via.placeholder.com/300x400/7c2d12/ffffff?text=JB",
     formats: {
@@ -104,9 +98,8 @@ const playersData = [
       bilateral: { matches: 59, runs: 86, avg: 12.3, sr: 91.5, hundreds: 0, fifties: 0, wickets: 98, economy: 4.89 }
     }
   },
-  {
-    id: 8, name: "Pat Cummins", role: "Bowler", country: "Australia",
-    batting: 42, bowling: 95, fielding: 85, overall: 92,
+  { id: 8, name: "Pat Cummins", role: "Bowler", country: "Australia",
+    batting: 42, bowling: 95, fielding: 85, captaincy: 88, pressure: 90, overall: 80,
     specialty: "Pace Ace", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/15803d/ffffff?text=PC",
     formats: {
@@ -118,9 +111,8 @@ const playersData = [
       bilateral: { matches: 58, runs: 368, avg: 19.4, sr: 90.4, hundreds: 0, fifties: 1, wickets: 118, economy: 5.21 }
     }
   },
-  {
-    id: 9, name: "Kagiso Rabada", role: "Bowler", country: "South Africa",
-    batting: 38, bowling: 94, fielding: 83, overall: 90,
+  { id: 9, name: "Kagiso Rabada", role: "Bowler", country: "South Africa",
+    batting: 38, bowling: 94, fielding: 83, captaincy: 65, pressure: 85, overall: 73,
     specialty: "Express Pace", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/059669/ffffff?text=KR",
     formats: {
@@ -132,9 +124,8 @@ const playersData = [
       bilateral: { matches: 78, runs: 311, avg: 15.1, sr: 76.8, hundreds: 0, fifties: 0, wickets: 124, economy: 4.76 }
     }
   },
-  {
-    id: 10, name: "Shaheen Afridi", role: "Bowler", country: "Pakistan",
-    batting: 36, bowling: 93, fielding: 80, overall: 89,
+  { id: 10, name: "Shaheen Afridi", role: "Bowler", country: "Pakistan",
+    batting: 36, bowling: 93, fielding: 80, captaincy: 60, pressure: 82, overall: 70,
     specialty: "Swing Sultan", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/0d9488/ffffff?text=SA",
     formats: {
@@ -146,9 +137,8 @@ const playersData = [
       bilateral: { matches: 37, runs: 134, avg: 13.4, sr: 67.3, hundreds: 0, fifties: 0, wickets: 67, economy: 5.12 }
     }
   },
-  {
-    id: 11, name: "Ravindra Jadeja", role: "All-rounder", country: "India",
-    batting: 78, bowling: 86, fielding: 97, overall: 91,
+  { id: 11, name: "Ravindra Jadeja", role: "All-rounder", country: "India",
+    batting: 78, bowling: 86, fielding: 97, captaincy: 76, pressure: 84, overall: 84,
     specialty: "Sword Master", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/4338ca/ffffff?text=RJ",
     formats: {
@@ -160,9 +150,8 @@ const playersData = [
       bilateral: { matches: 154, runs: 1877, avg: 31.6, sr: 88.4, hundreds: 2, fifties: 8, wickets: 170, economy: 5.04 }
     }
   },
-  {
-    id: 12, name: "Ben Stokes", role: "All-rounder", country: "England",
-    batting: 84, bowling: 82, fielding: 89, overall: 90,
+  { id: 12, name: "Ben Stokes", role: "All-rounder", country: "England",
+    batting: 84, bowling: 82, fielding: 89, captaincy: 86, pressure: 92, overall: 87,
     specialty: "Match Winner", rarity: "Epic",
     image: "https://via.placeholder.com/300x400/b91c1c/ffffff?text=BS",
     formats: {
@@ -174,9 +163,8 @@ const playersData = [
       bilateral: { matches: 76, runs: 1786, avg: 36.2, sr: 91.8, hundreds: 1, fifties: 13, wickets: 50, economy: 5.73 }
     }
   },
-  {
-    id: 13, name: "Hardik Pandya", role: "All-rounder", country: "India",
-    batting: 80, bowling: 79, fielding: 88, overall: 87,
+  { id: 13, name: "Hardik Pandya", role: "All-rounder", country: "India",
+    batting: 80, bowling: 79, fielding: 88, captaincy: 72, pressure: 82, overall: 80,
     specialty: "Big Hitter", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/0369a1/ffffff?text=HP",
     formats: {
@@ -188,9 +176,8 @@ const playersData = [
       bilateral: { matches: 63, runs: 1089, avg: 31.1, sr: 111.2, hundreds: 1, fifties: 5, wickets: 53, economy: 5.51 }
     }
   },
-  {
-    id: 14, name: "Mitchell Starc", role: "Bowler", country: "Australia",
-    batting: 40, bowling: 93, fielding: 81, overall: 89,
+  { id: 14, name: "Mitchell Starc", role: "Bowler", country: "Australia",
+    batting: 40, bowling: 93, fielding: 81, captaincy: 62, pressure: 84, overall: 72,
     specialty: "White Ball Demon", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/7e22ce/ffffff?text=MS",
     formats: {
@@ -202,9 +189,8 @@ const playersData = [
       bilateral: { matches: 72, runs: 573, avg: 16.8, sr: 90.2, hundreds: 0, fifties: 1, wickets: 167, economy: 5.38 }
     }
   },
-  {
-    id: 15, name: "Rashid Khan", role: "Bowler", country: "Afghanistan",
-    batting: 52, bowling: 92, fielding: 84, overall: 88,
+  { id: 15, name: "Rashid Khan", role: "Bowler", country: "Afghanistan",
+    batting: 52, bowling: 92, fielding: 84, captaincy: 68, pressure: 86, overall: 76,
     specialty: "Spin Wizard", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/be123c/ffffff?text=RK",
     formats: {
@@ -216,9 +202,8 @@ const playersData = [
       bilateral: { matches: 73, runs: 812, avg: 17.0, sr: 97.8, hundreds: 0, fifties: 2, wickets: 126, economy: 4.48 }
     }
   },
-  {
-    id: 16, name: "David Warner", role: "Batsman", country: "Australia",
-    batting: 89, bowling: 15, fielding: 82, overall: 86,
+  { id: 16, name: "David Warner", role: "Batsman", country: "Australia",
+    batting: 89, bowling: 15, fielding: 82, captaincy: 72, pressure: 80, overall: 68,
     specialty: "Aggressor", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/0891b2/ffffff?text=DW",
     formats: {
@@ -230,9 +215,8 @@ const playersData = [
       bilateral: { matches: 115, runs: 4593, avg: 42.1, sr: 95.4, hundreds: 13, fifties: 22, wickets: 0, economy: 0 }
     }
   },
-  {
-    id: 17, name: "Quinton de Kock", role: "Wicketkeeper-Batsman", country: "South Africa",
-    batting: 86, bowling: 10, fielding: 92, overall: 85,
+  { id: 17, name: "Quinton de Kock", role: "Wicketkeeper-Batsman", country: "South Africa",
+    batting: 86, bowling: 10, fielding: 92, captaincy: 65, pressure: 78, overall: 66,
     specialty: "Explosive Opener", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/ea580c/ffffff?text=QK",
     formats: {
@@ -244,9 +228,8 @@ const playersData = [
       bilateral: { matches: 118, runs: 4655, avg: 42.3, sr: 95.1, hundreds: 13, fifties: 27, wickets: 0, economy: 0 }
     }
   },
-  {
-    id: 18, name: "AB de Villiers", role: "Batsman", country: "South Africa",
-    batting: 95, bowling: 28, fielding: 94, overall: 93,
+  { id: 18, name: "AB de Villiers", role: "Batsman", country: "South Africa",
+    batting: 95, bowling: 28, fielding: 94, captaincy: 75, pressure: 88, overall: 76,
     specialty: "Mr. 360", rarity: "Legend",
     image: "https://via.placeholder.com/300x400/c026d3/ffffff?text=AB",
     formats: {
@@ -258,9 +241,8 @@ const playersData = [
       bilateral: { matches: 190, runs: 7647, avg: 51.3, sr: 98.8, hundreds: 19, fifties: 42, wickets: 0, economy: 0 }
     }
   },
-  {
-    id: 19, name: "MS Dhoni", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 88, bowling: 20, fielding: 96, overall: 92,
+  { id: 19, name: "MS Dhoni", role: "Wicketkeeper-Batsman", country: "India",
+    batting: 88, bowling: 20, fielding: 96, captaincy: 95, pressure: 94, overall: 79,
     specialty: "Captain Cool", rarity: "Legend",
     image: "https://via.placeholder.com/300x400/0e7490/ffffff?text=MSD",
     formats: {
@@ -272,9 +254,8 @@ const playersData = [
       bilateral: { matches: 272, runs: 8079, avg: 48.0, sr: 87.2, hundreds: 8, fifties: 50, wickets: 1, economy: 5.23 }
     }
   },
-  {
-    id: 20, name: "Trent Boult", role: "Bowler", country: "New Zealand",
-    batting: 33, bowling: 91, fielding: 79, overall: 86,
+  { id: 20, name: "Trent Boult", role: "Bowler", country: "New Zealand",
+    batting: 33, bowling: 91, fielding: 79, captaincy: 58, pressure: 80, overall: 68,
     specialty: "Swing Master", rarity: "Rare",
     image: "https://via.placeholder.com/300x400/0f766e/ffffff?text=TB",
     formats: {

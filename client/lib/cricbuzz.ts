@@ -1,5 +1,59 @@
 // lib/cricbuzz.ts
 
+// Live Matches Types
+export interface CricbuzzTeam {
+  teamId: number;
+  teamName: string;
+  teamImg: string;
+}
+
+export interface CricbuzzMatchInfo {
+  matchId: number;
+  seriesName: string;
+  matchDesc: string;
+  state: string;
+  status: string;
+  venue: {
+    ground: string;
+    city: string;
+    country: string;
+  };
+  startDate: number;
+  endDate: number;
+}
+
+export interface CricbuzzScore {
+  teamId: number;
+  teamName: string;
+  scores: string;
+  wickets: number;
+  overs: number;
+}
+
+export interface CricbuzzLiveMatch {
+  matchInfo: CricbuzzMatchInfo;
+  score: CricbuzzScore[];
+}
+
+export interface CricbuzzUpcomingMatch {
+  matchInfo: CricbuzzMatchInfo;
+}
+
+export interface LiveMatchesResponse {
+  success: boolean;
+  data: CricbuzzLiveMatch[];
+  cached: boolean;
+  timestamp: number;
+}
+
+export interface UpcomingMatchesResponse {
+  success: boolean;
+  data: CricbuzzUpcomingMatch[];
+  cached: boolean;
+  timestamp: number;
+}
+
+// Player Stats Types (existing)
 interface FormatStats {
   matches: number;
   runs: number;
@@ -206,4 +260,61 @@ function calculateOverallRating(bat: any, bowl: any): number {
   const battingRating = calculateBattingRating(bat);
   const bowlingRating = calculateBowlingRating(bowl);
   return Math.floor(battingRating * 0.6 + bowlingRating * 0.3 + 75 * 0.1);
+}
+
+// Live Matches API Helpers
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+export async function getLiveMatches(): Promise<LiveMatchesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/cricbuzz/live`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Always fetch fresh data
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching live matches:', error);
+    return {
+      success: false,
+      data: [],
+      cached: false,
+      timestamp: Date.now(),
+    };
+  }
+}
+
+export async function getUpcomingMatches(): Promise<UpcomingMatchesResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/cricbuzz/upcoming`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Always fetch fresh data
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching upcoming matches:', error);
+    return {
+      success: false,
+      data: [],
+      cached: false,
+      timestamp: Date.now(),
+    };
+  }
 }

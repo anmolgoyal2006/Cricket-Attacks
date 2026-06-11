@@ -7,7 +7,11 @@ export interface PvPCard {
   userCardId: string;
   name: string;
   role: string;
-  stat: number;
+  batting: number;
+  bowling: number;
+  fielding: number;
+  captaincy: number;
+  pressure: number;
 }
 
 export interface RoundResult {
@@ -17,6 +21,7 @@ export interface RoundResult {
   winner: 'player1' | 'player2' | 'tie';
   player1Score: number;
   player2Score: number;
+  attribute: string;
 }
 
 export interface OpponentInfo {
@@ -41,6 +46,8 @@ export function useMultiplayerBattle() {
   const [countdown, setCountdown] = useState(0);
   const [round, setRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(5);
+  const [currentAttribute, setCurrentAttribute] = useState('');
+  const [attributeOrder, setAttributeOrder] = useState<string[]>([]);
   const [myCards, setMyCards] = useState<PvPCard[]>([]);
   const [usedCardIds, setUsedCardIds] = useState<Set<string>>(new Set());
   const [myScore, setMyScore] = useState(0);
@@ -55,6 +62,9 @@ export function useMultiplayerBattle() {
 
   const statusRef = useRef(status);
   statusRef.current = status;
+
+  const attributeOrderRef = useRef(attributeOrder);
+  attributeOrderRef.current = attributeOrder;
 
   useEffect(() => {
     const socket = getSocket();
@@ -84,16 +94,19 @@ export function useMultiplayerBattle() {
       setCountdown(data.seconds);
     };
 
-    const handleBattleStart = (data: { battleId: string; round: number; totalRounds: number }) => {
+    const handleBattleStart = (data: { battleId: string; round: number; totalRounds: number; attribute?: string; attributeOrder?: string[] }) => {
       setBattleId(data.battleId);
       setRound(data.round);
       setTotalRounds(data.totalRounds);
+      setCurrentAttribute(data.attribute || 'batting');
+      setAttributeOrder(data.attributeOrder || []);
       setStatus('playing');
       setCountdown(0);
     };
 
-    const handleRoundStart = (data: { round: number; totalRounds: number }) => {
+    const handleRoundStart = (data: { round: number; totalRounds: number; attribute?: string }) => {
       setRound(data.round);
+      setCurrentAttribute(data.attribute || (attributeOrderRef.current[data.round - 1] || 'batting'));
       setOpponentSelected(false);
       setCurrentRoundResult(null);
       setAutoSelected(false);
@@ -107,6 +120,7 @@ export function useMultiplayerBattle() {
     const handleRoundResult = (data: RoundResult) => {
       setMyScore(data.player1Score);
       setOpponentScore(data.player2Score);
+      setCurrentAttribute(data.attribute || 'batting');
       setCurrentRoundResult(data);
       setRoundHistory((prev) => [...prev, data]);
       setStatus('roundResult');
@@ -151,6 +165,8 @@ export function useMultiplayerBattle() {
       battleId: string;
       round: number;
       totalRounds: number;
+      attribute?: string;
+      attributeOrder?: string[];
       player1Score: number;
       player2Score: number;
       roundHistory: RoundResult[];
@@ -161,6 +177,8 @@ export function useMultiplayerBattle() {
       setBattleId(data.battleId);
       setRound(data.round);
       setTotalRounds(data.totalRounds);
+      setCurrentAttribute(data.attribute || (data.attributeOrder || [])[data.round - 1] || 'batting');
+      setAttributeOrder(data.attributeOrder || []);
       setMyScore(data.player1Score);
       setOpponentScore(data.player2Score);
       setRoundHistory(data.roundHistory);
@@ -250,7 +268,7 @@ export function useMultiplayerBattle() {
   }, []);
 
   const getCardMainStat = useCallback((card: PvPCard): number => {
-    return card.stat;
+    return Math.round((card.batting + card.bowling + (card.fielding || 80) + (card.captaincy || 70) + (card.pressure || 80)) / 5);
   }, []);
 
   return {
@@ -262,6 +280,8 @@ export function useMultiplayerBattle() {
     countdown,
     round,
     totalRounds,
+    currentAttribute,
+    attributeOrder,
     myCards,
     usedCardIds,
     myScore,

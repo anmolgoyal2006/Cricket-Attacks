@@ -19,6 +19,8 @@ export interface IPlayer extends Document {
   batting: number;
   bowling: number;
   fielding: number;
+  captaincy: number;
+  pressure: number;
   overall: number;
   specialty: string;
   rarity: 'Common' | 'Rare' | 'Epic' | 'Legend';
@@ -81,6 +83,18 @@ const playerSchema = new Schema<IPlayer>(
       max: 100,
     },
     fielding: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+    captaincy: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+    pressure: {
       type: Number,
       required: true,
       min: 0,

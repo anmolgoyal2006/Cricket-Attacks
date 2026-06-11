@@ -5,6 +5,7 @@ export interface IRoundResult {
   playerCardId: mongoose.Types.ObjectId;
   playerCardName: string;
   playerStat: number;
+  attribute: string;
   aiId: string;
   computerCardName: string;
   computerStat: number;
@@ -14,8 +15,9 @@ export interface IRoundResult {
 export interface IBattle extends Document {
   user: mongoose.Types.ObjectId;
   playerSquad: mongoose.Types.ObjectId[];
-  aiSquad: { aiId: string; name: string; role: string; stat: number }[];
+  aiSquad: { aiId: string; name: string; role: string; batting: number; bowling: number; fielding: number; captaincy: number; pressure: number; overall: number }[];
   rounds: IRoundResult[];
+  attributeOrder: string[];
   playerScore: number;
   computerScore: number;
   winner: 'player' | 'computer' | 'tie';
@@ -37,6 +39,7 @@ const roundResultSchema = new Schema<IRoundResult>(
     playerCardId: { type: Schema.Types.ObjectId, ref: 'Player' },
     playerCardName: { type: String, required: true },
     playerStat: { type: Number, required: true },
+    attribute: { type: String, required: true },
     aiId: { type: String },
     computerCardName: { type: String, required: true },
     computerStat: { type: Number, required: true },
@@ -68,10 +71,16 @@ const battleSchema = new Schema<IBattle>(
         aiId: String,
         name: String,
         role: String,
-        stat: Number,
+        batting: Number,
+        bowling: Number,
+        fielding: Number,
+        captaincy: Number,
+        pressure: Number,
+        overall: Number,
       },
     ],
     rounds: [roundResultSchema],
+    attributeOrder: { type: [String], default: [] },
     playerScore: { type: Number, default: 0 },
     computerScore: { type: Number, default: 0 },
     winner: {

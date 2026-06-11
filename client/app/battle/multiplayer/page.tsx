@@ -2,12 +2,30 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Trophy, Zap, Users, ArrowRight, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw, CheckCircle } from 'lucide-react';
+import { Swords, Trophy, Zap, Users, ArrowRight, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw, CheckCircle, Crown } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { userCardsApi } from '@/lib/api';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import { useMultiplayerBattle } from '@/lib/useMultiplayerBattle';
 import Link from 'next/link';
+
+const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+
+const ATTRIBUTE_LABELS: Record<string, string> = {
+  batting: 'Batting',
+  bowling: 'Bowling',
+  fielding: 'Fielding',
+  captaincy: 'Captaincy',
+  pressure: 'Pressure',
+};
+
+const ATTRIBUTE_COLORS: Record<string, string> = {
+  batting: 'text-amber-400 border-amber-500/50 bg-amber-500/10',
+  bowling: 'text-blue-400 border-blue-500/50 bg-blue-500/10',
+  fielding: 'text-green-400 border-green-500/50 bg-green-500/10',
+  captaincy: 'text-purple-400 border-purple-500/50 bg-purple-500/10',
+  pressure: 'text-red-400 border-red-500/50 bg-red-500/10',
+};
 
 interface CardDisplay {
   _id: string;
@@ -15,6 +33,9 @@ interface CardDisplay {
   role: string;
   batting: number;
   bowling: number;
+  fielding: number;
+  captaincy: number;
+  pressure: number;
   overall: number;
   rarity?: string;
 }
@@ -75,11 +96,11 @@ export default function MultiplayerBattlePage() {
       _id: c._id,
       name: c.name,
       role: c.role,
-      stat: c.role === 'Batsman' || c.role === 'Wicketkeeper-Batsman'
-        ? c.batting
-        : c.role === 'Bowler'
-        ? c.bowling
-        : Math.round((c.batting + c.bowling) / 2),
+      batting: c.batting,
+      bowling: c.bowling,
+      fielding: c.fielding,
+      captaincy: c.captaincy ?? 70,
+      pressure: c.pressure ?? 80,
       userCardId: c._id,
     }));
     multiplayer.joinMatchmaking(pvpCards);
@@ -266,6 +287,11 @@ export default function MultiplayerBattlePage() {
                   <p className="text-sm text-amber-400 font-body mb-2">
                     Round {multiplayer.round}/{multiplayer.totalRounds}
                   </p>
+                  {multiplayer.currentAttribute && (
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold mb-2 inline-block border ${ATTRIBUTE_COLORS[multiplayer.currentAttribute] || 'text-amber-400 border-amber-500/50 bg-amber-500/10'}`}>
+                      {ATTRIBUTE_LABELS[multiplayer.currentAttribute] || multiplayer.currentAttribute}
+                    </div>
+                  )}
                   {multiplayer.opponentSelected && multiplayer.status === 'playing' && (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -300,7 +326,7 @@ export default function MultiplayerBattlePage() {
                 Your Cards ({multiplayer.myCards.length} remaining)
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {multiplayer.myCards.map((card) => {
                   const isUsed = multiplayer.usedCardIds.has(card.userCardId);
                   const isDisabled = multiplayer.status !== 'playing' || isUsed;
@@ -313,20 +339,31 @@ export default function MultiplayerBattlePage() {
                         isUsed ? 'ring-2 ring-gray-600 rounded-2xl' : 'hover:ring-2 hover:ring-blue-500 rounded-2xl'
                       }`}
                     >
-                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center p-2">
-                        <div className="text-center">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-2">
-                            <span className="text-white font-bold text-sm">{card.name.split(' ').map(n => n[0]).join('')}</span>
-                          </div>
-                          <p className="text-xs font-display font-bold text-white">{card.name}</p>
-                          <p className="text-xs text-gray-400 font-body">{card.role}</p>
-                          <p className="text-xl font-display font-bold text-amber-400">{card.stat}</p>
-                          {isUsed && (
-                            <div className="mt-1">
-                              <span className="text-xs text-gray-500 font-body">Used</span>
-                            </div>
-                          )}
+                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-1">
+                          <span className="text-white font-bold text-xs">{card.name.split(' ').map(n => n[0]).join('')}</span>
                         </div>
+                        <p className="text-[10px] font-display font-bold text-white leading-tight text-center">{card.name}</p>
+                        <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
+                        <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
+                          {ATTRIBUTES.map((attr) => {
+                            const val = (card as any)[attr] ?? 80;
+                            const isActive = attr === multiplayer.currentAttribute;
+                            return (
+                              <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'}`}>
+                                <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
+                                  {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
+                                </span>
+                                <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {isUsed && (
+                          <div className="mt-0.5">
+                            <span className="text-[8px] text-gray-500 font-body">Used</span>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -355,7 +392,7 @@ export default function MultiplayerBattlePage() {
                   className="glass rounded-2xl p-8 mb-8"
                 >
                   <div className="text-center mb-6">
-                    <h3 className={`text-3xl font-display font-bold mb-4 ${
+                    <h3 className={`text-3xl font-display font-bold mb-2 ${
                       multiplayer.currentRoundResult.winner === 'player1' ? 'text-green-400' :
                       multiplayer.currentRoundResult.winner === 'player2' ? 'text-red-400' : 'text-amber-400'
                     }`}>
@@ -363,6 +400,11 @@ export default function MultiplayerBattlePage() {
                        multiplayer.currentRoundResult.winner === 'player2' ? 'Opponent Won This Round!' :
                        "It's a Tie!"}
                     </h3>
+                    {multiplayer.currentRoundResult.attribute && (
+                      <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold mb-4 border ${ATTRIBUTE_COLORS[multiplayer.currentRoundResult.attribute] || ''}`}>
+                        {ATTRIBUTE_LABELS[multiplayer.currentRoundResult.attribute] || multiplayer.currentRoundResult.attribute}
+                      </div>
+                    )}
                     <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
                       <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
                         <p className="text-sm text-gray-400 font-body mb-1">Your Card</p>
@@ -469,6 +511,7 @@ export default function MultiplayerBattlePage() {
                   <div key={index} className="p-4 rounded-xl bg-white/5 border border-white/10">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-amber-400 font-body font-semibold">Round {index + 1}</span>
+                      {round.attribute && <span className={`text-[10px] px-2 py-0.5 rounded-full border ${ATTRIBUTE_COLORS[round.attribute] || ''}`}>{ATTRIBUTE_LABELS[round.attribute] || round.attribute}</span>}
                       <span className={`text-sm font-display font-bold ${
                         round.winner === 'player1' ? 'text-green-400' :
                         round.winner === 'player2' ? 'text-red-400' : 'text-gray-400'

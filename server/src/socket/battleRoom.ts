@@ -8,11 +8,26 @@ import { updateLeaderboardForUser } from '../services/leaderboardService';
 const ROUND_TIMEOUT = 30000;
 const TOTAL_ROUNDS = 5;
 
+const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 interface PvPRoundCard {
   userCardId: string;
   name: string;
   role: string;
-  stat: number;
+  batting: number;
+  bowling: number;
+  fielding: number;
+  captaincy: number;
+  pressure: number;
 }
 
 interface PvPBattleState {
@@ -20,6 +35,7 @@ interface PvPBattleState {
   player1: { userId: string; username: string; socketId: string; cards: PvPRoundCard[] };
   player2: { userId: string; username: string; socketId: string; cards: PvPRoundCard[] };
   round: number;
+  attributeOrder: string[];
   player1Score: number;
   player2Score: number;
   player1Choice: PvPRoundCard | null;
@@ -34,10 +50,8 @@ interface PvPBattleState {
 
 const activeBattles = new Map<string, PvPBattleState>();
 
-function getCardStat(card: any): number {
-  if (card.role === 'Batsman' || card.role === 'Wicketkeeper-Batsman') return card.batting || card.stat || 80;
-  if (card.role === 'Bowler') return card.bowling || card.stat || 80;
-  return Math.round(((card.batting || 80) + (card.bowling || 80)) / 2);
+function getAttr(card: any, attr: string): number {
+  return card[attr] ?? 80;
 }
 
 function createPvPCard(card: any): PvPRoundCard {
@@ -45,7 +59,11 @@ function createPvPCard(card: any): PvPRoundCard {
     userCardId: card._id || card.userCardId,
     name: card.name,
     role: card.role,
-    stat: getCardStat(card),
+    batting: card.batting ?? getAttr(card, 'batting'),
+    bowling: card.bowling ?? getAttr(card, 'bowling'),
+    fielding: card.fielding ?? getAttr(card, 'fielding'),
+    captaincy: card.captaincy ?? 70,
+    pressure: card.pressure ?? 80,
   };
 }
 
@@ -64,12 +82,16 @@ export function setupBattleRooms(io: Server) {
 
     const p1Card = battle.player1Choice;
     const p2Card = battle.player2Choice;
+    const attribute = battle.attributeOrder[battle.round - 1] || 'batting';
+
+    const p1Stat = getAttr(p1Card, attribute);
+    const p2Stat = getAttr(p2Card, attribute);
 
     let winner: 'player1' | 'player2' | 'tie';
-    if (p1Card.stat > p2Card.stat) {
+    if (p1Stat > p2Stat) {
       winner = 'player1';
       battle.player1Score++;
-    } else if (p2Card.stat > p1Card.stat) {
+    } else if (p2Stat > p1Stat) {
       winner = 'player2';
       battle.player2Score++;
     } else {
@@ -78,8 +100,9 @@ export function setupBattleRooms(io: Server) {
 
     const roundResult = {
       roundNumber: battle.round,
-      player1Card: { name: p1Card.name, stat: p1Card.stat },
-      player2Card: { name: p2Card.name, stat: p2Card.stat },
+      attribute,
+      player1Card: { name: p1Card.name, stat: p1Stat },
+      player2Card: { name: p2Card.name, stat: p2Stat },
       winner,
       player1Score: battle.player1Score,
       player2Score: battle.player2Score,
@@ -99,6 +122,7 @@ export function setupBattleRooms(io: Server) {
       io.to(battle.battleId).emit('battle:round-start', {
         round: battle.round,
         totalRounds: TOTAL_ROUNDS,
+        attribute: battle.attributeOrder[battle.round - 1] || 'batting',
       });
     }
   }
@@ -155,13 +179,15 @@ export function setupBattleRooms(io: Server) {
     try {
       const mongoBattle = await Battle.create({
         user: new mongoose.Types.ObjectId(battle.player1.userId),
+        attributeOrder: battle.attributeOrder,
         playerSquad: battle.player1.cards.map((c) => new mongoose.Types.ObjectId(c.userCardId)),
-        aiSquad: battle.player2.cards.map((c) => ({ name: c.name, role: c.role, stat: c.stat })),
+        aiSquad: battle.player2.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
         rounds: battle.roundHistory.map((r) => ({
           roundNumber: r.roundNumber,
           playerCardId: r.player1Card ? battle.player1.cards[0]?.userCardId : undefined,
           playerCardName: r.player1Card?.name || '',
           playerStat: r.player1Card?.stat || 0,
+          attribute: r.attribute || 'batting',
           computerCardName: r.player2Card?.name || '',
           computerStat: r.player2Card?.stat || 0,
           winner: r.winner === 'player1' ? 'player' : r.winner === 'player2' ? 'computer' : 'tie',
@@ -175,13 +201,15 @@ export function setupBattleRooms(io: Server) {
 
       const mongoBattle2 = await Battle.create({
         user: new mongoose.Types.ObjectId(battle.player2.userId),
+        attributeOrder: battle.attributeOrder,
         playerSquad: battle.player2.cards.map((c) => new mongoose.Types.ObjectId(c.userCardId)),
-        aiSquad: battle.player1.cards.map((c) => ({ name: c.name, role: c.role, stat: c.stat })),
+        aiSquad: battle.player1.cards.map((c) => ({ name: c.name, role: c.role, batting: c.batting, bowling: c.bowling, fielding: c.fielding, captaincy: c.captaincy, pressure: c.pressure, overall: Math.round((c.batting + c.bowling + c.fielding + c.captaincy + c.pressure) / 5) })),
         rounds: battle.roundHistory.map((r) => ({
           roundNumber: r.roundNumber,
           playerCardId: r.player2Card ? battle.player2.cards[0]?.userCardId : undefined,
           playerCardName: r.player2Card?.name || '',
           playerStat: r.player2Card?.stat || 0,
+          attribute: r.attribute || 'batting',
           computerCardName: r.player1Card?.name || '',
           computerStat: r.player1Card?.stat || 0,
           winner: r.winner === 'player2' ? 'player' : r.winner === 'player1' ? 'computer' : 'tie',
@@ -247,8 +275,10 @@ export function setupBattleRooms(io: Server) {
       player1Data: { userId: string; username: string; socketId: string; cards: any[] },
       player2Data: { userId: string; username: string; socketId: string; cards: any[] }
     ) {
+      const attributeOrder = shuffleArray(ATTRIBUTES);
       const battle: PvPBattleState = {
         battleId,
+        attributeOrder,
         player1: {
           ...player1Data,
           cards: player1Data.cards.map(createPvPCard),
@@ -275,6 +305,8 @@ export function setupBattleRooms(io: Server) {
         battleId,
         round: 1,
         totalRounds: TOTAL_ROUNDS,
+        attribute: attributeOrder[0] || 'batting',
+        attributeOrder,
       });
 
       return battle;
@@ -414,6 +446,8 @@ export function setupBattleRooms(io: Server) {
         battleId: battle.battleId,
         round: battle.round,
         totalRounds: TOTAL_ROUNDS,
+        attribute: battle.attributeOrder[battle.round - 1] || 'batting',
+        attributeOrder: battle.attributeOrder,
         player1Score: battle.player1Score,
         player2Score: battle.player2Score,
         roundHistory: battle.roundHistory,

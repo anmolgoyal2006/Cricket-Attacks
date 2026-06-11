@@ -29,12 +29,13 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
       }
     }
 
-    const { aiCards, playerHand } = startBattle(playerCards);
+    const { aiCards, playerHand, attributeOrder } = startBattle(playerCards);
 
     const battle = await Battle.create({
       user: user._id,
       playerSquad: squadCardIds,
       aiSquad: aiCards,
+      attributeOrder,
       playerScore: 0,
       computerScore: 0,
       type: 'pve',
@@ -45,6 +46,7 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
       battleId: battle._id,
       playerCards: playerHand,
       aiCards,
+      attributeOrder,
       currentRound: 0,
       totalRounds: 5,
     });
@@ -95,6 +97,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
       playerCardId: new mongoose.Types.ObjectId(playerCardId),
       playerCardName: result.playerCard.name,
       playerStat: result.playerCard.stat,
+      attribute: result.attribute,
       aiId: result.computerCard.aiId,
       computerCardName: result.computerCard.name,
       computerStat: result.computerCard.stat,

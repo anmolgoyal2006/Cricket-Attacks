@@ -107,6 +107,7 @@ export const battlesApi = {
       battleId: string;
       playerCards: any[];
       aiCards: any[];
+      attributeOrder: string[];
       currentRound: number;
       totalRounds: number;
     }>('/battles/pve', { method: 'POST', body: { squadCardIds } }),

@@ -38,16 +38,16 @@ export default function CollectionPage() {
   const filteredAndSortedPlayers = useMemo(() => {
     let filtered = allCards.filter((card: any) => {
       const matchesSearch = !searchQuery ||
-        card.cardName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.card?.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.card?.role?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesRarity = selectedRarity === 'All' || card.cardRarity === selectedRarity;
+        card.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.role?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRarity = selectedRarity === 'All' || card.rarity === selectedRarity;
       return matchesSearch && matchesRarity;
     });
 
     filtered.sort((a: any, b: any) => {
       if (sortBy === 'name') {
-        return (a.cardName || '').localeCompare(b.cardName || '');
+        return (a.name || '').localeCompare(b.name || '');
       }
       return (b[sortBy] || 0) - (a[sortBy] || 0);
     });
@@ -166,7 +166,6 @@ export default function CollectionPage() {
         {filteredAndSortedPlayers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredAndSortedPlayers.map((card: any, index: number) => {
-              const cardData = card.card || {};
               return (
                 <motion.div
                   key={card._id}
@@ -175,20 +174,7 @@ export default function CollectionPage() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <PlayerCard
-                    player={{
-                      id: card.cardId || index,
-                      name: card.cardName || cardData.name || 'Unknown',
-                      role: cardData.role || '',
-                      country: cardData.country || '',
-                      batting: card.batting,
-                      bowling: card.bowling,
-                      fielding: card.fielding,
-                      overall: card.overall,
-                      specialty: cardData.specialty || '',
-                      rarity: card.cardRarity || cardData.rarity || 'Common',
-                      image: cardData.image || '',
-                      formats: cardData.formats || {},
-                    }}
+                    player={card}
                     onClick={() => setSelectedPlayer(card)}
                   />
                 </motion.div>
@@ -240,20 +226,7 @@ export default function CollectionPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <PlayerCard
-                    player={{
-                      id: selectedPlayer.cardId || 0,
-                      name: selectedPlayer.cardName || selectedPlayer.card?.name || 'Unknown',
-                      role: selectedPlayer.card?.role || '',
-                      country: selectedPlayer.card?.country || '',
-                      batting: selectedPlayer.batting,
-                      bowling: selectedPlayer.bowling,
-                      fielding: selectedPlayer.fielding,
-                      overall: selectedPlayer.overall,
-                      specialty: selectedPlayer.card?.specialty || '',
-                      rarity: selectedPlayer.cardRarity || selectedPlayer.card?.rarity || 'Common',
-                      image: selectedPlayer.card?.image || '',
-                      formats: selectedPlayer.card?.formats || {},
-                    }}
+                    player={selectedPlayer}
                   />
                   <div className="mt-4 glass rounded-xl p-4 text-center">
                     <p className="text-sm text-gray-400 font-body">Card Level</p>
@@ -268,10 +241,10 @@ export default function CollectionPage() {
                     Career Statistics
                   </h2>
                   
-                  {selectedPlayer.card?.formats && (
+                  {selectedPlayer.formats && (
                     <div className="space-y-4">
                       {['odi', 'test', 't20'].map((format) => {
-                        const fmt = selectedPlayer.card.formats[format];
+                        const fmt = selectedPlayer.formats[format];
                         if (!fmt) return null;
                         return (
                           <div key={format} className="glass rounded-xl p-4">

@@ -18,6 +18,7 @@ interface BattleCard {
   batting: number;
   bowling: number;
   overall: number;
+  stat?: number;
 }
 
 interface RoundResult {
@@ -75,9 +76,9 @@ export default function BattlePage() {
     if (mySquad.length < 5) {
       setMySquad([...mySquad, {
         userCardId: card._id,
-        cardId: card.cardId || card._id,
-        name: card.cardName || card.card?.name || 'Unknown',
-        role: card.card?.role || '',
+        cardId: card._id,
+        name: card.name,
+        role: card.role,
         batting: card.batting,
         bowling: card.bowling,
         overall: card.overall,
@@ -90,6 +91,7 @@ export default function BattlePage() {
   };
 
   const getCardMainStat = (card: BattleCard): number => {
+    if (card.stat !== undefined) return card.stat;
     if (card.role === 'Batsman' || card.role === 'Wicketkeeper-Batsman') {
       return card.batting;
     } else if (card.role === 'Bowler') {
@@ -374,17 +376,17 @@ export default function BattlePage() {
                       <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center p-2 hover:border-amber-500/50 transition-all">
                         <div className="text-center">
                           <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${
-                            card.cardRarity === 'Legend' ? 'from-amber-400 to-orange-600' :
-                            card.cardRarity === 'Epic' ? 'from-purple-500 to-purple-700' :
-                            card.cardRarity === 'Rare' ? 'from-blue-500 to-blue-700' :
+                            card.rarity === 'Legend' ? 'from-amber-400 to-orange-600' :
+                            card.rarity === 'Epic' ? 'from-purple-500 to-purple-700' :
+                            card.rarity === 'Rare' ? 'from-blue-500 to-blue-700' :
                             'from-gray-500 to-gray-700'
                           } flex items-center justify-center mx-auto mb-2`}>
                             <span className="text-white font-bold text-sm">
-                              {(card.cardName || card.card?.name || '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                              {(card.name || '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                             </span>
                           </div>
-                          <p className="text-xs font-display font-bold text-white truncate">{card.cardName || card.card?.name}</p>
-                          <p className="text-xs text-gray-400 font-body">{card.card?.role || ''}</p>
+                          <p className="text-xs font-display font-bold text-white truncate">{card.name}</p>
+                          <p className="text-xs text-gray-400 font-body">{card.role}</p>
                           <p className="text-sm font-display font-bold text-amber-400">{card.overall}</p>
                         </div>
                       </div>

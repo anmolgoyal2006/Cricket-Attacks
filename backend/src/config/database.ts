@@ -7,7 +7,12 @@ export async function connectDatabase(): Promise<void> {
     console.log('Connected to MongoDB Atlas');
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.log('Server will start without database — retrying in 5s...');
+    setTimeout(() => {
+      mongoose.connect(config.mongodbUri).catch((err) => {
+        console.error('MongoDB retry failed:', err);
+      });
+    }, 5000);
   }
 
   mongoose.connection.on('error', (err) => {
@@ -15,6 +20,9 @@ export async function connectDatabase(): Promise<void> {
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.log('MongoDB disconnected');
+    console.log('MongoDB disconnected, reconnecting...');
+    mongoose.connect(config.mongodbUri).catch((err) => {
+      console.error('MongoDB reconnection failed:', err);
+    });
   });
 }

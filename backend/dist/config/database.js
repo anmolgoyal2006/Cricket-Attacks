@@ -13,13 +13,21 @@ async function connectDatabase() {
     }
     catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1);
+        console.log('Server will start without database — retrying in 5s...');
+        setTimeout(() => {
+            mongoose_1.default.connect(index_1.config.mongodbUri).catch((err) => {
+                console.error('MongoDB retry failed:', err);
+            });
+        }, 5000);
     }
     mongoose_1.default.connection.on('error', (err) => {
         console.error('MongoDB runtime error:', err);
     });
     mongoose_1.default.connection.on('disconnected', () => {
-        console.log('MongoDB disconnected');
+        console.log('MongoDB disconnected, reconnecting...');
+        mongoose_1.default.connect(index_1.config.mongodbUri).catch((err) => {
+            console.error('MongoDB reconnection failed:', err);
+        });
     });
 }
 //# sourceMappingURL=database.js.map

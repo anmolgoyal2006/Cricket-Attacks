@@ -146,9 +146,13 @@ class CricbuzzService {
 
     try {
       const response = await axios.get(
-        'https://cricbuzz-cricket.p.rapidapi.com/players/v1/list',
+        'https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-players',
         {
-          headers: this.getHeaders(),
+          params: { teamid: 2 },
+          headers: {
+            'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+            'x-rapidapi-host': 'free-cricbuzz-cricket-api.p.rapidapi.com',
+          },
           timeout: 10000,
         }
       );
@@ -158,7 +162,7 @@ class CricbuzzService {
       return players;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error fetching player list from Cricbuzz API:', message);
+      console.error('Error fetching player list from Free Cricbuzz Cricket API:', message);
 
       if (this.allPlayersCache) {
         console.log('Returning expired cached player list due to API failure');

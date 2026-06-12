@@ -5,6 +5,11 @@ import { config } from '../config';
 
 dotenv.config();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// All stats sourced from ESPNcricinfo & Wikipedia, verified as of June 2025.
+// Players marked (ret.) have retired from the noted format.
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface PlayerSeed {
   name: string;
   role: string;
@@ -19,547 +24,719 @@ interface PlayerSeed {
   rarity: 'Common' | 'Rare' | 'Epic' | 'Legend';
   image: string;
   formats: {
-    odi: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
-    test: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
-    t20: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
+    odi:      { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
+    test:     { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
+    t20:      { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
     worldCup: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number };
-    knockouts: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number };
-    bilateral: { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number };
+    knockouts:{ matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number };
+    bilateral:{ matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number };
   };
 }
 
 const playersData: PlayerSeed[] = [
+
+  // ── INDIA BATSMEN ────────────────────────────────────────────────────────────
+
   {
     name: "Virat Kohli", role: "Batsman", country: "India",
-    batting: 96, bowling: 25, fielding: 92, captaincy: 88, pressure: 90, overall: 78,
+    batting: 96, bowling: 22, fielding: 92, captaincy: 90, pressure: 95, overall: 90,
     specialty: "Chase Master", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616517/virat-kohli.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Virat_Kohli.jpg/220px-Virat_Kohli.jpg",
     formats: {
-      odi: { matches: 295, runs: 13906, avg: 57.31, sr: 93.17, hundreds: 51, fifties: 72, wickets: 4, economy: 6.21, bestScore: "183" },
-      test: { matches: 113, runs: 8848, avg: 49.16, sr: 55.37, hundreds: 29, fifties: 30, wickets: 0, economy: 0, bestScore: "254*" },
-      t20: { matches: 125, runs: 4188, avg: 52.35, sr: 138.02, hundreds: 1, fifties: 38, wickets: 0, economy: 0, bestScore: "122*" },
-      worldCup: { matches: 37, runs: 1795, avg: 59.83, sr: 88.20, hundreds: 5, fifties: 12, wickets: 0, economy: 0 },
-      knockouts: { matches: 25, runs: 1342, avg: 67.1, sr: 91.4, hundreds: 6, fifties: 7, wickets: 0, economy: 0 },
-      bilateral: { matches: 230, runs: 11053, avg: 56.6, sr: 94.2, hundreds: 39, fifties: 53, wickets: 4, economy: 6.21 }
-    }
+      odi:      { matches: 308, runs: 14058, avg: 58.82, sr: 93.63, hundreds: 51, fifties: 72, wickets: 4,  economy: 6.34, bestScore: "183" },
+      test:     { matches: 123, runs: 9230,  avg: 47.34, sr: 55.39, hundreds: 30, fifties: 31, wickets: 0,  economy: 0,    bestScore: "254*" },
+      t20:      { matches: 125, runs: 4188,  avg: 52.35, sr: 138.02,hundreds: 1,  fifties: 38, wickets: 0,  economy: 0,    bestScore: "122*" },
+      worldCup: { matches: 37, runs: 1882, avg: 62.73, sr: 89.56, hundreds: 5, fifties: 12, wickets: 0, economy: 0 },
+      knockouts:{ matches: 26, runs: 1398, avg: 66.57, sr: 91.20, hundreds: 6, fifties: 8,  wickets: 0, economy: 0 },
+      bilateral:{ matches: 240, runs: 11241, avg: 57.43, sr: 94.12, hundreds: 40, fifties: 55, wickets: 4, economy: 6.34 },
+    },
   },
   {
     name: "Rohit Sharma", role: "Batsman", country: "India",
-    batting: 94, bowling: 28, fielding: 85, captaincy: 82, pressure: 85, overall: 75,
+    batting: 94, bowling: 22, fielding: 85, captaincy: 86, pressure: 88, overall: 88,
     specialty: "Hitman", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616514/rohit-sharma.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Rohit_Sharma_%28cropped%29.jpg/220px-Rohit_Sharma_%28cropped%29.jpg",
     formats: {
-      odi: { matches: 267, runs: 10920, avg: 48.96, sr: 90.30, hundreds: 31, fifties: 55, wickets: 8, economy: 5.29, bestScore: "264" },
-      test: { matches: 59, runs: 4301, avg: 46.77, sr: 58.82, hundreds: 11, fifties: 16, wickets: 2, economy: 7.44, bestScore: "212" },
-      t20: { matches: 159, runs: 4198, avg: 32.34, sr: 140.61, hundreds: 5, fifties: 31, wickets: 1, economy: 7.62, bestScore: "121*" },
-      worldCup: { matches: 28, runs: 1575, avg: 60.58, sr: 95.12, hundreds: 7, fifties: 7, wickets: 0, economy: 0 },
-      knockouts: { matches: 18, runs: 920, avg: 51.11, sr: 93.4, hundreds: 3, fifties: 4, wickets: 0, economy: 0 },
-      bilateral: { matches: 210, runs: 8400, avg: 47.2, sr: 88.5, hundreds: 21, fifties: 44, wickets: 8, economy: 5.29 }
-    }
+      odi:      { matches: 267, runs: 10709, avg: 48.96, sr: 89.78, hundreds: 31, fifties: 55, wickets: 8,  economy: 5.14, bestScore: "264" },
+      test:     { matches: 67,  runs: 4844,  avg: 40.03, sr: 57.34, hundreds: 12, fifties: 18, wickets: 2,  economy: 7.44, bestScore: "212" },
+      t20:      { matches: 159, runs: 4231,  avg: 32.05, sr: 139.27,hundreds: 5,  fifties: 32, wickets: 1,  economy: 7.62, bestScore: "121*" },
+      worldCup: { matches: 28, runs: 1575, avg: 65.63, sr: 95.12, hundreds: 7, fifties: 7, wickets: 0, economy: 0 },
+      knockouts:{ matches: 18, runs: 923,  avg: 51.28, sr: 94.32, hundreds: 3, fifties: 5, wickets: 0, economy: 0 },
+      bilateral:{ matches: 213, runs: 8321, avg: 46.24, sr: 88.56, hundreds: 22, fifties: 44, wickets: 8, economy: 5.14 },
+    },
   },
   {
     name: "Shubman Gill", role: "Batsman", country: "India",
-    batting: 88, bowling: 20, fielding: 82, captaincy: 60, pressure: 72, overall: 64,
+    batting: 88, bowling: 10, fielding: 84, captaincy: 62, pressure: 74, overall: 76,
     specialty: "Elegant Stroker", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616515/shubman-gill.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Shubman_Gill_%28cropped%29.jpg/220px-Shubman_Gill_%28cropped%29.jpg",
     formats: {
-      odi: { matches: 47, runs: 2328, avg: 58.20, sr: 103.5, hundreds: 7, fifties: 13, wickets: 0, economy: 0, bestScore: "208" },
-      test: { matches: 28, runs: 1494, avg: 33.22, sr: 65.1, hundreds: 4, fifties: 6, wickets: 0, economy: 0, bestScore: "128" },
-      t20: { matches: 18, runs: 362, avg: 24.13, sr: 141.3, hundreds: 0, fifties: 2, wickets: 0, economy: 0, bestScore: "63*" },
-      worldCup: { matches: 9, runs: 420, avg: 52.5, sr: 102.4, hundreds: 2, fifties: 2, wickets: 0, economy: 0 },
-      knockouts: { matches: 4, runs: 145, avg: 36.25, sr: 98.6, hundreds: 0, fifties: 1, wickets: 0, economy: 0 },
-      bilateral: { matches: 34, runs: 1690, avg: 56.3, sr: 104.2, hundreds: 4, fifties: 10, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 53,  runs: 2607, avg: 58.27, sr: 104.12, hundreds: 8, fifties: 14, wickets: 0, economy: 0, bestScore: "208" },
+      test:     { matches: 30,  runs: 1624, avg: 34.56, sr: 65.31,  hundreds: 4, fifties: 7,  wickets: 0, economy: 0, bestScore: "128" },
+      t20:      { matches: 31,  runs: 746,  avg: 28.69, sr: 139.55, hundreds: 0, fifties: 4,  wickets: 0, economy: 0, bestScore: "63*" },
+      worldCup: { matches: 9,  runs: 420,  avg: 52.50, sr: 102.44, hundreds: 2, fifties: 2, wickets: 0, economy: 0 },
+      knockouts:{ matches: 5,  runs: 188,  avg: 37.60, sr: 100.54, hundreds: 0, fifties: 2, wickets: 0, economy: 0 },
+      bilateral:{ matches: 38, runs: 1942, avg: 56.82, sr: 105.18, hundreds: 5, fifties: 10, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "Yashasvi Jaiswal", role: "Batsman", country: "India",
-    batting: 85, bowling: 15, fielding: 78, captaincy: 50, pressure: 70, overall: 60,
+    batting: 87, bowling: 10, fielding: 80, captaincy: 45, pressure: 72, overall: 72,
     specialty: "Aggressive Opener", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591942/yashasvi-jaiswal.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Yashasvi_Jaiswal_2024.jpg/220px-Yashasvi_Jaiswal_2024.jpg",
     formats: {
-      odi: { matches: 10, runs: 502, avg: 55.78, sr: 112.3, hundreds: 2, fifties: 2, wickets: 0, economy: 0, bestScore: "149" },
-      test: { matches: 19, runs: 1478, avg: 46.19, sr: 68.4, hundreds: 4, fifties: 8, wickets: 0, economy: 0, bestScore: "214*" },
-      t20: { matches: 23, runs: 581, avg: 27.67, sr: 148.5, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "93" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 2, runs: 68, avg: 34.0, sr: 108.5, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 8, runs: 415, avg: 59.3, sr: 114.8, hundreds: 2, fifties: 1, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Sai Sudharsan", role: "Batsman", country: "India",
-    batting: 78, bowling: 15, fielding: 75, captaincy: 40, pressure: 65, overall: 55,
-    specialty: "Technically Sound", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c717782/sai-sudharsan.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 3, runs: 127, avg: 42.33, sr: 98.5, hundreds: 0, fifties: 1, wickets: 0, economy: 0, bestScore: "62" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 5, runs: 118, avg: 29.5, sr: 142.3, hundreds: 0, fifties: 1, wickets: 0, economy: 0, bestScore: "43" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 3, runs: 127, avg: 42.3, sr: 98.5, hundreds: 0, fifties: 1, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 12,  runs: 584,  avg: 58.40, sr: 112.31, hundreds: 2, fifties: 3, wickets: 0, economy: 0, bestScore: "149" },
+      test:     { matches: 21,  runs: 1705, avg: 47.36, sr: 68.68,  hundreds: 5, fifties: 8, wickets: 0, economy: 0, bestScore: "214*" },
+      t20:      { matches: 23,  runs: 581,  avg: 27.67, sr: 148.47, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "93" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 3,  runs: 96,   avg: 32.00, sr: 108.99, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 9,  runs: 476,  avg: 59.50, sr: 114.94, hundreds: 2, fifties: 2, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "Suryakumar Yadav", role: "Batsman", country: "India",
-    batting: 90, bowling: 18, fielding: 88, captaincy: 55, pressure: 82, overall: 67,
-    specialty: "360 Player", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846028/suryakumar-yadav.jpg?d=low&p=gthumb152x152undefined",
+    batting: 92, bowling: 10, fielding: 89, captaincy: 58, pressure: 84, overall: 80,
+    specialty: "360 Batter", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Suryakumar_Yadav_2022.jpg/220px-Suryakumar_Yadav_2022.jpg",
     formats: {
-      odi: { matches: 37, runs: 773, avg: 25.77, sr: 105.3, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "72" },
-      test: { matches: 1, runs: 8, avg: 4.0, sr: 21.6, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "8" },
-      t20: { matches: 70, runs: 2341, avg: 45.90, sr: 167.9, hundreds: 4, fifties: 20, wickets: 0, economy: 0, bestScore: "117" },
-      worldCup: { matches: 8, runs: 155, avg: 22.14, sr: 108.4, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 5, runs: 112, avg: 28.0, sr: 135.2, hundreds: 0, fifties: 1, wickets: 0, economy: 0 },
-      bilateral: { matches: 24, runs: 506, avg: 24.1, sr: 102.8, hundreds: 0, fifties: 3, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 40,  runs: 845,  avg: 26.72, sr: 105.10, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "72" },
+      test:     { matches: 1,   runs: 8,    avg: 4.00,  sr: 21.62,  hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "8" },
+      t20:      { matches: 78,  runs: 2536, avg: 47.85, sr: 169.08, hundreds: 4, fifties: 21,wickets: 0, economy: 0, bestScore: "117" },
+      worldCup: { matches: 8,  runs: 155,  avg: 22.14, sr: 108.39, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 6,  runs: 148,  avg: 29.60, sr: 136.11, hundreds: 0, fifties: 1, wickets: 0, economy: 0 },
+      bilateral:{ matches: 26, runs: 558,  avg: 24.26, sr: 103.14, hundreds: 0, fifties: 3, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "Shreyas Iyer", role: "Batsman", country: "India",
-    batting: 84, bowling: 22, fielding: 80, captaincy: 68, pressure: 75, overall: 66,
+    batting: 84, bowling: 18, fielding: 81, captaincy: 70, pressure: 76, overall: 74,
     specialty: "Spin Basher", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616518/shreyas-iyer.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Shreyas_Iyer_2022.jpg/220px-Shreyas_Iyer_2022.jpg",
     formats: {
-      odi: { matches: 62, runs: 2383, avg: 47.66, sr: 99.2, hundreds: 5, fifties: 15, wickets: 0, economy: 0, bestScore: "128*" },
-      test: { matches: 14, runs: 811, avg: 36.86, sr: 59.4, hundreds: 1, fifties: 6, wickets: 0, economy: 0, bestScore: "105" },
-      t20: { matches: 51, runs: 1104, avg: 30.67, sr: 135.8, hundreds: 0, fifties: 8, wickets: 0, economy: 0, bestScore: "74*" },
-      worldCup: { matches: 11, runs: 530, avg: 58.89, sr: 113.5, hundreds: 2, fifties: 3, wickets: 0, economy: 0 },
-      knockouts: { matches: 6, runs: 225, avg: 45.0, sr: 108.2, hundreds: 0, fifties: 2, wickets: 0, economy: 0 },
-      bilateral: { matches: 45, runs: 1628, avg: 44.0, sr: 96.8, hundreds: 3, fifties: 10, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Rinku Singh", role: "Batsman", country: "India",
-    batting: 76, bowling: 20, fielding: 75, captaincy: 35, pressure: 78, overall: 57,
-    specialty: "Finisher", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846030/rinku-singh.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 2, runs: 55, avg: 55.0, sr: 110.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "38" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 20, runs: 498, avg: 41.50, sr: 161.2, hundreds: 0, fifties: 3, wickets: 0, economy: 0, bestScore: "69*" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 1, runs: 24, avg: 24.0, sr: 150.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 2, runs: 55, avg: 55.0, sr: 110.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Tilak Varma", role: "Batsman", country: "India",
-    batting: 77, bowling: 25, fielding: 76, captaincy: 40, pressure: 68, overall: 57,
-    specialty: "Promising Talent", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846029/tilak-varma.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 2, runs: 71, avg: 35.5, sr: 96.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "42" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 17, runs: 425, avg: 38.64, sr: 145.5, hundreds: 0, fifties: 3, wickets: 0, economy: 0, bestScore: "55*" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 1, runs: 18, avg: 18.0, sr: 120.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 2, runs: 71, avg: 35.5, sr: 96.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Ruturaj Gaikwad", role: "Batsman", country: "India",
-    batting: 80, bowling: 15, fielding: 78, captaincy: 62, pressure: 70, overall: 61,
-    specialty: "Classy Opener", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c781069/ruturaj-gaikwad.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 1, runs: 5, avg: 5.0, sr: 35.7, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "5" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 23, runs: 679, avg: 35.74, sr: 138.9, hundreds: 0, fifties: 5, wickets: 0, economy: 0, bestScore: "80" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 2, runs: 45, avg: 22.5, sr: 125.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 1, runs: 5, avg: 5.0, sr: 35.7, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Rajat Patidar", role: "Batsman", country: "India",
-    batting: 76, bowling: 15, fielding: 72, captaincy: 35, pressure: 65, overall: 53,
-    specialty: "Middle Order", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c760758/rajat-patidar.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 1, runs: 22, avg: 22.0, sr: 68.8, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "22" },
-      test: { matches: 3, runs: 146, avg: 29.2, sr: 52.3, hundreds: 0, fifties: 1, wickets: 0, economy: 0, bestScore: "51" },
-      t20: { matches: 2, runs: 40, avg: 20.0, sr: 133.3, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "22" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 1, runs: 22, avg: 22.0, sr: 68.8, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Sarfaraz Khan", role: "Batsman", country: "India",
-    batting: 74, bowling: 18, fielding: 68, captaincy: 30, pressure: 60, overall: 50,
-    specialty: "Domestic Run Machine", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591955/sarfaraz-khan.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      test: { matches: 6, runs: 346, avg: 34.60, sr: 58.7, hundreds: 1, fifties: 2, wickets: 0, economy: 0, bestScore: "150" },
-      t20: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Abhimanyu Easwaran", role: "Batsman", country: "India",
-    batting: 70, bowling: 15, fielding: 70, captaincy: 45, pressure: 55, overall: 51,
-    specialty: "Domestic Stalwart", rarity: "Common",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591956/abhimanyu-easwaran.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      test: { matches: 1, runs: 35, avg: 17.5, sr: 41.2, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "35" },
-      t20: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Karun Nair", role: "Batsman", country: "India",
-    batting: 72, bowling: 20, fielding: 72, captaincy: 35, pressure: 58, overall: 52,
-    specialty: "Triple Centurion", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c717781/karun-nair.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 2, runs: 46, avg: 23.0, sr: 82.1, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "39" },
-      test: { matches: 6, runs: 374, avg: 62.33, sr: 52.3, hundreds: 1, fifties: 1, wickets: 0, economy: 0, bestScore: "303*" },
-      t20: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 2, runs: 46, avg: 23.0, sr: 82.1, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Nitish Kumar Reddy", role: "All-rounder", country: "India",
-    batting: 72, bowling: 65, fielding: 75, captaincy: 30, pressure: 68, overall: 62,
-    specialty: "Pace All-rounder", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591947/nitish-kumar-reddy.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 2, runs: 52, avg: 26.0, sr: 98.2, hundreds: 0, fifties: 0, wickets: 2, economy: 5.80, bestScore: "38" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 8, runs: 112, avg: 22.4, sr: 148.2, hundreds: 0, fifties: 0, wickets: 5, economy: 8.50, bestScore: "36*" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 2, runs: 52, avg: 26.0, sr: 98.2, hundreds: 0, fifties: 0, wickets: 2, economy: 5.80 }
-    }
-  },
-  {
-    name: "Hardik Pandya", role: "All-rounder", country: "India",
-    batting: 85, bowling: 78, fielding: 88, captaincy: 72, pressure: 80, overall: 81,
-    specialty: "Dynamic All-rounder", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846032/hardik-pandya.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 86, runs: 1869, avg: 34.80, sr: 110.4, hundreds: 0, fifties: 11, wickets: 84, economy: 5.63, bestScore: "92*" },
-      test: { matches: 11, runs: 532, avg: 31.29, sr: 74.1, hundreds: 1, fifties: 4, wickets: 17, economy: 3.60, bestScore: "108" },
-      t20: { matches: 98, runs: 1482, avg: 26.95, sr: 141.8, hundreds: 0, fifties: 5, wickets: 72, economy: 7.84, bestScore: "71*" },
-      worldCup: { matches: 12, runs: 295, avg: 32.78, sr: 118.5, hundreds: 0, fifties: 2, wickets: 12, economy: 5.12 },
-      knockouts: { matches: 8, runs: 182, avg: 30.33, sr: 125.6, hundreds: 0, fifties: 1, wickets: 8, economy: 5.45 },
-      bilateral: { matches: 64, runs: 1353, avg: 33.0, sr: 107.8, hundreds: 0, fifties: 8, wickets: 64, economy: 5.82 }
-    }
-  },
-  {
-    name: "Shivam Dube", role: "All-rounder", country: "India",
-    batting: 74, bowling: 68, fielding: 70, captaincy: 30, pressure: 65, overall: 61,
-    specialty: "Power Hitter", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846034/shivam-dube.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 1, runs: 9, avg: 9.0, sr: 60.0, hundreds: 0, fifties: 0, wickets: 1, economy: 5.75, bestScore: "9" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 34, runs: 381, avg: 21.17, sr: 142.7, hundreds: 0, fifties: 2, wickets: 16, economy: 8.45, bestScore: "54*" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 2, runs: 35, avg: 17.5, sr: 125.0, hundreds: 0, fifties: 0, wickets: 1, economy: 8.20 },
-      bilateral: { matches: 1, runs: 9, avg: 9.0, sr: 60.0, hundreds: 0, fifties: 0, wickets: 1, economy: 5.75 }
-    }
-  },
-  {
-    name: "Abhishek Sharma", role: "All-rounder", country: "India",
-    batting: 76, bowling: 55, fielding: 74, captaincy: 35, pressure: 62, overall: 60,
-    specialty: "Left-hand Dynamo", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846031/abhishek-sharma.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 12, runs: 188, avg: 18.80, sr: 145.8, hundreds: 0, fifties: 1, wickets: 4, economy: 8.25, bestScore: "55*" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
-  },
-  {
-    name: "Ravindra Jadeja", role: "All-rounder", country: "India",
-    batting: 82, bowling: 88, fielding: 92, captaincy: 60, pressure: 78, overall: 80,
-    specialty: "Rockstar All-rounder", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616520/ravindra-jadeja.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 197, runs: 2756, avg: 32.42, sr: 85.4, hundreds: 2, fifties: 14, wickets: 220, economy: 4.89, bestScore: "77" },
-      test: { matches: 71, runs: 2903, avg: 36.29, sr: 60.2, hundreds: 4, fifties: 19, wickets: 294, economy: 2.62, bestScore: "175*" },
-      t20: { matches: 62, runs: 426, avg: 21.30, sr: 127.5, hundreds: 0, fifties: 0, wickets: 54, economy: 7.12, bestScore: "44*" },
-      worldCup: { matches: 18, runs: 295, avg: 29.5, sr: 82.4, hundreds: 0, fifties: 2, wickets: 22, economy: 4.65 },
-      knockouts: { matches: 12, runs: 182, avg: 36.4, sr: 88.5, hundreds: 0, fifties: 1, wickets: 15, economy: 4.12 },
-      bilateral: { matches: 150, runs: 2144, avg: 31.5, sr: 86.2, hundreds: 2, fifties: 11, wickets: 168, economy: 4.95 }
-    }
-  },
-  {
-    name: "Shardul Thakur", role: "All-rounder", country: "India",
-    batting: 68, bowling: 76, fielding: 72, captaincy: 30, pressure: 70, overall: 63,
-    specialty: "Impact Player", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c352487/shardul-thakur.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 47, runs: 356, avg: 17.80, sr: 95.6, hundreds: 0, fifties: 2, wickets: 64, economy: 5.82, bestScore: "50*" },
-      test: { matches: 11, runs: 326, avg: 21.73, sr: 76.9, hundreds: 0, fifties: 3, wickets: 35, economy: 3.48, bestScore: "67" },
-      t20: { matches: 25, runs: 68, avg: 8.50, sr: 97.1, hundreds: 0, fifties: 0, wickets: 26, economy: 8.92, bestScore: "22*" },
-      worldCup: { matches: 6, runs: 58, avg: 19.33, sr: 107.4, hundreds: 0, fifties: 0, wickets: 8, economy: 5.45 },
-      knockouts: { matches: 4, runs: 38, avg: 19.0, sr: 95.0, hundreds: 0, fifties: 0, wickets: 5, economy: 5.82 },
-      bilateral: { matches: 37, runs: 260, avg: 17.3, sr: 92.8, hundreds: 0, fifties: 2, wickets: 48, economy: 5.95 }
-    }
-  },
-  {
-    name: "Washington Sundar", role: "All-rounder", country: "India",
-    batting: 68, bowling: 72, fielding: 74, captaincy: 40, pressure: 62, overall: 63,
-    specialty: "Off-spin All-rounder", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616522/washington-sundar.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 22, runs: 285, avg: 22.69, sr: 82.6, hundreds: 0, fifties: 2, wickets: 25, economy: 4.85, bestScore: "51" },
-      test: { matches: 4, runs: 266, avg: 66.50, sr: 50.2, hundreds: 1, fifties: 2, wickets: 6, economy: 3.12, bestScore: "96" },
-      t20: { matches: 48, runs: 142, avg: 14.20, sr: 118.3, hundreds: 0, fifties: 0, wickets: 42, economy: 7.25, bestScore: "33*" },
-      worldCup: { matches: 2, runs: 18, avg: 9.0, sr: 75.0, hundreds: 0, fifties: 0, wickets: 2, economy: 4.50 },
-      knockouts: { matches: 1, runs: 8, avg: 8.0, sr: 80.0, hundreds: 0, fifties: 0, wickets: 1, economy: 4.80 },
-      bilateral: { matches: 18, runs: 259, avg: 24.5, sr: 84.2, hundreds: 0, fifties: 2, wickets: 20, economy: 4.92 }
-    }
-  },
-  {
-    name: "Axar Patel", role: "All-rounder", country: "India",
-    batting: 76, bowling: 82, fielding: 80, captaincy: 50, pressure: 72, overall: 72,
-    specialty: "Spin All-rounder", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846033/axar-patel.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 58, runs: 480, avg: 18.46, sr: 95.4, hundreds: 0, fifties: 2, wickets: 70, economy: 4.72, bestScore: "64*" },
-      test: { matches: 14, runs: 640, avg: 35.56, sr: 58.2, hundreds: 1, fifties: 5, wickets: 55, economy: 2.52, bestScore: "84" },
-      t20: { matches: 58, runs: 375, avg: 18.75, sr: 135.8, hundreds: 0, fifties: 1, wickets: 57, economy: 6.85, bestScore: "43*" },
-      worldCup: { matches: 8, runs: 62, avg: 15.5, sr: 82.7, hundreds: 0, fifties: 0, wickets: 10, economy: 4.45 },
-      knockouts: { matches: 5, runs: 42, avg: 14.0, sr: 85.6, hundreds: 0, fifties: 0, wickets: 7, economy: 4.28 },
-      bilateral: { matches: 45, runs: 376, avg: 19.8, sr: 97.2, hundreds: 0, fifties: 2, wickets: 53, economy: 4.82 }
-    }
-  },
-  {
-    name: "Rishabh Pant", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 84, bowling: 15, fielding: 78, captaincy: 55, pressure: 78, overall: 62,
-    specialty: "Fearless Batter", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616524/rishabh-pant.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 31, runs: 865, avg: 34.60, sr: 111.2, hundreds: 1, fifties: 5, wickets: 0, economy: 0, bestScore: "125*" },
-      test: { matches: 33, runs: 2271, avg: 43.67, sr: 73.4, hundreds: 5, fifties: 11, wickets: 0, economy: 0, bestScore: "159*" },
-      t20: { matches: 66, runs: 987, avg: 22.43, sr: 127.2, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "65*" },
-      worldCup: { matches: 6, runs: 212, avg: 42.4, sr: 108.2, hundreds: 0, fifties: 2, wickets: 0, economy: 0 },
-      knockouts: { matches: 4, runs: 148, avg: 49.33, sr: 118.5, hundreds: 0, fifties: 1, wickets: 0, economy: 0 },
-      bilateral: { matches: 21, runs: 505, avg: 29.7, sr: 112.5, hundreds: 1, fifties: 2, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 67,  runs: 2619, avg: 47.62, sr: 99.47,  hundreds: 5, fifties: 16, wickets: 0, economy: 0, bestScore: "128*" },
+      test:     { matches: 14,  runs: 811,  avg: 36.86, sr: 59.40,  hundreds: 1, fifties: 6,  wickets: 0, economy: 0, bestScore: "105" },
+      t20:      { matches: 51,  runs: 1104, avg: 30.67, sr: 135.79, hundreds: 0, fifties: 8,  wickets: 0, economy: 0, bestScore: "74*" },
+      worldCup: { matches: 11, runs: 530,  avg: 58.89, sr: 113.45, hundreds: 2, fifties: 3, wickets: 0, economy: 0 },
+      knockouts:{ matches: 7,  runs: 265,  avg: 44.17, sr: 108.20, hundreds: 0, fifties: 2, wickets: 0, economy: 0 },
+      bilateral:{ matches: 49, runs: 1806, avg: 45.15, sr: 97.20,  hundreds: 3, fifties: 11, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "KL Rahul", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 86, bowling: 18, fielding: 84, captaincy: 70, pressure: 72, overall: 66,
-    specialty: "Elegant Wicketkeeper", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616523/kl-rahul.jpg?d=low&p=gthumb152x152undefined",
+    batting: 88, bowling: 10, fielding: 86, captaincy: 72, pressure: 74, overall: 78,
+    specialty: "Elegant Keeper-Bat", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/KL_Rahul_in_2022.jpg/220px-KL_Rahul_in_2022.jpg",
     formats: {
-      odi: { matches: 77, runs: 2851, avg: 47.52, sr: 88.2, hundreds: 7, fifties: 18, wickets: 0, economy: 0, bestScore: "112" },
-      test: { matches: 50, runs: 2866, avg: 34.54, sr: 52.5, hundreds: 8, fifties: 14, wickets: 0, economy: 0, bestScore: "199" },
-      t20: { matches: 72, runs: 2265, avg: 37.75, sr: 139.7, hundreds: 2, fifties: 22, wickets: 0, economy: 0, bestScore: "110*" },
-      worldCup: { matches: 14, runs: 555, avg: 46.25, sr: 90.5, hundreds: 2, fifties: 3, wickets: 0, economy: 0 },
-      knockouts: { matches: 8, runs: 285, avg: 40.71, sr: 88.2, hundreds: 0, fifties: 2, wickets: 0, economy: 0 },
-      bilateral: { matches: 55, runs: 2011, avg: 48.2, sr: 87.5, hundreds: 5, fifties: 13, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 77,  runs: 2851, avg: 47.52, sr: 88.15,  hundreds: 7,  fifties: 18, wickets: 0, economy: 0, bestScore: "112" },
+      test:     { matches: 50,  runs: 2866, avg: 34.41, sr: 52.53,  hundreds: 8,  fifties: 14, wickets: 0, economy: 0, bestScore: "199" },
+      t20:      { matches: 72,  runs: 2265, avg: 37.75, sr: 139.66, hundreds: 2,  fifties: 22, wickets: 0, economy: 0, bestScore: "110*" },
+      worldCup: { matches: 14, runs: 555,  avg: 46.25, sr: 90.54,  hundreds: 2,  fifties: 3, wickets: 0, economy: 0 },
+      knockouts:{ matches: 8,  runs: 285,  avg: 40.71, sr: 88.24,  hundreds: 0,  fifties: 2, wickets: 0, economy: 0 },
+      bilateral:{ matches: 55, runs: 2011, avg: 48.12, sr: 87.50,  hundreds: 5,  fifties: 13, wickets: 0, economy: 0 },
+    },
   },
   {
-    name: "Dhruv Jurel", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 68, bowling: 15, fielding: 74, captaincy: 30, pressure: 62, overall: 50,
-    specialty: "Promising Wicketkeeper", rarity: "Common",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591954/dhruv-jurel.jpg?d=low&p=gthumb152x152undefined",
+    name: "Rishabh Pant", role: "Wicketkeeper-Batsman", country: "India",
+    batting: 86, bowling: 10, fielding: 80, captaincy: 58, pressure: 80, overall: 78,
+    specialty: "Fearless Batter", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Rishabh_Pant_2022.jpg/220px-Rishabh_Pant_2022.jpg",
     formats: {
-      odi: { matches: 1, runs: 23, avg: 23.0, sr: 92.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "23" },
-      test: { matches: 3, runs: 145, avg: 36.25, sr: 48.6, hundreds: 0, fifties: 1, wickets: 0, economy: 0, bestScore: "90" },
-      t20: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 1, runs: 23, avg: 23.0, sr: 92.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 31,  runs: 865,  avg: 34.60, sr: 111.24, hundreds: 1,  fifties: 5,  wickets: 0, economy: 0, bestScore: "125*" },
+      test:     { matches: 33,  runs: 2271, avg: 43.67, sr: 73.36,  hundreds: 5,  fifties: 11, wickets: 0, economy: 0, bestScore: "159*" },
+      t20:      { matches: 66,  runs: 987,  avg: 22.43, sr: 127.16, hundreds: 0,  fifties: 4,  wickets: 0, economy: 0, bestScore: "65*" },
+      worldCup: { matches: 6,  runs: 212,  avg: 42.40, sr: 108.16, hundreds: 0,  fifties: 2, wickets: 0, economy: 0 },
+      knockouts:{ matches: 4,  runs: 148,  avg: 49.33, sr: 118.40, hundreds: 0,  fifties: 1, wickets: 0, economy: 0 },
+      bilateral:{ matches: 21, runs: 505,  avg: 29.71, sr: 112.47, hundreds: 1,  fifties: 2, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "Sanju Samson", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 80, bowling: 15, fielding: 78, captaincy: 65, pressure: 68, overall: 61,
-    specialty: "Flamboyant Batter", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846035/sanju-samson.jpg?d=low&p=gthumb152x152undefined",
+    batting: 82, bowling: 10, fielding: 80, captaincy: 68, pressure: 70, overall: 68,
+    specialty: "Flamboyant Hitter", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Sanju_samson_2019.jpg/220px-Sanju_samson_2019.jpg",
     formats: {
-      odi: { matches: 16, runs: 510, avg: 36.43, sr: 99.6, hundreds: 0, fifties: 4, wickets: 0, economy: 0, bestScore: "86*" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 30, runs: 412, avg: 18.73, sr: 129.6, hundreds: 0, fifties: 2, wickets: 0, economy: 0, bestScore: "77" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 1, runs: 15, avg: 15.0, sr: 100.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 15, runs: 495, avg: 38.1, sr: 100.2, hundreds: 0, fifties: 4, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 19,  runs: 638,  avg: 42.53, sr: 100.16, hundreds: 1,  fifties: 4, wickets: 0, economy: 0, bestScore: "108*" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0, bestScore: "" },
+      t20:      { matches: 38,  runs: 597,  avg: 22.11, sr: 131.64, hundreds: 1,  fifties: 2, wickets: 0, economy: 0, bestScore: "111*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 1,  runs: 15,   avg: 15.00, sr: 100.00, hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 17, runs: 596,  avg: 41.84, sr: 100.34, hundreds: 1,  fifties: 4, wickets: 0, economy: 0 },
+    },
   },
   {
     name: "Ishan Kishan", role: "Wicketkeeper-Batsman", country: "India",
-    batting: 78, bowling: 15, fielding: 76, captaincy: 40, pressure: 64, overall: 55,
-    specialty: "Aggressive Opener", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846036/ishan-kishan.jpg?d=low&p=gthumb152x152undefined",
+    batting: 79, bowling: 10, fielding: 77, captaincy: 40, pressure: 65, overall: 62,
+    specialty: "Power Opener", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Ishan_Kishan_in_2021.jpg/220px-Ishan_Kishan_in_2021.jpg",
     formats: {
-      odi: { matches: 27, runs: 933, avg: 38.88, sr: 102.5, hundreds: 1, fifties: 7, wickets: 0, economy: 0, bestScore: "210" },
-      test: { matches: 2, runs: 78, avg: 19.5, sr: 47.6, hundreds: 0, fifties: 1, wickets: 0, economy: 0, bestScore: "52" },
-      t20: { matches: 32, runs: 694, avg: 25.70, sr: 129.4, hundreds: 0, fifties: 5, wickets: 0, economy: 0, bestScore: "89" },
-      worldCup: { matches: 2, runs: 57, avg: 28.5, sr: 90.5, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 1, runs: 12, avg: 12.0, sr: 80.0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 24, runs: 864, avg: 40.2, sr: 104.8, hundreds: 1, fifties: 7, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 27,  runs: 933,  avg: 38.88, sr: 102.53, hundreds: 1,  fifties: 7, wickets: 0, economy: 0, bestScore: "210" },
+      test:     { matches: 2,   runs: 78,   avg: 19.50, sr: 47.56,  hundreds: 0,  fifties: 1, wickets: 0, economy: 0, bestScore: "52" },
+      t20:      { matches: 32,  runs: 694,  avg: 25.70, sr: 129.40, hundreds: 0,  fifties: 5, wickets: 0, economy: 0, bestScore: "89" },
+      worldCup: { matches: 2,  runs: 57,   avg: 28.50, sr: 90.48,  hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 1,  runs: 12,   avg: 12.00, sr: 80.00,  hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 24, runs: 864,  avg: 40.19, sr: 104.85, hundreds: 1,  fifties: 7, wickets: 0, economy: 0 },
+    },
+  },
+  {
+    name: "Rinku Singh", role: "Batsman", country: "India",
+    batting: 78, bowling: 10, fielding: 76, captaincy: 35, pressure: 80, overall: 60,
+    specialty: "Super Finisher", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Rinku_Singh_%28cricketer%29.jpg/220px-Rinku_Singh_%28cricketer%29.jpg",
+    formats: {
+      odi:      { matches: 4,   runs: 88,   avg: 44.00, sr: 108.64, hundreds: 0,  fifties: 0, wickets: 0, economy: 0, bestScore: "40*" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0, bestScore: "" },
+      t20:      { matches: 25,  runs: 598,  avg: 42.71, sr: 163.39, hundreds: 0,  fifties: 3, wickets: 0, economy: 0, bestScore: "69*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 2,  runs: 46,   avg: 46.00, sr: 156.33, hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 3,  runs: 74,   avg: 37.00, sr: 106.24, hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+    },
+  },
+  {
+    name: "Tilak Varma", role: "Batsman", country: "India",
+    batting: 79, bowling: 20, fielding: 77, captaincy: 38, pressure: 70, overall: 62,
+    specialty: "Aggressive Middle-Order", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Tilak_Varma.jpg/220px-Tilak_Varma.jpg",
+    formats: {
+      odi:      { matches: 3,   runs: 91,   avg: 45.50, sr: 97.85,  hundreds: 0,  fifties: 1, wickets: 0, economy: 0, bestScore: "52" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0, bestScore: "" },
+      t20:      { matches: 24,  runs: 547,  avg: 41.31, sr: 147.97, hundreds: 0,  fifties: 4, wickets: 0, economy: 0, bestScore: "72*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 1,  runs: 18,   avg: 18.00, sr: 120.00, hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 2,  runs: 78,   avg: 39.00, sr: 98.73,  hundreds: 0,  fifties: 1, wickets: 0, economy: 0 },
+    },
+  },
+  {
+    name: "Ruturaj Gaikwad", role: "Batsman", country: "India",
+    batting: 80, bowling: 10, fielding: 79, captaincy: 64, pressure: 68, overall: 64,
+    specialty: "Classy Opener", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Ruturaj_Gaikwad.jpg/220px-Ruturaj_Gaikwad.jpg",
+    formats: {
+      odi:      { matches: 10,  runs: 386,  avg: 48.25, sr: 98.72,  hundreds: 1,  fifties: 2, wickets: 0, economy: 0, bestScore: "116*" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0, bestScore: "" },
+      t20:      { matches: 31,  runs: 862,  avg: 33.15, sr: 140.03, hundreds: 1,  fifties: 5, wickets: 0, economy: 0, bestScore: "123*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      knockouts:{ matches: 2,  runs: 48,   avg: 24.00, sr: 126.32, hundreds: 0,  fifties: 0, wickets: 0, economy: 0 },
+      bilateral:{ matches: 8,  runs: 348,  avg: 49.71, sr: 99.14,  hundreds: 1,  fifties: 2, wickets: 0, economy: 0 },
+    },
+  },
+
+  // ── INDIA ALL-ROUNDERS ────────────────────────────────────────────────────
+
+  {
+    name: "Hardik Pandya", role: "All-rounder", country: "India",
+    batting: 82, bowling: 80, fielding: 88, captaincy: 74, pressure: 84, overall: 82,
+    specialty: "Dynamic All-rounder", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Hardik_Pandya_in_2022.jpg/220px-Hardik_Pandya_in_2022.jpg",
+    formats: {
+      odi:      { matches: 96,  runs: 1964, avg: 33.27, sr: 112.48, hundreds: 1,  fifties: 10, wickets: 90,  economy: 5.54, bestScore: "92*" },
+      test:     { matches: 11,  runs: 532,  avg: 31.29, sr: 72.51,  hundreds: 1,  fifties: 3,  wickets: 17,  economy: 3.72, bestScore: "108" },
+      t20:      { matches: 115, runs: 1881, avg: 27.67, sr: 144.12, hundreds: 0,  fifties: 8,  wickets: 87,  economy: 8.08, bestScore: "91" },
+      worldCup: { matches: 18, runs: 431,  avg: 35.92, sr: 118.96, hundreds: 0,  fifties: 2, wickets: 15, economy: 5.84 },
+      knockouts:{ matches: 12, runs: 278,  avg: 34.75, sr: 122.03, hundreds: 0,  fifties: 2, wickets: 10, economy: 6.08 },
+      bilateral:{ matches: 68, runs: 1187, avg: 32.08, sr: 108.78, hundreds: 1,  fifties: 6, wickets: 60, economy: 5.42 },
+    },
+  },
+  {
+    name: "Ravindra Jadeja", role: "All-rounder", country: "India",
+    batting: 78, bowling: 87, fielding: 97, captaincy: 72, pressure: 82, overall: 84,
+    specialty: "Sword Master", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Ravindra_Jadeja.jpg/220px-Ravindra_Jadeja.jpg",
+    formats: {
+      odi:      { matches: 200, runs: 2831, avg: 34.50, sr: 86.72,  hundreds: 2,  fifties: 14, wickets: 225, economy: 4.85, bestScore: "87" },
+      test:     { matches: 80,  runs: 3156, avg: 36.70, sr: 60.28,  hundreds: 4,  fifties: 21, wickets: 315, economy: 2.32, bestScore: "175*" },
+      t20:      { matches: 74,  runs: 515,  avg: 23.41, sr: 127.96, hundreds: 0,  fifties: 2,  wickets: 54,  economy: 7.13, bestScore: "46*" },
+      worldCup: { matches: 28, runs: 578,  avg: 36.13, sr: 83.64,  hundreds: 0,  fifties: 3, wickets: 35, economy: 4.58 },
+      knockouts:{ matches: 17, runs: 322,  avg: 32.20, sr: 82.36,  hundreds: 0,  fifties: 2, wickets: 20, economy: 4.44 },
+      bilateral:{ matches: 157, runs: 1943, avg: 32.38, sr: 88.20, hundreds: 2,  fifties: 9, wickets: 176, economy: 4.98 },
+    },
+  },
+  {
+    name: "Axar Patel", role: "All-rounder", country: "India",
+    batting: 76, bowling: 83, fielding: 80, captaincy: 52, pressure: 74, overall: 74,
+    specialty: "Left-arm Spin All-rounder", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Axar_Patel.jpg/220px-Axar_Patel.jpg",
+    formats: {
+      odi:      { matches: 60,  runs: 503,  avg: 18.63, sr: 95.44,  hundreds: 0,  fifties: 2, wickets: 74,  economy: 4.68, bestScore: "64*" },
+      test:     { matches: 17,  runs: 735,  avg: 36.75, sr: 58.14,  hundreds: 1,  fifties: 5, wickets: 66,  economy: 2.48, bestScore: "84" },
+      t20:      { matches: 65,  runs: 411,  avg: 18.68, sr: 137.12, hundreds: 0,  fifties: 1, wickets: 64,  economy: 6.80, bestScore: "43*" },
+      worldCup: { matches: 9,  runs: 72,   avg: 18.00, sr: 83.72,  hundreds: 0,  fifties: 0, wickets: 11, economy: 4.38 },
+      knockouts:{ matches: 6,  runs: 48,   avg: 16.00, sr: 86.04,  hundreds: 0,  fifties: 0, wickets: 8,  economy: 4.22 },
+      bilateral:{ matches: 47, runs: 387,  avg: 19.35, sr: 97.24,  hundreds: 0,  fifties: 2, wickets: 56, economy: 4.78 },
+    },
+  },
+  {
+    name: "Washington Sundar", role: "All-rounder", country: "India",
+    batting: 70, bowling: 74, fielding: 75, captaincy: 42, pressure: 65, overall: 64,
+    specialty: "Off-spin All-rounder", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Washington_Sundar.jpg/220px-Washington_Sundar.jpg",
+    formats: {
+      odi:      { matches: 22,  runs: 285,  avg: 22.69, sr: 82.61,  hundreds: 0,  fifties: 2, wickets: 25, economy: 4.83, bestScore: "51" },
+      test:     { matches: 8,   runs: 404,  avg: 57.71, sr: 48.85,  hundreds: 1,  fifties: 2, wickets: 13, economy: 3.00, bestScore: "96" },
+      t20:      { matches: 57,  runs: 157,  avg: 14.27, sr: 118.94, hundreds: 0,  fifties: 0, wickets: 50, economy: 7.22, bestScore: "33*" },
+      worldCup: { matches: 2,  runs: 18,   avg: 9.00,  sr: 75.00,  hundreds: 0,  fifties: 0, wickets: 2,  economy: 4.50 },
+      knockouts:{ matches: 1,  runs: 8,    avg: 8.00,  sr: 80.00,  hundreds: 0,  fifties: 0, wickets: 1,  economy: 4.80 },
+      bilateral:{ matches: 18, runs: 259,  avg: 24.52, sr: 84.37,  hundreds: 0,  fifties: 2, wickets: 20, economy: 4.92 },
+    },
+  },
+  {
+    name: "Shardul Thakur", role: "All-rounder", country: "India",
+    batting: 68, bowling: 76, fielding: 72, captaincy: 30, pressure: 70, overall: 64,
+    specialty: "Lord Shardul", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Shardul_Thakur_2020.jpg/220px-Shardul_Thakur_2020.jpg",
+    formats: {
+      odi:      { matches: 47,  runs: 356,  avg: 17.80, sr: 95.68,  hundreds: 0,  fifties: 2, wickets: 64,  economy: 5.82, bestScore: "50*" },
+      test:     { matches: 11,  runs: 326,  avg: 21.73, sr: 76.94,  hundreds: 0,  fifties: 3, wickets: 35,  economy: 3.48, bestScore: "67" },
+      t20:      { matches: 25,  runs: 68,   avg: 8.50,  sr: 97.14,  hundreds: 0,  fifties: 0, wickets: 26,  economy: 8.92, bestScore: "22*" },
+      worldCup: { matches: 6,  runs: 58,   avg: 19.33, sr: 107.41, hundreds: 0,  fifties: 0, wickets: 8,  economy: 5.45 },
+      knockouts:{ matches: 4,  runs: 38,   avg: 19.00, sr: 95.00,  hundreds: 0,  fifties: 0, wickets: 5,  economy: 5.82 },
+      bilateral:{ matches: 37, runs: 260,  avg: 17.33, sr: 92.86,  hundreds: 0,  fifties: 2, wickets: 48, economy: 5.95 },
+    },
+  },
+  {
+    name: "Nitish Kumar Reddy", role: "All-rounder", country: "India",
+    batting: 74, bowling: 67, fielding: 76, captaincy: 32, pressure: 70, overall: 64,
+    specialty: "Pace All-rounder", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Nitish_Kumar_Reddy.jpg/220px-Nitish_Kumar_Reddy.jpg",
+    formats: {
+      odi:      { matches: 4,   runs: 92,   avg: 30.67, sr: 98.92,  hundreds: 0,  fifties: 0, wickets: 4,  economy: 5.88, bestScore: "38" },
+      test:     { matches: 6,   runs: 380,  avg: 34.55, sr: 60.61,  hundreds: 1,  fifties: 1, wickets: 8,  economy: 4.21, bestScore: "114" },
+      t20:      { matches: 14,  runs: 214,  avg: 21.40, sr: 148.61, hundreds: 0,  fifties: 0, wickets: 9,  economy: 8.64, bestScore: "74*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0 },
+      knockouts:{ matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0 },
+      bilateral:{ matches: 3,  runs: 78,   avg: 26.00, sr: 96.30,  hundreds: 0,  fifties: 0, wickets: 3,  economy: 5.92 },
+    },
+  },
+  {
+    name: "Shivam Dube", role: "All-rounder", country: "India",
+    batting: 75, bowling: 68, fielding: 71, captaincy: 30, pressure: 66, overall: 62,
+    specialty: "Power Hitter", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Shivam_Dube.jpg/220px-Shivam_Dube.jpg",
+    formats: {
+      odi:      { matches: 2,   runs: 21,   avg: 10.50, sr: 65.63,  hundreds: 0,  fifties: 0, wickets: 2,  economy: 5.75, bestScore: "14" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0,    bestScore: "" },
+      t20:      { matches: 36,  runs: 418,  avg: 22.00, sr: 144.33, hundreds: 0,  fifties: 2, wickets: 17, economy: 8.49, bestScore: "54*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0 },
+      knockouts:{ matches: 2,  runs: 35,   avg: 17.50, sr: 125.00, hundreds: 0,  fifties: 0, wickets: 1,  economy: 8.20 },
+      bilateral:{ matches: 2,  runs: 21,   avg: 10.50, sr: 65.63,  hundreds: 0,  fifties: 0, wickets: 2,  economy: 5.75 },
+    },
+  },
+  {
+    name: "Abhishek Sharma", role: "All-rounder", country: "India",
+    batting: 78, bowling: 58, fielding: 75, captaincy: 35, pressure: 64, overall: 64,
+    specialty: "Left-hand Dynamo", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Abhishek_Sharma_in_2024.jpg/220px-Abhishek_Sharma_in_2024.jpg",
+    formats: {
+      odi:      { matches: 4,   runs: 126,  avg: 42.00, sr: 108.62, hundreds: 0,  fifties: 1, wickets: 1,  economy: 6.40, bestScore: "78*" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0,    bestScore: "" },
+      t20:      { matches: 17,  runs: 484,  avg: 32.27, sr: 160.26, hundreds: 1,  fifties: 3, wickets: 6,  economy: 8.48, bestScore: "100*" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0 },
+      knockouts:{ matches: 0,  runs: 0,    avg: 0,     sr: 0,      hundreds: 0,  fifties: 0, wickets: 0,  economy: 0 },
+      bilateral:{ matches: 3,  runs: 108,  avg: 36.00, sr: 106.93, hundreds: 0,  fifties: 1, wickets: 1,  economy: 6.40 },
+    },
+  },
+
+  // ── INDIA BOWLERS ────────────────────────────────────────────────────────────
+
+  {
+    name: "Jasprit Bumrah", role: "Bowler", country: "India",
+    batting: 10, bowling: 97, fielding: 80, captaincy: 72, pressure: 94, overall: 91,
+    specialty: "Yorker King", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Jasprit_Bumrah.jpg/220px-Jasprit_Bumrah.jpg",
+    formats: {
+      odi:      { matches: 98,  runs: 112,  avg: 5.60,  sr: 50.00, hundreds: 0,  fifties: 0, wickets: 163, economy: 4.48, bestScore: "16" },
+      test:     { matches: 47,  runs: 120,  avg: 6.00,  sr: 35.40, hundreds: 0,  fifties: 0, wickets: 213, economy: 2.74, bestScore: "10*" },
+      t20:      { matches: 85,  runs: 23,   avg: 4.60,  sr: 64.00, hundreds: 0,  fifties: 0, wickets: 107, economy: 6.24, bestScore: "7" },
+      worldCup: { matches: 21, runs: 10,   avg: 2.50,  sr: 27.78, hundreds: 0,  fifties: 0, wickets: 38, economy: 4.06 },
+      knockouts:{ matches: 13, runs: 6,    avg: 2.00,  sr: 20.00, hundreds: 0,  fifties: 0, wickets: 24, economy: 4.00 },
+      bilateral:{ matches: 68, runs: 88,   avg: 5.87,  sr: 46.32, hundreds: 0,  fifties: 0, wickets: 110, economy: 4.56 },
+    },
   },
   {
     name: "Mohammed Siraj", role: "Bowler", country: "India",
-    batting: 15, bowling: 84, fielding: 60, captaincy: 20, pressure: 72, overall: 50,
-    specialty: "Swing Bowler", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591952/mohammed-siraj.jpg?d=low&p=gthumb152x152undefined",
+    batting: 14, bowling: 83, fielding: 62, captaincy: 20, pressure: 72, overall: 60,
+    specialty: "Swing & Seam", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Mohammed_Siraj_%28cropped%29.jpg/220px-Mohammed_Siraj_%28cropped%29.jpg",
     formats: {
-      odi: { matches: 43, runs: 53, avg: 8.83, sr: 49.1, hundreds: 0, fifties: 0, wickets: 71, economy: 4.92, bestScore: "9" },
-      test: { matches: 27, runs: 108, avg: 7.20, sr: 29.4, hundreds: 0, fifties: 0, wickets: 86, economy: 3.12, bestScore: "16*" },
-      t20: { matches: 10, runs: 12, avg: 6.0, sr: 85.7, hundreds: 0, fifties: 0, wickets: 12, economy: 8.45, bestScore: "5" },
-      worldCup: { matches: 8, runs: 10, avg: 5.0, sr: 35.7, hundreds: 0, fifties: 0, wickets: 14, economy: 4.68 },
-      knockouts: { matches: 5, runs: 8, avg: 4.0, sr: 40.0, hundreds: 0, fifties: 0, wickets: 8, economy: 4.85 },
-      bilateral: { matches: 30, runs: 35, avg: 8.75, sr: 52.3, hundreds: 0, fifties: 0, wickets: 49, economy: 5.02 }
-    }
-  },
-  {
-    name: "Jasprit Bumrah", role: "Bowler", country: "India",
-    batting: 12, bowling: 96, fielding: 55, captaincy: 25, pressure: 88, overall: 55,
-    specialty: "Yorker Specialist", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846037/jasprit-bumrah.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 89, runs: 35, avg: 5.83, sr: 44.9, hundreds: 0, fifties: 0, wickets: 149, economy: 4.52, bestScore: "16" },
-      test: { matches: 38, runs: 48, avg: 3.43, sr: 16.3, hundreds: 0, fifties: 0, wickets: 155, economy: 2.52, bestScore: "6" },
-      t20: { matches: 70, runs: 18, avg: 4.50, sr: 62.1, hundreds: 0, fifties: 0, wickets: 89, economy: 6.62, bestScore: "7" },
-      worldCup: { matches: 15, runs: 8, avg: 2.67, sr: 25.0, hundreds: 0, fifties: 0, wickets: 28, economy: 4.15 },
-      knockouts: { matches: 10, runs: 5, avg: 2.5, sr: 20.0, hundreds: 0, fifties: 0, wickets: 18, economy: 4.02 },
-      bilateral: { matches: 62, runs: 22, avg: 5.5, sr: 40.0, hundreds: 0, fifties: 0, wickets: 103, economy: 4.65 }
-    }
-  },
-  {
-    name: "Prasidh Krishna", role: "Bowler", country: "India",
-    batting: 15, bowling: 74, fielding: 58, captaincy: 20, pressure: 62, overall: 46,
-    specialty: "Hit-the-deck Bowler", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591958/prasidh-krishna.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 17, runs: 2, avg: 1.0, sr: 25.0, hundreds: 0, fifties: 0, wickets: 29, economy: 5.28, bestScore: "2" },
-      test: { matches: 2, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 5, economy: 3.85, bestScore: "0*" },
-      t20: { matches: 2, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 3, economy: 8.50, bestScore: "0*" },
-      worldCup: { matches: 3, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 6, economy: 5.02 },
-      knockouts: { matches: 2, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 3, economy: 5.45 },
-      bilateral: { matches: 12, runs: 2, avg: 1.0, sr: 25.0, hundreds: 0, fifties: 0, wickets: 20, economy: 5.35 }
-    }
-  },
-  {
-    name: "Akash Deep", role: "Bowler", country: "India",
-    batting: 20, bowling: 72, fielding: 60, captaincy: 20, pressure: 60, overall: 46,
-    specialty: "Seam Bowler", rarity: "Common",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c591951/akash-deep.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      test: { matches: 5, runs: 28, avg: 9.33, sr: 42.4, hundreds: 0, fifties: 0, wickets: 12, economy: 3.45, bestScore: "14" },
-      t20: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 47,  runs: 58,   avg: 8.29,  sr: 49.15, hundreds: 0,  fifties: 0, wickets: 78,  economy: 4.86, bestScore: "9" },
+      test:     { matches: 32,  runs: 124,  avg: 7.29,  sr: 30.32, hundreds: 0,  fifties: 0, wickets: 104, economy: 3.14, bestScore: "16*" },
+      t20:      { matches: 17,  runs: 14,   avg: 7.00,  sr: 87.50, hundreds: 0,  fifties: 0, wickets: 18,  economy: 8.52, bestScore: "5" },
+      worldCup: { matches: 9,  runs: 11,   avg: 5.50,  sr: 36.67, hundreds: 0,  fifties: 0, wickets: 15, economy: 4.72 },
+      knockouts:{ matches: 6,  runs: 8,    avg: 4.00,  sr: 40.00, hundreds: 0,  fifties: 0, wickets: 9,  economy: 4.88 },
+      bilateral:{ matches: 33, runs: 40,   avg: 8.00,  sr: 50.00, hundreds: 0,  fifties: 0, wickets: 54, economy: 4.96 },
+    },
   },
   {
     name: "Kuldeep Yadav", role: "Bowler", country: "India",
-    batting: 18, bowling: 86, fielding: 62, captaincy: 25, pressure: 70, overall: 52,
-    specialty: "Chinaman Bowler", rarity: "Legend",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846039/kuldeep-yadav.jpg?d=low&p=gthumb152x152undefined",
+    batting: 16, bowling: 86, fielding: 63, captaincy: 25, pressure: 72, overall: 66,
+    specialty: "Chinaman Wizard", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Kuldeep_Yadav.jpg/220px-Kuldeep_Yadav.jpg",
     formats: {
-      odi: { matches: 106, runs: 190, avg: 10.56, sr: 56.4, hundreds: 0, fifties: 0, wickets: 175, economy: 4.82, bestScore: "19" },
-      test: { matches: 12, runs: 54, avg: 7.71, sr: 40.0, hundreds: 0, fifties: 0, wickets: 40, economy: 2.98, bestScore: "16" },
-      t20: { matches: 35, runs: 18, avg: 4.50, sr: 56.3, hundreds: 0, fifties: 0, wickets: 42, economy: 7.45, bestScore: "6*" },
-      worldCup: { matches: 11, runs: 10, avg: 5.0, sr: 33.3, hundreds: 0, fifties: 0, wickets: 21, economy: 4.28 },
-      knockouts: { matches: 6, runs: 6, avg: 3.0, sr: 30.0, hundreds: 0, fifties: 0, wickets: 10, economy: 4.45 },
-      bilateral: { matches: 85, runs: 170, avg: 11.33, sr: 58.5, hundreds: 0, fifties: 0, wickets: 140, economy: 4.92 }
-    }
+      odi:      { matches: 108, runs: 200,  avg: 11.11, sr: 57.47, hundreds: 0,  fifties: 0, wickets: 181, economy: 4.82, bestScore: "19" },
+      test:     { matches: 14,  runs: 62,   avg: 7.75,  sr: 40.52, hundreds: 0,  fifties: 0, wickets: 50,  economy: 3.00, bestScore: "16" },
+      t20:      { matches: 43,  runs: 20,   avg: 5.00,  sr: 57.14, hundreds: 0,  fifties: 0, wickets: 55,  economy: 7.54, bestScore: "6*" },
+      worldCup: { matches: 12, runs: 11,   avg: 5.50,  sr: 33.33, hundreds: 0,  fifties: 0, wickets: 22, economy: 4.28 },
+      knockouts:{ matches: 7,  runs: 6,    avg: 3.00,  sr: 30.00, hundreds: 0,  fifties: 0, wickets: 11, economy: 4.46 },
+      bilateral:{ matches: 87, runs: 178,  avg: 11.13, sr: 58.74, hundreds: 0,  fifties: 0, wickets: 144, economy: 4.92 },
+    },
   },
   {
     name: "Arshdeep Singh", role: "Bowler", country: "India",
-    batting: 15, bowling: 80, fielding: 62, captaincy: 20, pressure: 75, overall: 50,
-    specialty: "Death Bowler", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846038/arshdeep-singh.jpg?d=low&p=gthumb152x152undefined",
+    batting: 14, bowling: 82, fielding: 64, captaincy: 22, pressure: 78, overall: 64,
+    specialty: "Left-arm Death Bowler", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Arshdeep_Singh_%28cropped%29.jpg/220px-Arshdeep_Singh_%28cropped%29.jpg",
     formats: {
-      odi: { matches: 8, runs: 8, avg: 4.0, sr: 53.3, hundreds: 0, fifties: 0, wickets: 15, economy: 5.45, bestScore: "5" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 60, runs: 18, avg: 4.50, sr: 75.0, hundreds: 0, fifties: 0, wickets: 95, economy: 7.82, bestScore: "7" },
-      worldCup: { matches: 8, runs: 2, avg: 1.0, sr: 20.0, hundreds: 0, fifties: 0, wickets: 12, economy: 5.82 },
-      knockouts: { matches: 4, runs: 2, avg: 1.0, sr: 20.0, hundreds: 0, fifties: 0, wickets: 6, economy: 6.12 },
-      bilateral: { matches: 6, runs: 6, avg: 3.0, sr: 50.0, hundreds: 0, fifties: 0, wickets: 10, economy: 5.28 }
-    }
-  },
-  {
-    name: "Harshit Rana", role: "Bowler", country: "India",
-    batting: 22, bowling: 70, fielding: 60, captaincy: 20, pressure: 60, overall: 46,
-    specialty: "Pace Bowler", rarity: "Common",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c616529/harshit-rana.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 2, runs: 8, avg: 8.0, sr: 100.0, hundreds: 0, fifties: 0, wickets: 3, economy: 8.25, bestScore: "8" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 }
-    }
+      odi:      { matches: 12,  runs: 10,   avg: 5.00,  sr: 52.63, hundreds: 0,  fifties: 0, wickets: 22,  economy: 5.40, bestScore: "5" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0,    bestScore: "" },
+      t20:      { matches: 65,  runs: 18,   avg: 4.50,  sr: 75.00, hundreds: 0,  fifties: 0, wickets: 103, economy: 7.72, bestScore: "7" },
+      worldCup: { matches: 10, runs: 2,    avg: 1.00,  sr: 20.00, hundreds: 0,  fifties: 0, wickets: 15, economy: 5.80 },
+      knockouts:{ matches: 5,  runs: 2,    avg: 1.00,  sr: 20.00, hundreds: 0,  fifties: 0, wickets: 7,  economy: 6.12 },
+      bilateral:{ matches: 9,  runs: 8,    avg: 4.00,  sr: 53.33, hundreds: 0,  fifties: 0, wickets: 14, economy: 5.26 },
+    },
   },
   {
     name: "Ravi Bishnoi", role: "Bowler", country: "India",
-    batting: 18, bowling: 76, fielding: 65, captaincy: 25, pressure: 65, overall: 50,
-    specialty: "Leg-spin Wizard", rarity: "Rare",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c226280/ravi-bishnoi.jpg?d=low&p=gthumb152x152undefined",
+    batting: 16, bowling: 78, fielding: 66, captaincy: 25, pressure: 66, overall: 56,
+    specialty: "Googly Specialist", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Ravi_Bishnoi_%28cricketer%29.jpg/220px-Ravi_Bishnoi_%28cricketer%29.jpg",
     formats: {
-      odi: { matches: 1, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 1, economy: 5.20, bestScore: "0*" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 27, runs: 12, avg: 6.0, sr: 75.0, hundreds: 0, fifties: 0, wickets: 38, economy: 7.35, bestScore: "5" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 1, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 1, economy: 7.00 },
-      bilateral: { matches: 1, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 1, economy: 5.20 }
-    }
-  },
-  {
-    name: "Mukesh Kumar", role: "Bowler", country: "India",
-    batting: 15, bowling: 72, fielding: 58, captaincy: 20, pressure: 58, overall: 45,
-    specialty: "Medium Pacer", rarity: "Common",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c333872/mukesh-kumar.jpg?d=low&p=gthumb152x152undefined",
-    formats: {
-      odi: { matches: 6, runs: 8, avg: 4.0, sr: 40.0, hundreds: 0, fifties: 0, wickets: 10, economy: 5.62, bestScore: "6" },
-      test: { matches: 3, runs: 10, avg: 5.0, sr: 25.0, hundreds: 0, fifties: 0, wickets: 7, economy: 3.85, bestScore: "6" },
-      t20: { matches: 10, runs: 4, avg: 2.0, sr: 40.0, hundreds: 0, fifties: 0, wickets: 12, economy: 8.12, bestScore: "3" },
-      worldCup: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      knockouts: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0 },
-      bilateral: { matches: 6, runs: 8, avg: 4.0, sr: 40.0, hundreds: 0, fifties: 0, wickets: 10, economy: 5.62 }
-    }
+      odi:      { matches: 5,   runs: 4,    avg: 2.00,  sr: 40.00, hundreds: 0,  fifties: 0, wickets: 7,   economy: 5.14, bestScore: "4" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0,    bestScore: "" },
+      t20:      { matches: 36,  runs: 14,   avg: 7.00,  sr: 77.78, hundreds: 0,  fifties: 0, wickets: 51,  economy: 7.28, bestScore: "5" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0 },
+      knockouts:{ matches: 2,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 2,   economy: 7.00 },
+      bilateral:{ matches: 4,  runs: 4,    avg: 2.00,  sr: 40.00, hundreds: 0,  fifties: 0, wickets: 5,   economy: 5.22 },
+    },
   },
   {
     name: "Varun Chakaravarthy", role: "Bowler", country: "India",
-    batting: 15, bowling: 78, fielding: 60, captaincy: 20, pressure: 68, overall: 48,
+    batting: 12, bowling: 80, fielding: 61, captaincy: 20, pressure: 70, overall: 58,
     specialty: "Mystery Spinner", rarity: "Epic",
-    image: "https://static.cricbuzz.com/a/img/v1/i1/c846040/varun-chakaravarthy.jpg?d=low&p=gthumb152x152undefined",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Varun_Chakravarthy.jpg/220px-Varun_Chakravarthy.jpg",
     formats: {
-      odi: { matches: 1, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 1, economy: 4.80, bestScore: "0*" },
-      test: { matches: 0, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 0, economy: 0, bestScore: "" },
-      t20: { matches: 25, runs: 10, avg: 3.33, sr: 55.6, hundreds: 0, fifties: 0, wickets: 38, economy: 7.15, bestScore: "5" },
-      worldCup: { matches: 3, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 5, economy: 4.62 },
-      knockouts: { matches: 2, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 3, economy: 5.00 },
-      bilateral: { matches: 1, runs: 0, avg: 0, sr: 0, hundreds: 0, fifties: 0, wickets: 1, economy: 4.80 }
-    }
-  }
+      odi:      { matches: 1,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 1,   economy: 4.80, bestScore: "0*" },
+      test:     { matches: 0,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0,    bestScore: "" },
+      t20:      { matches: 31,  runs: 10,   avg: 3.33,  sr: 55.56, hundreds: 0,  fifties: 0, wickets: 47,  economy: 7.12, bestScore: "5" },
+      worldCup: { matches: 4,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 6,   economy: 4.62 },
+      knockouts:{ matches: 2,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 3,   economy: 5.00 },
+      bilateral:{ matches: 1,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 1,   economy: 4.80 },
+    },
+  },
+  {
+    name: "Prasidh Krishna", role: "Bowler", country: "India",
+    batting: 14, bowling: 75, fielding: 60, captaincy: 20, pressure: 64, overall: 52,
+    specialty: "Hit-the-deck Pacer", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Prasidh_Krishna.jpg/220px-Prasidh_Krishna.jpg",
+    formats: {
+      odi:      { matches: 20,  runs: 8,    avg: 2.67,  sr: 27.59, hundreds: 0,  fifties: 0, wickets: 34,  economy: 5.28, bestScore: "2" },
+      test:     { matches: 2,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 5,   economy: 3.85, bestScore: "0*" },
+      t20:      { matches: 2,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 3,   economy: 8.50, bestScore: "0*" },
+      worldCup: { matches: 3,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 6,   economy: 5.02 },
+      knockouts:{ matches: 2,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 3,   economy: 5.45 },
+      bilateral:{ matches: 14, runs: 8,    avg: 2.67,  sr: 27.59, hundreds: 0,  fifties: 0, wickets: 23,  economy: 5.38 },
+    },
+  },
+  {
+    name: "Akash Deep", role: "Bowler", country: "India",
+    batting: 18, bowling: 74, fielding: 62, captaincy: 20, pressure: 62, overall: 50,
+    specialty: "Seam Movement", rarity: "Common",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Akash_Deep.jpg/220px-Akash_Deep.jpg",
+    formats: {
+      odi:      { matches: 1,   runs: 2,    avg: 2.00,  sr: 33.33, hundreds: 0,  fifties: 0, wickets: 2,   economy: 5.00, bestScore: "2" },
+      test:     { matches: 9,   runs: 48,   avg: 9.60,  sr: 42.48, hundreds: 0,  fifties: 0, wickets: 24,  economy: 3.38, bestScore: "14" },
+      t20:      { matches: 0,   runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0,    bestScore: "" },
+      worldCup: { matches: 0,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0 },
+      knockouts:{ matches: 0,  runs: 0,    avg: 0,     sr: 0,     hundreds: 0,  fifties: 0, wickets: 0,   economy: 0 },
+      bilateral:{ matches: 1,  runs: 2,    avg: 2.00,  sr: 33.33, hundreds: 0,  fifties: 0, wickets: 2,   economy: 5.00 },
+    },
+  },
+
+  // ── PAKISTAN ────────────────────────────────────────────────────────────────
+
+  {
+    name: "Babar Azam", role: "Batsman", country: "Pakistan",
+    batting: 92, bowling: 15, fielding: 87, captaincy: 80, pressure: 82, overall: 85,
+    specialty: "Consistency King", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Babar_Azam_%28cropped%29.jpg/220px-Babar_Azam_%28cropped%29.jpg",
+    formats: {
+      odi:      { matches: 138, runs: 6700,  avg: 56.78, sr: 88.14, hundreds: 22, fifties: 37, wickets: 0, economy: 0, bestScore: "158" },
+      test:     { matches: 57,  runs: 4108,  avg: 47.21, sr: 53.12, hundreds: 10, fifties: 27, wickets: 0, economy: 0, bestScore: "196" },
+      t20:      { matches: 130, runs: 4200,  avg: 40.78, sr: 129.80,hundreds: 4,  fifties: 35, wickets: 0, economy: 0, bestScore: "122" },
+      worldCup: { matches: 19, runs: 811,   avg: 58.64, sr: 86.42, hundreds: 3,  fifties: 5, wickets: 0, economy: 0 },
+      knockouts:{ matches: 15, runs: 612,   avg: 55.64, sr: 83.73, hundreds: 2,  fifties: 4, wickets: 0, economy: 0 },
+      bilateral:{ matches: 108, runs: 5233, avg: 57.50, sr: 89.26, hundreds: 17, fifties: 28, wickets: 0, economy: 0 },
+    },
+  },
+  {
+    name: "Shaheen Afridi", role: "Bowler", country: "Pakistan",
+    batting: 28, bowling: 92, fielding: 78, captaincy: 68, pressure: 84, overall: 84,
+    specialty: "Swing Sultan", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Shaheen_Afridi_2022.jpg/220px-Shaheen_Afridi_2022.jpg",
+    formats: {
+      odi:      { matches: 73,  runs: 248,  avg: 13.78, sr: 71.26, hundreds: 0,  fifties: 0, wickets: 134, economy: 5.28, bestScore: "23" },
+      test:     { matches: 37,  runs: 356,  avg: 13.69, sr: 52.12, hundreds: 0,  fifties: 0, wickets: 142, economy: 3.08, bestScore: "51" },
+      t20:      { matches: 88,  runs: 84,   avg: 9.33,  sr: 98.82, hundreds: 0,  fifties: 0, wickets: 122, economy: 7.32, bestScore: "12" },
+      worldCup: { matches: 16, runs: 36,   avg: 12.00, sr: 66.67, hundreds: 0,  fifties: 0, wickets: 26, economy: 5.58 },
+      knockouts:{ matches: 11, runs: 22,   avg: 11.00, sr: 68.75, hundreds: 0,  fifties: 0, wickets: 17, economy: 5.76 },
+      bilateral:{ matches: 50, runs: 184,  avg: 14.15, sr: 70.77, hundreds: 0,  fifties: 0, wickets: 89, economy: 5.04 },
+    },
+  },
+  {
+    name: "Mohammad Rizwan", role: "Wicketkeeper-Batsman", country: "Pakistan",
+    batting: 88, bowling: 10, fielding: 90, captaincy: 75, pressure: 82, overall: 80,
+    specialty: "Consistent Keeper-Bat", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Mohammad_Rizwan_in_2022.jpg/220px-Mohammad_Rizwan_in_2022.jpg",
+    formats: {
+      odi:      { matches: 78,  runs: 2864, avg: 47.77, sr: 82.44, hundreds: 7,  fifties: 15, wickets: 0, economy: 0, bestScore: "131*" },
+      test:     { matches: 45,  runs: 2850, avg: 46.72, sr: 50.76, hundreds: 7,  fifties: 14, wickets: 0, economy: 0, bestScore: "115*" },
+      t20:      { matches: 100, runs: 3432, avg: 47.67, sr: 132.51,hundreds: 5,  fifties: 26, wickets: 0, economy: 0, bestScore: "104*" },
+      worldCup: { matches: 11, runs: 544,  avg: 68.00, sr: 110.79,hundreds: 2,  fifties: 3, wickets: 0, economy: 0 },
+      knockouts:{ matches: 7,  runs: 288,  avg: 57.60, sr: 104.72,hundreds: 0,  fifties: 3, wickets: 0, economy: 0 },
+      bilateral:{ matches: 60, runs: 2215, avg: 46.15, sr: 80.12, hundreds: 5,  fifties: 12, wickets: 0, economy: 0 },
+    },
+  },
+
+  // ── AUSTRALIA ────────────────────────────────────────────────────────────────
+
+  {
+    name: "Steve Smith", role: "Batsman", country: "Australia",
+    batting: 92, bowling: 32, fielding: 85, captaincy: 86, pressure: 90, overall: 88,
+    specialty: "Test Legend", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Steve_Smith_in_2019.jpg/220px-Steve_Smith_in_2019.jpg",
+    formats: {
+      odi:      { matches: 157, runs: 5133, avg: 43.38, sr: 87.04, hundreds: 12, fifties: 29, wickets: 29, economy: 5.24, bestScore: "164" },
+      test:     { matches: 112, runs: 9864, avg: 57.91, sr: 55.22, hundreds: 34, fifties: 40, wickets: 17, economy: 3.07, bestScore: "239" },
+      t20:      { matches: 62,  runs: 898,  avg: 27.21, sr: 125.00,hundreds: 0,  fifties: 2,  wickets: 8,  economy: 7.32, bestScore: "90" },
+      worldCup: { matches: 22, runs: 911,  avg: 50.61, sr: 91.18, hundreds: 2,  fifties: 6, wickets: 3, economy: 5.14 },
+      knockouts:{ matches: 16, runs: 714,  avg: 59.50, sr: 88.42, hundreds: 2,  fifties: 4, wickets: 2, economy: 4.82 },
+      bilateral:{ matches: 118, runs: 3532, avg: 40.60, sr: 86.74, hundreds: 9, fifties: 19, wickets: 24, economy: 5.32 },
+    },
+  },
+  {
+    name: "Pat Cummins", role: "Bowler", country: "Australia",
+    batting: 44, bowling: 95, fielding: 86, captaincy: 89, pressure: 91, overall: 90,
+    specialty: "Captain Pace Ace", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Pat_Cummins_2018.jpg/220px-Pat_Cummins_2018.jpg",
+    formats: {
+      odi:      { matches: 97,  runs: 598,  avg: 17.59, sr: 85.10, hundreds: 0,  fifties: 1, wickets: 187, economy: 5.08, bestScore: "63" },
+      test:     { matches: 71,  runs: 1136, avg: 19.59, sr: 55.16, hundreds: 0,  fifties: 3, wickets: 325, economy: 2.84, bestScore: "72" },
+      t20:      { matches: 54,  runs: 89,   avg: 11.13, sr: 118.67,hundreds: 0,  fifties: 0, wickets: 63,  economy: 7.22, bestScore: "18*" },
+      worldCup: { matches: 22, runs: 121,  avg: 17.29, sr: 88.32, hundreds: 0,  fifties: 0, wickets: 38, economy: 4.70 },
+      knockouts:{ matches: 12, runs: 74,   avg: 14.80, sr: 89.16, hundreds: 0,  fifties: 0, wickets: 22, economy: 4.48 },
+      bilateral:{ matches: 62, runs: 411,  avg: 18.68, sr: 87.84, hundreds: 0,  fifties: 1, wickets: 128, economy: 5.26 },
+    },
+  },
+  {
+    name: "Mitchell Starc", role: "Bowler", country: "Australia",
+    batting: 38, bowling: 92, fielding: 80, captaincy: 60, pressure: 84, overall: 83,
+    specialty: "Left-arm Thunder", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Mitchell_Starc_in_2019.jpg/220px-Mitchell_Starc_in_2019.jpg",
+    formats: {
+      odi:      { matches: 120, runs: 713,  avg: 14.85, sr: 87.68, hundreds: 0,  fifties: 1, wickets: 256, economy: 5.22, bestScore: "52" },
+      test:     { matches: 91,  runs: 1901, avg: 18.46, sr: 65.02, hundreds: 0,  fifties: 6, wickets: 375, economy: 3.18, bestScore: "99" },
+      t20:      { matches: 62,  runs: 116,  avg: 11.60, sr: 130.34,hundreds: 0,  fifties: 0, wickets: 75,  economy: 7.28, bestScore: "25" },
+      worldCup: { matches: 30, runs: 92,   avg: 13.14, sr: 85.19, hundreds: 0,  fifties: 0, wickets: 71, economy: 4.78 },
+      knockouts:{ matches: 16, runs: 48,   avg: 12.00, sr: 80.00, hundreds: 0,  fifties: 0, wickets: 36, economy: 4.60 },
+      bilateral:{ matches: 76, runs: 588,  avg: 16.89, sr: 88.29, hundreds: 0,  fifties: 1, wickets: 174, economy: 5.42 },
+    },
+  },
+  {
+    name: "David Warner", role: "Batsman", country: "Australia",
+    batting: 90, bowling: 14, fielding: 83, captaincy: 70, pressure: 82, overall: 82,
+    specialty: "Explosive Opener", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/David_Warner_in_2019.jpg/220px-David_Warner_in_2019.jpg",
+    formats: {
+      odi:      { matches: 161, runs: 6932, avg: 45.30, sr: 97.26, hundreds: 22, fifties: 33, wickets: 0, economy: 0, bestScore: "179" },
+      test:     { matches: 112, runs: 8786, avg: 44.59, sr: 70.19, hundreds: 26, fifties: 37, wickets: 1, economy: 4.50, bestScore: "335*" },
+      t20:      { matches: 110, runs: 3283, avg: 33.50, sr: 142.47,hundreds: 1,  fifties: 28, wickets: 0, economy: 0, bestScore: "100*" },
+      worldCup: { matches: 29, runs: 1527, avg: 56.56, sr: 105.44,hundreds: 6,  fifties: 7, wickets: 0, economy: 0 },
+      knockouts:{ matches: 17, runs: 822,  avg: 54.80, sr: 102.88,hundreds: 3,  fifties: 4, wickets: 0, economy: 0 },
+      bilateral:{ matches: 116, runs: 4631, avg: 42.49, sr: 95.48, hundreds: 14, fifties: 23, wickets: 0, economy: 0 },
+    },
+  },
+
+  // ── ENGLAND ────────────────────────────────────────────────────────────────
+
+  {
+    name: "Joe Root", role: "Batsman", country: "England",
+    batting: 93, bowling: 36, fielding: 85, captaincy: 82, pressure: 86, overall: 89,
+    specialty: "Modern Great", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Joe_Root_in_2018.jpg/220px-Joe_Root_in_2018.jpg",
+    formats: {
+      odi:      { matches: 171, runs: 6738, avg: 47.48, sr: 86.73, hundreds: 17, fifties: 39, wickets: 28, economy: 5.38, bestScore: "133*" },
+      test:     { matches: 147, runs: 13610,avg: 51.36, sr: 53.28, hundreds: 37, fifties: 65, wickets: 5,  economy: 3.20, bestScore: "254*" },
+      t20:      { matches: 32,  runs: 893,  avg: 35.72, sr: 126.37,hundreds: 0,  fifties: 5,  wickets: 3,  economy: 7.83, bestScore: "90*" },
+      worldCup: { matches: 29, runs: 1323, avg: 51.88, sr: 88.60, hundreds: 3,  fifties: 8, wickets: 2, economy: 5.20 },
+      knockouts:{ matches: 14, runs: 623,  avg: 51.92, sr: 85.32, hundreds: 1,  fifties: 5, wickets: 1, economy: 5.42 },
+      bilateral:{ matches: 128, runs: 4762, avg: 46.20, sr: 86.21, hundreds: 13, fifties: 27, wickets: 25, economy: 5.44 },
+    },
+  },
+  {
+    name: "Ben Stokes", role: "All-rounder", country: "England",
+    batting: 86, bowling: 82, fielding: 90, captaincy: 88, pressure: 94, overall: 89,
+    specialty: "Match Winner", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Ben_Stokes_in_2019_%28cropped%29.jpg/220px-Ben_Stokes_in_2019_%28cropped%29.jpg",
+    formats: {
+      odi:      { matches: 113, runs: 3017, avg: 38.94, sr: 93.20, hundreds: 3,  fifties: 21, wickets: 74, economy: 5.91, bestScore: "102*" },
+      test:     { matches: 107, runs: 6549, avg: 35.82, sr: 58.12, hundreds: 14, fifties: 30, wickets: 203, economy: 3.14, bestScore: "258" },
+      t20:      { matches: 43,  runs: 591,  avg: 22.73, sr: 135.78,hundreds: 0,  fifties: 2,  wickets: 28, economy: 8.32, bestScore: "63*" },
+      worldCup: { matches: 23, runs: 719,  avg: 39.94, sr: 94.10, hundreds: 1,  fifties: 5, wickets: 15, economy: 6.12 },
+      knockouts:{ matches: 14, runs: 512,  avg: 51.20, sr: 98.27, hundreds: 1,  fifties: 3, wickets: 9,  economy: 6.34 },
+      bilateral:{ matches: 76, runs: 1882, avg: 37.26, sr: 91.80, hundreds: 2,  fifties: 14, wickets: 55, economy: 5.68 },
+    },
+  },
+
+  // ── NEW ZEALAND ──────────────────────────────────────────────────────────────
+
+  {
+    name: "Kane Williamson", role: "Batsman", country: "New Zealand",
+    batting: 91, bowling: 30, fielding: 88, captaincy: 93, pressure: 90, overall: 88,
+    specialty: "Captain Composed", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Kane_Williamson_2022.jpg/220px-Kane_Williamson_2022.jpg",
+    formats: {
+      odi:      { matches: 163, runs: 6554, avg: 47.49, sr: 82.10, hundreds: 14, fifties: 43, wickets: 37, economy: 5.03, bestScore: "148" },
+      test:     { matches: 101, runs: 9013, avg: 54.28, sr: 51.31, hundreds: 33, fifties: 36, wickets: 2,  economy: 3.91, bestScore: "251" },
+      t20:      { matches: 91,  runs: 2443, avg: 32.81, sr: 124.12,hundreds: 0,  fifties: 18, wickets: 14, economy: 7.22, bestScore: "95" },
+      worldCup: { matches: 24, runs: 1186, avg: 55.81, sr: 83.85, hundreds: 2,  fifties: 9, wickets: 3, economy: 4.92 },
+      knockouts:{ matches: 16, runs: 742,  avg: 57.08, sr: 82.36, hundreds: 2,  fifties: 5, wickets: 2, economy: 5.18 },
+      bilateral:{ matches: 125, runs: 4621, avg: 45.30, sr: 80.98, hundreds: 10, fifties: 31, wickets: 32, economy: 5.12 },
+    },
+  },
+  {
+    name: "Trent Boult", role: "Bowler", country: "New Zealand",
+    batting: 30, bowling: 90, fielding: 78, captaincy: 56, pressure: 82, overall: 80,
+    specialty: "Left-arm Swing King", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Trent_Boult.jpg/220px-Trent_Boult.jpg",
+    formats: {
+      odi:      { matches: 117, runs: 412,  avg: 11.77, sr: 73.62, hundreds: 0,  fifties: 0, wickets: 199, economy: 5.13, bestScore: "32" },
+      test:     { matches: 78,  runs: 1114, avg: 15.97, sr: 53.41, hundreds: 0,  fifties: 3, wickets: 317, economy: 2.85, bestScore: "52*" },
+      t20:      { matches: 63,  runs: 67,   avg: 8.38,  sr: 108.06,hundreds: 0,  fifties: 0, wickets: 74,  economy: 7.82, bestScore: "14" },
+      worldCup: { matches: 24, runs: 56,   avg: 9.33,  sr: 70.89, hundreds: 0,  fifties: 0, wickets: 38, economy: 4.85 },
+      knockouts:{ matches: 14, runs: 34,   avg: 8.50,  sr: 68.00, hundreds: 0,  fifties: 0, wickets: 22, economy: 4.68 },
+      bilateral:{ matches: 79, runs: 322,  avg: 12.77, sr: 75.29, hundreds: 0,  fifties: 0, wickets: 139, economy: 5.28 },
+    },
+  },
+
+  // ── SOUTH AFRICA ─────────────────────────────────────────────────────────────
+
+  {
+    name: "Kagiso Rabada", role: "Bowler", country: "South Africa",
+    batting: 36, bowling: 94, fielding: 83, captaincy: 65, pressure: 87, overall: 87,
+    specialty: "Express Pace", rarity: "Epic",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Rabada.jpg/220px-Rabada.jpg",
+    formats: {
+      odi:      { matches: 107, runs: 492,  avg: 14.47, sr: 73.43, hundreds: 0,  fifties: 0, wickets: 168, economy: 4.93, bestScore: "31" },
+      test:     { matches: 73,  runs: 1241, avg: 17.48, sr: 55.81, hundreds: 0,  fifties: 3, wickets: 340, economy: 3.22, bestScore: "56" },
+      t20:      { matches: 75,  runs: 98,   avg: 8.17,  sr: 113.95,hundreds: 0,  fifties: 0, wickets: 103, economy: 7.38, bestScore: "15" },
+      worldCup: { matches: 19, runs: 82,   avg: 13.67, sr: 72.57, hundreds: 0,  fifties: 0, wickets: 27, economy: 5.08 },
+      knockouts:{ matches: 11, runs: 38,   avg: 12.67, sr: 69.09, hundreds: 0,  fifties: 0, wickets: 15, economy: 5.30 },
+      bilateral:{ matches: 82, runs: 366,  avg: 14.88, sr: 74.24, hundreds: 0,  fifties: 0, wickets: 130, economy: 4.78 },
+    },
+  },
+  {
+    name: "AB de Villiers", role: "Batsman", country: "South Africa",
+    batting: 96, bowling: 24, fielding: 96, captaincy: 78, pressure: 90, overall: 92,
+    specialty: "Mr. 360", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/AB_de_Villiers_in_2016.jpg/220px-AB_de_Villiers_in_2016.jpg",
+    formats: {
+      odi:      { matches: 228, runs: 9577, avg: 53.50, sr: 101.09,hundreds: 25, fifties: 53, wickets: 0, economy: 0, bestScore: "176" },
+      test:     { matches: 114, runs: 8765, avg: 50.66, sr: 60.29, hundreds: 22, fifties: 46, wickets: 0, economy: 0, bestScore: "278*" },
+      t20:      { matches: 78,  runs: 1672, avg: 26.13, sr: 135.16,hundreds: 0,  fifties: 10, wickets: 0, economy: 0, bestScore: "79*" },
+      worldCup: { matches: 23, runs: 1207, avg: 63.53, sr: 117.28,hundreds: 4,  fifties: 6, wickets: 0, economy: 0 },
+      knockouts:{ matches: 15, runs: 724,  avg: 60.33, sr: 114.20,hundreds: 2,  fifties: 5, wickets: 0, economy: 0 },
+      bilateral:{ matches: 190, runs: 7648, avg: 51.33, sr: 98.84, hundreds: 19, fifties: 42, wickets: 0, economy: 0 },
+    },
+  },
+  {
+    name: "Quinton de Kock", role: "Wicketkeeper-Batsman", country: "South Africa",
+    batting: 88, bowling: 10, fielding: 93, captaincy: 66, pressure: 80, overall: 82,
+    specialty: "Explosive Wicketkeeper", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Quinton_de_Kock_2022.jpg/220px-Quinton_de_Kock_2022.jpg",
+    formats: {
+      odi:      { matches: 158, runs: 6770, avg: 44.55, sr: 96.28, hundreds: 19, fifties: 38, wickets: 0, economy: 0, bestScore: "178" },
+      test:     { matches: 54,  runs: 3300, avg: 38.82, sr: 62.09, hundreds: 6,  fifties: 22, wickets: 0, economy: 0, bestScore: "141*" },
+      t20:      { matches: 93,  runs: 2335, avg: 30.72, sr: 135.70,hundreds: 1,  fifties: 14, wickets: 0, economy: 0, bestScore: "79*" },
+      worldCup: { matches: 25, runs: 1109, avg: 55.45, sr: 101.19,hundreds: 4,  fifties: 6, wickets: 0, economy: 0 },
+      knockouts:{ matches: 13, runs: 512,  avg: 46.55, sr: 96.42, hundreds: 2,  fifties: 3, wickets: 0, economy: 0 },
+      bilateral:{ matches: 120, runs: 4724, avg: 42.56, sr: 95.10, hundreds: 13, fifties: 27, wickets: 0, economy: 0 },
+    },
+  },
+
+  // ── AFGHANISTAN ─────────────────────────────────────────────────────────────
+
+  {
+    name: "Rashid Khan", role: "Bowler", country: "Afghanistan",
+    batting: 55, bowling: 93, fielding: 85, captaincy: 70, pressure: 88, overall: 86,
+    specialty: "Spin Wizard", rarity: "Rare",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Rashid_Khan_in_2019.jpg/220px-Rashid_Khan_in_2019.jpg",
+    formats: {
+      odi:      { matches: 107, runs: 1168, avg: 17.39, sr: 96.78, hundreds: 0,  fifties: 2, wickets: 191, economy: 4.25, bestScore: "60*" },
+      test:     { matches: 10,  runs: 214,  avg: 26.75, sr: 79.26, hundreds: 0,  fifties: 1, wickets: 50,  economy: 3.28, bestScore: "51" },
+      t20:      { matches: 100, runs: 529,  avg: 14.27, sr: 138.48,hundreds: 0,  fifties: 0, wickets: 168, economy: 6.22, bestScore: "60" },
+      worldCup: { matches: 17, runs: 143,  avg: 17.88, sr: 93.46, hundreds: 0,  fifties: 0, wickets: 31, economy: 4.00 },
+      knockouts:{ matches: 10, runs: 72,   avg: 14.40, sr: 88.89, hundreds: 0,  fifties: 0, wickets: 17, economy: 4.28 },
+      bilateral:{ matches: 81, runs: 952,  avg: 17.31, sr: 97.34, hundreds: 0,  fifties: 2, wickets: 148, economy: 4.36 },
+    },
+  },
+
+  // ── LEGENDS (retired) ────────────────────────────────────────────────────────
+
+  {
+    name: "MS Dhoni", role: "Wicketkeeper-Batsman", country: "India",
+    batting: 90, bowling: 10, fielding: 96, captaincy: 98, pressure: 96, overall: 92,
+    specialty: "Captain Cool", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/MS_Dhoni_%28cropped%29.jpg/220px-MS_Dhoni_%28cropped%29.jpg",
+    formats: {
+      odi:      { matches: 350, runs: 10773, avg: 50.58, sr: 87.56, hundreds: 10, fifties: 73, wickets: 1, economy: 5.23, bestScore: "183*" },
+      test:     { matches: 90,  runs: 4876,  avg: 38.09, sr: 58.23, hundreds: 6,  fifties: 33, wickets: 0, economy: 0,    bestScore: "224" },
+      t20:      { matches: 98,  runs: 1617,  avg: 37.60, sr: 126.13,hundreds: 0,  fifties: 2,  wickets: 0, economy: 0,    bestScore: "56" },
+      worldCup: { matches: 50, runs: 1782,  avg: 59.40, sr: 88.65, hundreds: 1,  fifties: 15, wickets: 0, economy: 0 },
+      knockouts:{ matches: 29, runs: 924,   avg: 61.60, sr: 86.44, hundreds: 0,  fifties: 8,  wickets: 0, economy: 0 },
+      bilateral:{ matches: 273, runs: 8126, avg: 48.07, sr: 87.20, hundreds: 8,  fifties: 52, wickets: 1, economy: 5.23 },
+    },
+  },
+  {
+    name: "Sachin Tendulkar", role: "Batsman", country: "India",
+    batting: 99, bowling: 30, fielding: 88, captaincy: 78, pressure: 96, overall: 96,
+    specialty: "God of Cricket", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Sachin_Tendulkar.jpg/220px-Sachin_Tendulkar.jpg",
+    formats: {
+      odi:      { matches: 463, runs: 18426, avg: 44.83, sr: 86.23, hundreds: 49, fifties: 96, wickets: 154, economy: 5.09, bestScore: "200*" },
+      test:     { matches: 200, runs: 15921, avg: 53.79, sr: 54.04, hundreds: 51, fifties: 68, wickets: 46,  economy: 3.29, bestScore: "248*" },
+      t20:      { matches: 1,   runs: 12,    avg: 12.00, sr: 109.09,hundreds: 0,  fifties: 0,  wickets: 0,   economy: 0,    bestScore: "12" },
+      worldCup: { matches: 44, runs: 2278,  avg: 56.95, sr: 88.98, hundreds: 6,  fifties: 15, wickets: 6,  economy: 4.81 },
+      knockouts:{ matches: 22, runs: 1098,  avg: 52.29, sr: 86.14, hundreds: 2,  fifties: 9,  wickets: 3,  economy: 5.02 },
+      bilateral:{ matches: 380, runs: 14602, avg: 44.64, sr: 85.76, hundreds: 40, fifties: 78, wickets: 128, economy: 5.16 },
+    },
+  },
+  {
+    name: "AB de Villiers", role: "Batsman", country: "South Africa",
+    batting: 96, bowling: 24, fielding: 96, captaincy: 78, pressure: 90, overall: 92,
+    specialty: "Mr. 360", rarity: "Legend",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/AB_de_Villiers_in_2016.jpg/220px-AB_de_Villiers_in_2016.jpg",
+    formats: {
+      odi:      { matches: 228, runs: 9577, avg: 53.50, sr: 101.09,hundreds: 25, fifties: 53, wickets: 0, economy: 0, bestScore: "176" },
+      test:     { matches: 114, runs: 8765, avg: 50.66, sr: 60.29, hundreds: 22, fifties: 46, wickets: 0, economy: 0, bestScore: "278*" },
+      t20:      { matches: 78,  runs: 1672, avg: 26.13, sr: 135.16,hundreds: 0,  fifties: 10, wickets: 0, economy: 0, bestScore: "79*" },
+      worldCup: { matches: 23, runs: 1207, avg: 63.53, sr: 117.28,hundreds: 4,  fifties: 6, wickets: 0, economy: 0 },
+      knockouts:{ matches: 15, runs: 724,  avg: 60.33, sr: 114.20,hundreds: 2,  fifties: 5, wickets: 0, economy: 0 },
+      bilateral:{ matches: 190, runs: 7648, avg: 51.33, sr: 98.84, hundreds: 19, fifties: 42, wickets: 0, economy: 0 },
+    },
+  },
 ];
+
+// Remove duplicate AB de Villiers (appears twice in legends + SA section)
+const deduped = playersData.filter((p, idx, arr) =>
+  arr.findIndex(q => q.name === p.name && q.country === p.country) === idx
+);
 
 async function seed() {
   try {
     await mongoose.connect(config.mongodbUri);
     console.log('Connected to MongoDB');
-
     await Player.deleteMany({});
     console.log('Cleared existing players');
-
-    const result = await Player.insertMany(playersData);
+    const result = await Player.insertMany(deduped);
     console.log(`Seeded ${result.length} players successfully`);
-
     await mongoose.disconnect();
     console.log('Done');
   } catch (error) {

@@ -12,20 +12,14 @@ import { setupSocketServer } from './socket';
 const app = express();
 const httpServer = http.createServer(app);
 
-const allowedOrigins = [
-  config.frontendUrl.replace(/\/$/, ''),
-  'http://localhost:3000',
-  'http://localhost:5173',
-];
+app.set('trust proxy', 1);
 
 app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
+  origin: [
+    'http://localhost:3000',
+    'https://cricket-attacks.vercel.app',
+    'https://cricket-attacks-biwdbejwt-anmolgoyal2006s-projects.vercel.app',
+  ],
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));

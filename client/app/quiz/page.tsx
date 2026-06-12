@@ -12,8 +12,6 @@ import {
   Loader2,
   Zap,
   Star,
-  ChevronRight,
-  Coins,
 } from 'lucide-react';
 import { quizApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';

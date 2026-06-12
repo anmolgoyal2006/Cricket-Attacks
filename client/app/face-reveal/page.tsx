@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Eye, EyeOff, Share2, Loader2, Clock, ChevronDown, ChevronUp,
+  Eye, EyeOff, Share2, Loader2, ChevronDown, ChevronUp,
   Star, CheckCircle2, XCircle, Lock,
 } from 'lucide-react';
 import { wordleApi } from '@/lib/api';
@@ -13,179 +13,135 @@ import Link from 'next/link';
 const MAX_GUESSES = 5;
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
-
 interface Hint { id: number; label: string; value: string; emoji: string }
 
-// ─── Difficulty config ────────────────────────────────────────────────────────
-// Instead of blur, each mode uses a named clip region:
-//   easy   → left half of face
-//   medium → eyes strip (top 30-48%)
-//   hard   → forehead strip (top 0-28%)
-//   expert → lips strip (bottom 70-85%)
-// No blur applied anywhere — just clean partial crops.
+interface Region {
+  top: number;    // % from top
+  bottom: number; // % from top
+  left: number;   // % from left
+  right: number;  // % from left
+}
+
 interface DifficultyConfig {
   label: string;
   description: string;
   emoji: string;
   points: number;
-  // The visible rect(s) as percentage of image height: [{ top, bottom }]
-  // Multiple rects = multiple visible strips shown together via SVG clipPath
-  regions: { top: number; bottom: number; leftPercent: number; rightPercent: number }[];
+  regions: Region[];
 }
 
+// Each region defines a rectangle that IS visible — everything else is covered.
 const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   easy: {
-    label: 'Easy',
-    description: 'Left half of face revealed',
-    emoji: '😊',
-    points: 5,
-    regions: [{ top: 0, bottom: 100, leftPercent: 0, rightPercent: 50 }],
+    label: 'Easy', description: 'Left half of face', emoji: '😊', points: 5,
+    regions: [{ top: 0, bottom: 100, left: 0, right: 50 }],
   },
   medium: {
-    label: 'Medium',
-    description: 'Eyes region only',
-    emoji: '🤔',
-    points: 10,
-    regions: [{ top: 28, bottom: 52, leftPercent: 0, rightPercent: 100 }],
+    label: 'Medium', description: 'Eyes only', emoji: '🤔', points: 10,
+    regions: [{ top: 28, bottom: 52, left: 0, right: 100 }],
   },
   hard: {
-    label: 'Hard',
-    description: 'Forehead only',
-    emoji: '😰',
-    points: 20,
-    regions: [{ top: 0, bottom: 26, leftPercent: 0, rightPercent: 100 }],
+    label: 'Hard', description: 'Forehead only', emoji: '😰', points: 20,
+    regions: [{ top: 0, bottom: 26, left: 0, right: 100 }],
   },
   expert: {
-    label: 'Expert',
-    description: 'Lips only',
-    emoji: '💀',
-    points: 40,
-    regions: [{ top: 68, bottom: 84, leftPercent: 0, rightPercent: 100 }],
+    label: 'Expert', description: 'Lips only', emoji: '💀', points: 40,
+    regions: [{ top: 68, bottom: 84, left: 0, right: 100 }],
   },
 };
 
-function countdown(): string {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  const d = midnight.getTime() - now.getTime();
-  const h = Math.floor(d / 3600000);
-  const m = Math.floor((d % 3600000) / 60000);
-  const s = Math.floor((d % 60000) / 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+// ─── MaskedImage ──────────────────────────────────────────────────────────────
+// Strategy: render the image at full size, then overlay 4 dark cover panels
+// that hide everything OUTSIDE the visible region(s).
+// This avoids SVG cross-origin issues entirely.
+function MaskedImage({
+  url, difficulty, revealed,
+}: {
+  url: string; difficulty: Difficulty; revealed: boolean;
+}) {
+  if (!url) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+        <EyeOff className="w-12 h-12 text-gray-600" />
+      </div>
+    );
+  }
+
+  if (revealed) {
+    return (
+      <img src={url} alt="Player" className="w-full h-full object-cover object-top" />
+    );
+  }
+
+  const { regions } = DIFFICULTIES[difficulty];
+  // For now we only use the first region (all difficulties have 1)
+  const r = regions[0];
+
+  // We build 4 overlay panels that cover the 4 sides OUTSIDE the visible rect.
+  // Each panel is absolutely positioned and solid dark.
+  const overlays: React.CSSProperties[] = [];
+
+  // Top cover (above the visible region)
+  if (r.top > 0) {
+    overlays.push({ position: 'absolute', top: 0, left: 0, right: 0, height: `${r.top}%`, background: 'rgb(8,8,12)' });
+  }
+  // Bottom cover (below the visible region)
+  if (r.bottom < 100) {
+    overlays.push({ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${100 - r.bottom}%`, background: 'rgb(8,8,12)' });
+  }
+  // Left cover (left of the visible region)
+  if (r.left > 0) {
+    overlays.push({
+      position: 'absolute',
+      top: `${r.top}%`, height: `${r.bottom - r.top}%`,
+      left: 0, width: `${r.left}%`,
+      background: 'rgb(8,8,12)',
+    });
+  }
+  // Right cover (right of the visible region)
+  if (r.right < 100) {
+    overlays.push({
+      position: 'absolute',
+      top: `${r.top}%`, height: `${r.bottom - r.top}%`,
+      right: 0, width: `${100 - r.right}%`,
+      background: 'rgb(8,8,12)',
+    });
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Full image always visible underneath */}
+      <img
+        src={url}
+        alt="Mystery player"
+        className="absolute inset-0 w-full h-full object-cover object-top"
+        draggable={false}
+      />
+
+      {/* Cover panels hiding everything outside the visible region */}
+      {overlays.map((style, i) => (
+        <div key={i} style={style} />
+      ))}
+
+      {/* Amber border around the visible window */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: `${r.top}%`,
+          left: `${r.left}%`,
+          width: `${r.right - r.left}%`,
+          height: `${r.bottom - r.top}%`,
+          boxShadow: 'inset 0 0 0 2px rgba(251,191,36,0.5)',
+        }}
+      />
+    </div>
+  );
 }
 
 function todayKey() {
   const t = new Date();
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
-
-// ─── Masked image component ───────────────────────────────────────────────────
-// Renders the player photo with a dark overlay punched out in the visible regions.
-// Uses inline SVG clipPath so no CSS blur is needed at all.
-function MaskedPlayerImage({
-  imageUrl,
-  difficulty,
-  revealed,
-}: {
-  imageUrl: string;
-  difficulty: Difficulty;
-  revealed: boolean;
-}) {
-  const cfg = DIFFICULTIES[difficulty];
-  const clipId = `face-clip-${difficulty}`;
-
-  if (revealed || !imageUrl) {
-    return (
-      <img
-        src={imageUrl || ''}
-        alt="Player"
-        className="w-full h-full object-cover object-top"
-      />
-    );
-  }
-
-  return (
-    <div className="relative w-full h-full">
-      {/* Full image underneath — always rendered so layout is stable */}
-      <img
-        src={imageUrl}
-        alt="Mystery player"
-        className="absolute inset-0 w-full h-full object-cover object-top"
-      />
-
-      {/* Dark overlay with cut-outs for visible regions */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <clipPath id={clipId} clipPathUnits="objectBoundingBox">
-            {cfg.regions.map((r, i) => (
-              <rect
-                key={i}
-                x={r.leftPercent / 100}
-                y={r.top / 100}
-                width={(r.rightPercent - r.leftPercent) / 100}
-                height={(r.bottom - r.top) / 100}
-              />
-            ))}
-          </clipPath>
-        </defs>
-
-        {/* Full dark overlay */}
-        <rect x="0" y="0" width="100" height="100" fill="rgba(8,8,12,0.88)" />
-
-        {/* Punch out visible regions — show the actual image through them */}
-        {cfg.regions.map((r, i) => (
-          <image
-            key={i}
-            href={imageUrl}
-            x="0"
-            y="0"
-            width="100"
-            height="100"
-            preserveAspectRatio="xMidYMin slice"
-            clipPath={`url(#${clipId})`}
-          />
-        ))}
-      </svg>
-
-      {/* Subtle border lines showing the cut region boundaries */}
-      {cfg.regions.map((r, i) => (
-        <div
-          key={i}
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{
-            top: `${r.top}%`,
-            height: `${r.bottom - r.top}%`,
-            left: `${r.leftPercent}%`,
-            width: `${r.rightPercent - r.leftPercent}%`,
-            boxShadow: 'inset 0 0 0 1.5px rgba(251,191,36,0.35)',
-            borderRadius: 2,
-          }}
-        />
-      ))}
-
-      {/* Label badge showing what region is visible */}
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-        <span className="text-[10px] text-amber-400/80 font-body font-semibold bg-black/70 px-2 py-0.5 rounded-full border border-amber-500/20">
-          {cfg.description}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Region label for the "how it works" breakdown ────────────────────────────
-const REGION_PREVIEWS: Record<Difficulty, { label: string; visual: string }> = {
-  easy:   { label: 'Left Half',  visual: '⬛🟨 ←left side of face' },
-  medium: { label: 'Eyes Strip', visual: '🔲 eyes band across middle' },
-  hard:   { label: 'Forehead',   visual: '🔲 top portion only' },
-  expert: { label: 'Lips',       visual: '🔲 small lips band near bottom' },
-};
 
 export default function FaceRevealPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
@@ -203,18 +159,10 @@ export default function FaceRevealPage() {
   const [won, setWon]               = useState(false);
   const [answer, setAnswer]         = useState<any>(null);
   const [score, setScore]           = useState(0);
-  const [streak]                    = useState(1);
   const [revealImage, setRevealImage] = useState(false);
-  const [timer, setTimer]           = useState('');
   const [copied, setCopied]         = useState(false);
   const [showHow, setShowHow]       = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => setTimer(countdown()), 1000);
-    setTimer(countdown());
-    return () => clearInterval(t);
-  }, []);
 
   // Restore saved state
   useEffect(() => {
@@ -229,6 +177,7 @@ export default function FaceRevealPage() {
         setScore(s.score || 0);
         setDifficulty(s.difficulty || 'medium');
         setAnswer(s.answer || null);
+        setImageUrl(s.imageUrl || '');
         setRevealedHints(s.revealedHints || 0);
         setRevealImage(true);
       }
@@ -273,12 +222,12 @@ export default function FaceRevealPage() {
       setGuesses(newGuesses);
 
       if (result.isCorrect) {
-        const finalScore = result.pointsEarned * streak;
+        const finalScore = result.pointsEarned;
         setWon(true); setGameOver(true); setScore(finalScore); setRevealImage(true);
         if (result.answer) setAnswer(result.answer);
         setPhase('done');
         localStorage.setItem(`face-reveal-${todayKey()}`, JSON.stringify({
-          phase: 'done', guesses: newGuesses, won: true,
+          phase: 'done', guesses: newGuesses, won: true, imageUrl,
           score: finalScore, difficulty, answer: result.answer, revealedHints,
         }));
       } else if (guessNum >= MAX_GUESSES || result.answer) {
@@ -286,7 +235,7 @@ export default function FaceRevealPage() {
         if (result.answer) setAnswer(result.answer);
         setPhase('done');
         localStorage.setItem(`face-reveal-${todayKey()}`, JSON.stringify({
-          phase: 'done', guesses: newGuesses, won: false,
+          phase: 'done', guesses: newGuesses, won: false, imageUrl,
           score: 0, difficulty, answer: result.answer, revealedHints,
         }));
       } else {
@@ -297,7 +246,7 @@ export default function FaceRevealPage() {
       setSubmitting(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [guesses, input, submitting, gameOver, difficulty, hints.length, streak, revealedHints]);
+  }, [guesses, input, submitting, gameOver, difficulty, hints.length, revealedHints, imageUrl]);
 
   const handleShare = async () => {
     const cfg = DIFFICULTIES[difficulty];
@@ -309,28 +258,27 @@ export default function FaceRevealPage() {
 
   const cfg = DIFFICULTIES[difficulty];
 
-  // ── DIFFICULTY SELECT ──────────────────────────────────────────────────────
+  // ── SELECT DIFFICULTY ──────────────────────────────────────────────────────
   if (phase === 'select') {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <div className="max-w-2xl w-full">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+        <div className="max-w-xl w-full">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
             <div className="text-6xl mb-4">👁️</div>
             <h1 className="text-5xl font-display font-black gradient-text mb-2">Face Reveal</h1>
-            <p className="text-gray-400 font-body">Identify the cricketer from a partial photo — no blur, just a slice of their face</p>
+            <p className="text-gray-400 font-body">Identify the cricketer from a slice of their face — no blur, just a clean crop</p>
           </motion.div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             {(Object.entries(DIFFICULTIES) as [Difficulty, DifficultyConfig][]).map(([key, d]) => (
               <motion.button
                 key={key}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setDifficulty(key)}
                 className={cn(
                   'p-5 rounded-2xl border-2 text-left transition-all',
                   difficulty === key
-                    ? 'border-amber-500/60 bg-amber-500/10'
+                    ? 'border-amber-500/70 bg-amber-500/10'
                     : 'border-white/10 bg-white/[0.03] hover:border-white/20'
                 )}
               >
@@ -345,24 +293,20 @@ export default function FaceRevealPage() {
                   )}>{d.label}</span>
                 </div>
 
-                {/* Mini visual showing which region is revealed */}
-                <div className="w-10 h-14 rounded-lg overflow-hidden border border-white/10 bg-gray-800 mb-3 relative">
-                  <div className="absolute inset-0 bg-gray-700" />
+                {/* Preview diagram showing which slice is revealed */}
+                <div className="w-10 h-14 rounded-lg overflow-hidden border border-white/10 mb-3 relative bg-gray-800">
+                  {/* Dark background = hidden */}
+                  <div className="absolute inset-0 bg-gray-900" />
+                  {/* Amber highlight = visible slice */}
                   {d.regions.map((r, i) => (
-                    <div
-                      key={i}
-                      className="absolute bg-amber-400/60"
-                      style={{
-                        top: `${r.top}%`,
-                        left: `${r.leftPercent}%`,
-                        width: `${r.rightPercent - r.leftPercent}%`,
-                        height: `${r.bottom - r.top}%`,
-                      }}
-                    />
+                    <div key={i} className="absolute bg-amber-400/70" style={{
+                      top: `${r.top}%`, left: `${r.left}%`,
+                      width: `${r.right - r.left}%`, height: `${r.bottom - r.top}%`,
+                    }} />
                   ))}
                 </div>
 
-                <p className="text-white font-display font-bold text-sm mb-0.5">{d.points} pts · {d.label}</p>
+                <p className="text-white font-display font-bold text-sm mb-0.5">{d.points} pts</p>
                 <p className="text-xs text-gray-400 font-body">{d.description}</p>
               </motion.button>
             ))}
@@ -370,30 +314,23 @@ export default function FaceRevealPage() {
 
           {/* How to play */}
           <div className="glass rounded-2xl p-5 mb-6">
-            <button
-              onClick={() => setShowHow(s => !s)}
-              className="w-full flex items-center justify-between text-sm text-gray-400 hover:text-white font-body transition-colors"
-            >
+            <button onClick={() => setShowHow(s => !s)}
+              className="w-full flex items-center justify-between text-sm text-gray-400 hover:text-white font-body transition-colors">
               <span>How it works</span>
               {showHow ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             <AnimatePresence>
               {showHow && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                   <ul className="mt-4 space-y-2 text-sm text-gray-300 font-body">
-                    <li>👁️ A portion of the cricketer's photo is revealed — no blur, just a clean crop</li>
+                    <li>👁️ A clean slice of the cricketer's photo is shown — no blur</li>
                     <li>😊 <strong className="text-white">Easy</strong> — left half of the face</li>
-                    <li>🤔 <strong className="text-white">Medium</strong> — eyes strip only</li>
-                    <li>😰 <strong className="text-white">Hard</strong> — forehead strip only</li>
-                    <li>💀 <strong className="text-white">Expert</strong> — lips strip only</li>
-                    <li>💡 A text hint unlocks after each wrong guess</li>
+                    <li>🤔 <strong className="text-white">Medium</strong> — eyes region</li>
+                    <li>😰 <strong className="text-white">Hard</strong> — forehead only</li>
+                    <li>💀 <strong className="text-white">Expert</strong> — lips only</li>
+                    <li>💡 A text clue unlocks after each wrong guess</li>
                     <li>🏆 Fewer guesses = more points</li>
-                    <li>📅 New player every day at midnight</li>
                   </ul>
                 </motion.div>
               )}
@@ -401,113 +338,85 @@ export default function FaceRevealPage() {
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={startGame}
-            disabled={loading}
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            onClick={startGame} disabled={loading}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-xl shadow-2xl shadow-amber-500/30 flex items-center justify-center gap-2"
           >
-            {loading
-              ? <Loader2 className="w-6 h-6 animate-spin" />
-              : <><Eye className="w-5 h-5" /> Start {cfg.label} Challenge</>
-            }
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Eye className="w-5 h-5" /> Start {cfg.label} Challenge</>}
           </motion.button>
         </div>
       </div>
     );
   }
 
-  // ── GAME OVER / DONE ───────────────────────────────────────────────────────
+  // ── DONE ──────────────────────────────────────────────────────────────────
   if (phase === 'done') {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <div className="max-w-lg w-full">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={cn(
-              'glass rounded-3xl p-8 text-center border-2',
-              won ? 'border-green-500/30' : 'border-white/10'
-            )}
-          >
+        <div className="max-w-md w-full">
+          <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+            className={cn('glass rounded-3xl p-8 text-center border-2',
+              won ? 'border-green-500/30' : 'border-white/10')}>
+
             <div className="text-5xl mb-3">{won ? '🏆' : '😔'}</div>
             <h2 className="text-3xl font-display font-black text-white mb-1">
-              {won ? `Identified in ${guesses.length} guess${guesses.length > 1 ? 'es' : ''}!` : 'Better luck tomorrow!'}
+              {won ? `Got it in ${guesses.length} guess${guesses.length > 1 ? 'es' : ''}!` : 'Better luck next time!'}
             </h2>
 
             {won && score > 0 && (
-              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 mt-3 mb-1">
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 mt-3 mb-1">
                 <Star className="w-4 h-4 text-amber-400" />
                 <span className="text-amber-400 font-display font-bold">+{score} points</span>
               </div>
             )}
 
-            {/* Full revealed image */}
-            {(imageUrl || answer) && (
-              <div className="mt-5 mb-5">
+            {/* Revealed photo */}
+            {imageUrl && (
+              <div className="mt-5 mb-4">
                 <div className="w-36 h-44 mx-auto rounded-2xl overflow-hidden border-4 border-amber-500/40 mb-3">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt="Player" className="w-full h-full object-cover object-top" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center text-4xl">
-                      {answer?.name?.split(' ').map((n: string) => n[0]).join('')}
-                    </div>
-                  )}
+                  <img src={imageUrl} alt="Player" className="w-full h-full object-cover object-top" />
                 </div>
-                <p className="text-3xl font-display font-black text-amber-400 mb-2">{answer?.name}</p>
-                <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-body">
-                  {[answer?.country, answer?.role, answer?.specialty].filter(Boolean).map((tag: string, i: number) => (
-                    <span key={i} className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-gray-300">{tag}</span>
+                <p className="text-2xl font-display font-black text-amber-400 mb-2">{answer?.name}</p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs font-body">
+                  {[answer?.country, answer?.role, answer?.specialty].filter(Boolean).map((t: string, i: number) => (
+                    <span key={i} className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-gray-300">{t}</span>
                   ))}
                 </div>
               </div>
             )}
 
             {/* Guess log */}
-            {guesses.length > 0 && (
-              <div className="space-y-1.5 mb-5">
-                {guesses.map((g, i) => (
-                  <div key={i} className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-body',
-                    i === guesses.length - 1 && won
-                      ? 'bg-green-500/15 border-green-500/30 text-green-300'
-                      : 'bg-red-500/10 border-red-500/20 text-red-400'
-                  )}>
-                    {i === guesses.length - 1 && won
-                      ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                      : <XCircle className="w-4 h-4 flex-shrink-0" />}
-                    <span className="font-semibold">{g}</span>
-                    <span className="ml-auto text-xs text-gray-500">#{i + 1}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="space-y-1.5 my-5">
+              {guesses.map((g, i) => (
+                <div key={i} className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-body',
+                  i === guesses.length - 1 && won
+                    ? 'bg-green-500/15 border-green-500/30 text-green-300'
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                )}>
+                  {i === guesses.length - 1 && won
+                    ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    : <XCircle className="w-4 h-4 flex-shrink-0" />}
+                  <span className="font-semibold">{g}</span>
+                  <span className="ml-auto text-xs text-gray-500">#{i + 1}</span>
+                </div>
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-sm"
-              >
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={handleShare}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-sm">
                 <Share2 className="w-4 h-4" />
                 {copied ? 'Copied!' : 'Share'}
               </button>
-              <button
-                onClick={() => { setPhase('select'); setRevealImage(false); }}
-                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-display font-bold text-sm hover:bg-white/10 transition-all"
-              >
+              <button onClick={() => { setPhase('select'); setRevealImage(false); }}
+                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-display font-bold text-sm hover:bg-white/10 transition-all">
                 Change Difficulty
               </button>
-              <Link
-                href="/wordle"
-                className="px-5 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-display font-bold text-sm hover:bg-amber-500/25 transition-all"
-              >
+              <Link href="/wordle"
+                className="px-5 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-display font-bold text-sm hover:bg-amber-500/25 transition-all">
                 🏏 Try Wordle
               </Link>
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-500 font-body">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Next challenge in {timer}</span>
             </div>
           </motion.div>
         </div>
@@ -518,15 +427,11 @@ export default function FaceRevealPage() {
   // ── PLAYING ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-md mx-auto">
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mb-3">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-xs text-amber-400 font-body font-semibold">Next challenge in {timer}</span>
-          </div>
-          <h1 className="text-4xl font-display font-black gradient-text mb-1">Face Reveal</h1>
+          <h1 className="text-4xl font-display font-black gradient-text mb-2">Face Reveal</h1>
           <div className="flex items-center justify-center gap-2">
             <span className={cn(
               'text-xs px-2.5 py-1 rounded-full font-body font-semibold border',
@@ -537,67 +442,44 @@ export default function FaceRevealPage() {
             )}>
               {cfg.emoji} {cfg.label}
             </span>
-            <span className="text-xs text-gray-500 font-body">{cfg.points} pts · {cfg.description}</span>
+            <span className="text-xs text-gray-500 font-body">{cfg.description} · {cfg.points} pts</span>
           </div>
         </div>
 
-        {/* Player Image — masked with SVG, zero blur */}
-        <div className="mb-6 mx-auto relative" style={{ maxWidth: 300 }}>
+        {/* Image */}
+        <div className="mb-6 mx-auto" style={{ maxWidth: 280 }}>
           <div className={cn(
-            'rounded-2xl overflow-hidden border-2 bg-gray-900 aspect-[3/4] relative',
+            'rounded-2xl overflow-hidden border-2 aspect-[3/4] relative',
+            'bg-gray-950',
             difficulty === 'easy'   ? 'border-green-500/30' :
             difficulty === 'medium' ? 'border-yellow-500/30' :
             difficulty === 'hard'   ? 'border-orange-500/30' :
                                        'border-red-500/30'
           )}>
-            {imageUrl ? (
-              <MaskedPlayerImage
-                imageUrl={imageUrl}
-                difficulty={difficulty}
-                revealed={revealImage}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <EyeOff className="w-12 h-12 text-gray-600" />
-              </div>
-            )}
+            <MaskedImage url={imageUrl} difficulty={difficulty} revealed={revealImage} />
           </div>
-
-          {/* Glow ring */}
-          <div className={cn(
-            'absolute -inset-1 rounded-2xl -z-10',
-            difficulty === 'easy'   ? 'shadow-lg shadow-green-500/15' :
-            difficulty === 'medium' ? 'shadow-lg shadow-yellow-500/15' :
-            difficulty === 'hard'   ? 'shadow-lg shadow-orange-500/20' :
-                                       'shadow-lg shadow-red-500/20'
-          )} />
         </div>
 
-        {/* What region is visible — visual legend */}
+        {/* Showing label */}
         {!revealImage && (
-          <div className="flex items-center justify-center gap-2 mb-5">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <span className="text-xs text-gray-400 font-body">Showing:</span>
-              <span className="text-xs text-amber-400 font-display font-bold">{cfg.description}</span>
-            </div>
+          <div className="flex justify-center mb-5">
+            <span className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-amber-400 font-body font-semibold">
+              Showing: {cfg.description}
+            </span>
           </div>
         )}
 
-        {/* Progressive Hints */}
+        {/* Unlocked Hints */}
         {revealedHints > 0 && (
-          <div className="mb-6">
+          <div className="mb-5">
             <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Lock className="w-3 h-3" />
-              Hints Unlocked ({revealedHints}/{hints.length})
+              <Lock className="w-3 h-3" /> Hints ({revealedHints}/{hints.length})
             </p>
             <div className="grid grid-cols-3 gap-2">
               {hints.slice(0, revealedHints).map(hint => (
-                <motion.div
-                  key={hint.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="glass rounded-xl p-3 border border-amber-500/20 text-center"
-                >
+                <motion.div key={hint.id}
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  className="glass rounded-xl p-3 border border-amber-500/20 text-center">
                   <div className="text-lg mb-0.5">{hint.emoji}</div>
                   <div className="text-[10px] text-gray-400 font-body">{hint.label}</div>
                   <div className="text-xs text-amber-300 font-display font-bold mt-0.5">{hint.value}</div>
@@ -607,7 +489,7 @@ export default function FaceRevealPage() {
           </div>
         )}
 
-        {/* Guess History */}
+        {/* Guess history */}
         {guesses.length > 0 && (
           <div className="mb-4 space-y-1.5">
             {guesses.map((g, i) => (
@@ -621,7 +503,7 @@ export default function FaceRevealPage() {
                   ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                   : <XCircle className="w-4 h-4 flex-shrink-0" />}
                 <span className="font-semibold">{g}</span>
-                <span className="ml-auto text-xs text-gray-500">Guess {i + 1}</span>
+                <span className="ml-auto text-xs text-gray-500">#{i + 1}</span>
               </div>
             ))}
           </div>
@@ -631,13 +513,11 @@ export default function FaceRevealPage() {
         {!gameOver && (
           <div className="flex items-center justify-center gap-2 mb-5">
             {Array.from({ length: MAX_GUESSES }).map((_, i) => (
-              <div key={i} className={cn(
-                'w-2.5 h-2.5 rounded-full transition-all',
-                i < guesses.length ? 'bg-amber-400 scale-110' : 'bg-white/10'
-              )} />
+              <div key={i} className={cn('w-2.5 h-2.5 rounded-full transition-all',
+                i < guesses.length ? 'bg-amber-400 scale-110' : 'bg-white/10')} />
             ))}
             <span className="text-xs text-gray-500 font-body ml-2">
-              {MAX_GUESSES - guesses.length} guess{MAX_GUESSES - guesses.length !== 1 ? 'es' : ''} left
+              {MAX_GUESSES - guesses.length} left
             </span>
           </div>
         )}
@@ -649,8 +529,7 @@ export default function FaceRevealPage() {
               <div className="relative flex-1">
                 <input
                   ref={inputRef}
-                  type="text"
-                  value={input}
+                  type="text" value={input}
                   onChange={e => handleInput(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter') submitGuess();
@@ -658,24 +537,16 @@ export default function FaceRevealPage() {
                   }}
                   placeholder="Name the player…"
                   className="w-full px-5 py-3.5 rounded-2xl bg-white/5 border-2 border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/60 font-body text-sm transition-all"
-                  disabled={submitting}
-                  autoComplete="off"
+                  disabled={submitting} autoComplete="off"
                 />
-
                 <AnimatePresence>
                   {suggestions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
+                    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
-                      className="absolute top-full left-0 right-0 mt-1 z-30 glass-dark rounded-xl overflow-hidden border border-white/10 shadow-2xl"
-                    >
+                      className="absolute top-full left-0 right-0 mt-1 z-30 glass-dark rounded-xl overflow-hidden border border-white/10 shadow-2xl">
                       {suggestions.map(name => (
-                        <button
-                          key={name}
-                          onClick={() => { setSuggestions([]); submitGuess(name); }}
-                          className="w-full text-left px-4 py-2.5 text-white font-body text-sm hover:bg-amber-500/10 hover:text-amber-300 transition-colors border-b border-white/5 last:border-0"
-                        >
+                        <button key={name} onClick={() => { setSuggestions([]); submitGuess(name); }}
+                          className="w-full text-left px-4 py-2.5 text-white font-body text-sm hover:bg-amber-500/10 hover:text-amber-300 transition-colors border-b border-white/5 last:border-0">
                           {name}
                         </button>
                       ))}
@@ -683,27 +554,21 @@ export default function FaceRevealPage() {
                   )}
                 </AnimatePresence>
               </div>
-
-              <button
-                onClick={() => submitGuess()}
-                disabled={!input.trim() || submitting}
+              <button onClick={() => submitGuess()} disabled={!input.trim() || submitting}
                 className={cn(
                   'px-5 py-3.5 rounded-2xl font-display font-bold text-sm transition-all flex items-center gap-1.5 flex-shrink-0',
                   input.trim() && !submitting
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-lg hover:shadow-amber-500/30'
                     : 'bg-white/5 text-gray-600 cursor-not-allowed'
-                )}
-              >
+                )}>
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guess'}
               </button>
             </div>
-
             <p className="mt-2 text-xs text-gray-500 font-body text-center">
               Correct now = <span className="text-amber-400 font-semibold">{cfg.points} pts</span>
             </p>
           </div>
         )}
-
       </div>
     </div>
   );

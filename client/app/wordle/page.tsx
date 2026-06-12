@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Share2, Loader2, Info, Clock, ChevronDown, ChevronUp,
+  Share2, Loader2, Info, ChevronDown, ChevronUp,
   Lock, CheckCircle2, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 import { wordleApi } from '@/lib/api';
@@ -45,16 +45,6 @@ function MatchIcon({ match }: { match: MatchState }) {
   return <Minus className="w-3 h-3 text-gray-600" />;
 }
 
-function countdown(): string {
-  const now = new Date();
-  const midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
-  const d = midnight.getTime() - now.getTime();
-  const h = Math.floor(d / 3600000);
-  const m = Math.floor((d % 3600000) / 60000);
-  const s = Math.floor((d % 60000) / 1000);
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-
 function todayKey(): string {
   const t = new Date();
   return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
@@ -81,17 +71,10 @@ export default function WordlePage() {
   const [won, setWon]                 = useState(false);
   const [answer, setAnswer]           = useState<any>(null);
   const [error, setError]             = useState('');
-  const [timer, setTimer]             = useState('');
   const [showHow, setShowHow]         = useState(false);
   const [date, setDate]               = useState('');
   const [copied, setCopied]           = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => setTimer(countdown()), 1000);
-    setTimer(countdown());
-    return () => clearInterval(t);
-  }, []);
 
   // Restore today's saved state
   useEffect(() => {
@@ -183,12 +166,6 @@ export default function WordlePage() {
 
         {/* ── Header ── */}
         <div className="text-center mb-8">
-          <motion.div initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mb-4">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-amber-400 text-xs font-body font-semibold">Next puzzle in {timer}</span>
-          </motion.div>
-
           <h1 className="text-5xl sm:text-6xl font-display font-black gradient-text mb-2">Cricket Wordle</h1>
           <p className="text-gray-400 font-body mb-3">Deduce the mystery cricketer — {MAX_GUESSES} guesses, real cricket knowledge</p>
 
@@ -424,10 +401,6 @@ export default function WordlePage() {
                   className="flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-display font-bold hover:bg-purple-500/30 transition-all">
                   👁️ Try Face Reveal
                 </Link>
-                <div className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm font-body">
-                  <Clock className="w-4 h-4" />
-                  Next in {timer}
-                </div>
               </div>
             </motion.div>
           )}

@@ -235,7 +235,7 @@ export default function PacksPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
                 {revealedCards.map((result: any, index: number) => (
                   <motion.div
-                    key={result._id}
+                    key={result._id || index}
                     initial={{ opacity: 0, rotateY: 180, scale: 0.5 }}
                     animate={{ opacity: 1, rotateY: 0, scale: 1 }}
                     transition={{ delay: index * 0.2, duration: 0.8, type: "spring", stiffness: 100 }}
@@ -245,24 +245,28 @@ export default function PacksPage() {
                         player={{
                           id: index,
                           name: result.name,
-                          role: '',
-                          country: '',
-                          batting: 0,
-                          bowling: 0,
-                          fielding: 0,
-                          overall: 0,
-                          specialty: '',
+                          role: result.role || '',
+                          country: result.country || '',
+                          batting: result.batting || 0,
+                          bowling: result.bowling || 0,
+                          fielding: result.fielding || 0,
+                          captaincy: result.captaincy,
+                          pressure: result.pressure,
+                          overall: result.overall || 0,
+                          specialty: result.specialty || '',
                           rarity: result.rarity,
-                          image: '',
-                          formats: {} as any,
+                          image: result.image || '',
+                          formats: result.formats,
                         }}
+                        animate
+                        delay={index * 0.15}
                       />
-                      <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold ${
+                      <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-30 ${
                         result.isNew
-                          ? 'bg-green-500/80 text-white'
-                          : 'bg-blue-500/80 text-white'
+                          ? 'bg-green-500/90 text-white'
+                          : 'bg-blue-500/90 text-white'
                       }`}>
-                        {result.isNew ? 'NEW' : 'DUPE'}
+                        {result.isNew ? '✨ NEW' : '🔁 DUPE'}
                       </div>
                     </div>
                   </motion.div>

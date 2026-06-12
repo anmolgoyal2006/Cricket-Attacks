@@ -15,6 +15,8 @@ const rankedRoutes_1 = __importDefault(require("./rankedRoutes"));
 const profileRoutes_1 = __importDefault(require("./profileRoutes"));
 const historyRoutes_1 = __importDefault(require("./historyRoutes"));
 const seasonRoutes_1 = __importDefault(require("./seasonRoutes"));
+const wordleRoutes_1 = __importDefault(require("./wordleRoutes"));
+const quizRoutes_1 = __importDefault(require("./quizRoutes"));
 const router = (0, express_1.Router)();
 router.use('/auth', authRoutes_1.default);
 router.use('/cards', playerRoutes_1.default);
@@ -27,6 +29,8 @@ router.use('/ranked', rankedRoutes_1.default);
 router.use('/profile', profileRoutes_1.default);
 router.use('/history', historyRoutes_1.default);
 router.use('/seasons', seasonRoutes_1.default);
+router.use('/wordle', wordleRoutes_1.default);
+router.use('/quiz', quizRoutes_1.default);
 // Health check
 router.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

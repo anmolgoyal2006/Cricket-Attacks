@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, Swords, Trophy, ChevronRight, Star, TrendingUp, Zap, Loader2 } from 'lucide-react';
+import { Sparkles, Swords, Trophy, ChevronRight, Star, TrendingUp, Zap, Loader2, Hash, HelpCircle } from 'lucide-react';
 import PlayerCard from '@/components/PlayerCard';
 import { useAuth } from '@/lib/auth-context';
 import { cardsApi, userCardsApi, leaderboardApi, battlesApi } from '@/lib/api';
@@ -227,6 +227,80 @@ export default function HomePage() {
           )}
         </>
       )}
+
+      {/* Daily Games Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-3xl font-display font-bold text-white mb-2">Daily Games</h2>
+            <p className="text-gray-400 font-body">Come back every day — new challenges, new bragging rights</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Cricket Wordle */}
+            <Link href="/wordle">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative overflow-hidden rounded-2xl p-6 cursor-pointer border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-600/5 hover:border-amber-500/40 transition-all group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-start space-x-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/30">
+                    <Hash className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-xl font-display font-bold text-white">Cricket Wordle</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 font-body">Daily</span>
+                    </div>
+                    <p className="text-gray-400 font-body text-sm leading-relaxed">
+                      Guess the mystery cricketer from clues revealed one by one. 6 guesses. Resets at midnight.
+                    </p>
+                    <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500 font-body">
+                      <span>🌍 Country</span>
+                      <span>🏏 Role</span>
+                      <span>📊 Stats</span>
+                      <span>⚡ Specialty</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-amber-400 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            </Link>
+
+            {/* Who Said This Quiz */}
+            <Link href="/quiz">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative overflow-hidden rounded-2xl p-6 cursor-pointer border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-blue-600/5 hover:border-purple-500/40 transition-all group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-start space-x-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
+                    <HelpCircle className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-xl font-display font-bold text-white">Who Said This?</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 font-body">Quiz</span>
+                    </div>
+                    <p className="text-gray-400 font-body text-sm leading-relaxed">
+                      Famous quotes, spicy controversies, press conference moments — match the words to the cricketer.
+                    </p>
+                    <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500 font-body">
+                      <span>🗣️ 10 Questions</span>
+                      <span>🪙 Earn Coins</span>
+                      <span>📤 Shareable Score</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-purple-400 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Leaderboard Preview */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">

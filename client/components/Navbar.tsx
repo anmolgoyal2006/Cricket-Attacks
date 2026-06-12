@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, Sparkles, Swords, Users, Home, Grid3x3, LogIn, UserPlus, LogOut, Radio } from 'lucide-react';
+import { Trophy, Sparkles, Swords, Users, Home, Grid3x3, LogIn, UserPlus, LogOut, Radio, Hash, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 
@@ -15,7 +15,9 @@ export default function Navbar() {
     { href: '/live-matches', label: 'Live Matches', icon: Radio },
     { href: '/battle', label: 'Card Battle', icon: Swords },
     { href: '/packs', label: 'Open Packs', icon: Sparkles },
-    { href: '/compare', label: 'Compare Players', icon: Users },
+    { href: '/wordle', label: 'Wordle', icon: Hash },
+    { href: '/quiz', label: 'Who Said This?', icon: HelpCircle },
+    { href: '/compare', label: 'Compare', icon: Users },
     { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
 

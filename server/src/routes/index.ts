@@ -10,6 +10,8 @@ import rankedRoutes from './rankedRoutes';
 import profileRoutes from './profileRoutes';
 import historyRoutes from './historyRoutes';
 import seasonRoutes from './seasonRoutes';
+import wordleRoutes from './wordleRoutes';
+import quizRoutes from './quizRoutes';
 
 const router = Router();
 
@@ -24,6 +26,8 @@ router.use('/ranked', rankedRoutes);
 router.use('/profile', profileRoutes);
 router.use('/history', historyRoutes);
 router.use('/seasons', seasonRoutes);
+router.use('/wordle', wordleRoutes);
+router.use('/quiz', quizRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

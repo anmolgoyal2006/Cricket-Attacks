@@ -173,6 +173,57 @@ export const seasonApi = {
   getHistory: () => api<{ seasons: any[] }>('/seasons/history', { auth: false }),
 };
 
+// Wordle API
+export const wordleApi = {
+  getDaily: () =>
+    api<{
+      date: string;
+      clues: { id: number; category: string; label: string; value: string; emoji: string }[];
+      playerNames: string[];
+      totalClues: number;
+    }>('/wordle/daily', { auth: false }),
+  submitGuess: (guess: string, guessNumber: number) =>
+    api<{
+      isCorrect: boolean;
+      guessNumber: number;
+      hintRow: Record<string, { value: any; match: string }> | null;
+      playerFound: boolean;
+      answer?: {
+        name: string;
+        country: string;
+        role: string;
+        rarity: string;
+        overall: number;
+        batting: number;
+        bowling: number;
+        specialty: string;
+        image: string;
+      };
+    }>('/wordle/guess', { method: 'POST', body: { guess, guessNumber } }),
+};
+
+// Quiz API
+export const quizApi = {
+  getQuestions: (count?: number) =>
+    api<{
+      questions: {
+        id: string;
+        quote: string;
+        options: string[];
+        category: string;
+        difficulty: string;
+      }[];
+      total: number;
+    }>(`/quiz/questions${count ? `?count=${count}` : ''}`, { auth: false }),
+  submitAnswer: (questionId: string, answer: string) =>
+    api<{
+      isCorrect: boolean;
+      correctAnswer: string;
+      explanation: string;
+      coinsEarned: number;
+    }>('/quiz/answer', { method: 'POST', body: { questionId, answer } }),
+};
+
 // Ranked Battle API
 export const rankedApi = {
   completeBattle: (data: { battleId: string; opponentId: string; playerScore: number; opponentScore: number; isDraw: boolean }) =>

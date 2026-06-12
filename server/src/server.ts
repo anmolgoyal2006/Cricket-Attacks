@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { config } from './config';
 import { connectDatabase } from './config/database';
 import routes from './routes';
+import cricbuzzRoutes from './routes/cricbuzzRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { generalLimiter } from './middleware/rateLimiter';
 import { setupSocketServer } from './socket';
@@ -31,6 +32,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api/cricbuzz', cricbuzzRoutes);
 app.use('/api', routes);
 
 app.use('/api/*', (_req, res) => {

@@ -3,337 +3,259 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  HelpCircle,
-  CheckCircle2,
-  XCircle,
-  ChevronDown,
-  ChevronUp,
-  Share2,
-  RotateCcw,
-  Trophy,
-  Loader2,
-  Info,
-  Clock,
+  Share2, Loader2, Info, Clock, ChevronDown, ChevronUp,
+  Lock, CheckCircle2, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 import { wordleApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const MAX_GUESSES = 6;
 
 type MatchState = 'correct' | 'close' | 'wrong' | 'higher' | 'lower';
 
-interface HintCell {
-  value: any;
-  match: MatchState;
-}
+interface HintCell { value: any; match: MatchState }
+interface GuessRow  { guess: string; hints: Record<string, HintCell> | null; valid: boolean }
+interface Clue      { id: number; category: string; label: string; value: string; emoji: string }
 
-interface GuessRow {
-  guess: string;
-  hints: Record<string, HintCell> | null;
-  valid: boolean;
-}
-
-interface Clue {
-  id: number;
-  category: string;
-  label: string;
-  value: string;
-  emoji: string;
-}
-
-const COLUMNS = [
-  { key: 'country', label: 'Country', emoji: '🌍' },
-  { key: 'role', label: 'Role', emoji: '🏏' },
-  { key: 'rarity', label: 'Rarity', emoji: '⭐' },
-  { key: 'batting', label: 'Batting', emoji: '🏏' },
-  { key: 'bowling', label: 'Bowling', emoji: '🎯' },
-  { key: 'overall', label: 'Overall', emoji: '📊' },
-  { key: 'specialty', label: 'Specialty', emoji: '⚡' },
+// Columns shown in the guess grid — matches server hintRow keys
+const COLUMNS: { key: string; label: string; emoji: string }[] = [
+  { key: 'country',      label: 'Country',       emoji: '🌍' },
+  { key: 'role',         label: 'Role',           emoji: '🏏' },
+  { key: 'battingHand',  label: 'Bat Hand',       emoji: '🖐️' },
+  { key: 'bowlingStyle', label: 'Bowl Style',     emoji: '🎳' },
+  { key: 'iplTeam',      label: 'IPL Team',       emoji: '🏟️' },
+  { key: 'debutYear',    label: 'Debut Era',      emoji: '📅' },
+  { key: 'specialty',    label: 'Specialty',      emoji: '⚡' },
 ];
 
-const MATCH_STYLES: Record<MatchState, string> = {
-  correct: 'bg-green-500/30 border-green-500 text-green-300',
-  close: 'bg-yellow-500/30 border-yellow-500 text-yellow-300',
-  wrong: 'bg-red-500/20 border-red-500/50 text-red-400',
-  higher: 'bg-blue-500/20 border-blue-500/50 text-blue-300',
-  lower: 'bg-orange-500/20 border-orange-500/50 text-orange-300',
+const CELL_STYLES: Record<MatchState, string> = {
+  correct: 'bg-green-500/25 border-green-500/70 text-green-300',
+  close:   'bg-yellow-500/25 border-yellow-500/70 text-yellow-300',
+  wrong:   'bg-white/5 border-white/10 text-gray-500',
+  higher:  'bg-blue-500/20 border-blue-500/50 text-blue-300',
+  lower:   'bg-orange-500/20 border-orange-500/50 text-orange-300',
 };
 
-const MATCH_ICONS: Record<MatchState, string> = {
-  correct: '✅',
-  close: '🟡',
-  wrong: '❌',
-  higher: '⬇️',
-  lower: '⬆️',
-};
-
-function getTimeUntilMidnight(): string {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  const diff = midnight.getTime() - now.getTime();
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+function MatchIcon({ match }: { match: MatchState }) {
+  if (match === 'correct') return <CheckCircle2 className="w-3 h-3 text-green-400" />;
+  if (match === 'higher')  return <ArrowUp className="w-3 h-3 text-blue-400" />;
+  if (match === 'lower')   return <ArrowDown className="w-3 h-3 text-orange-400" />;
+  if (match === 'close')   return <span className="text-xs">〜</span>;
+  return <Minus className="w-3 h-3 text-gray-600" />;
 }
 
-function getTodayKey(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+function countdown(): string {
+  const now = new Date();
+  const midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
+  const d = midnight.getTime() - now.getTime();
+  const h = Math.floor(d / 3600000);
+  const m = Math.floor((d % 3600000) / 60000);
+  const s = Math.floor((d % 60000) / 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function todayKey(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+function emojiForMatch(m: string) {
+  if (m === 'correct') return '🟩';
+  if (m === 'close')   return '🟨';
+  if (m === 'higher')  return '⬆️';
+  if (m === 'lower')   return '⬇️';
+  return '🟥';
 }
 
 export default function WordlePage() {
-  const [clues, setClues] = useState<Clue[]>([]);
+  const [clues, setClues]             = useState<Clue[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [revealedClues, setRevealedClues] = useState(1);
-  const [guesses, setGuesses] = useState<GuessRow[]>([]);
-  const [input, setInput] = useState('');
+  const [guesses, setGuesses]         = useState<GuessRow[]>([]);
+  const [input, setInput]             = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
-  const [won, setWon] = useState(false);
-  const [answer, setAnswer] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [countdown, setCountdown] = useState('');
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [date, setDate] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [submitting, setSubmitting]   = useState(false);
+  const [gameOver, setGameOver]       = useState(false);
+  const [won, setWon]                 = useState(false);
+  const [answer, setAnswer]           = useState<any>(null);
+  const [error, setError]             = useState('');
+  const [timer, setTimer]             = useState('');
+  const [showHow, setShowHow]         = useState(false);
+  const [date, setDate]               = useState('');
+  const [copied, setCopied]           = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Countdown timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown(getTimeUntilMidnight());
-    }, 1000);
-    setCountdown(getTimeUntilMidnight());
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTimer(countdown()), 1000);
+    setTimer(countdown());
+    return () => clearInterval(t);
   }, []);
 
-  // Load saved state from localStorage
+  // Restore today's saved state
   useEffect(() => {
-    const todayKey = getTodayKey();
-    const saved = localStorage.getItem(`wordle-${todayKey}`);
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        setGuesses(state.guesses || []);
-        setRevealedClues(state.revealedClues || 1);
-        setGameOver(state.gameOver || false);
-        setWon(state.won || false);
-        setAnswer(state.answer || null);
-      } catch {
-        // ignore
-      }
-    }
+    const saved = localStorage.getItem(`wordle-v2-${todayKey()}`);
+    if (!saved) return;
+    try {
+      const s = JSON.parse(saved);
+      setGuesses(s.guesses || []);
+      setRevealedClues(s.revealedClues || 1);
+      setGameOver(s.gameOver || false);
+      setWon(s.won || false);
+      setAnswer(s.answer || null);
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    async function fetchDaily() {
-      try {
-        const data = await wordleApi.getDaily();
-        setClues(data.clues);
-        setPlayerNames(data.playerNames);
-        setDate(data.date);
-      } catch {
-        setError('Failed to load today\'s challenge. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDaily();
+    wordleApi.getDaily().then(d => {
+      setClues(d.clues);
+      setPlayerNames(d.playerNames);
+      setDate(d.date);
+    }).catch(() => setError('Failed to load today\'s challenge.')).finally(() => setLoading(false));
   }, []);
 
-  // Save state whenever it changes
+  // Persist on every change
   useEffect(() => {
-    if (guesses.length === 0 && !gameOver) return;
-    const todayKey = getTodayKey();
-    localStorage.setItem(
-      `wordle-${todayKey}`,
-      JSON.stringify({ guesses, revealedClues, gameOver, won, answer })
-    );
+    if (!gameOver && guesses.length === 0) return;
+    localStorage.setItem(`wordle-v2-${todayKey()}`, JSON.stringify({ guesses, revealedClues, gameOver, won, answer }));
   }, [guesses, revealedClues, gameOver, won, answer]);
 
-  const handleInputChange = (value: string) => {
-    setInput(value);
-    if (value.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const filtered = playerNames
-      .filter((n) => n.toLowerCase().includes(value.toLowerCase()))
-      .slice(0, 8);
-    setSuggestions(filtered);
+  const handleInput = (v: string) => {
+    setInput(v);
+    if (v.length < 2) { setSuggestions([]); return; }
+    setSuggestions(playerNames.filter(n => n.toLowerCase().includes(v.toLowerCase())).slice(0, 8));
   };
 
-  const handleGuess = useCallback(
-    async (name?: string) => {
-      const guessName = name || input;
-      if (!guessName.trim() || submitting || gameOver) return;
+  const submitGuess = useCallback(async (name?: string) => {
+    const gname = (name || input).trim();
+    if (!gname || submitting || gameOver) return;
+    const guessNumber = guesses.length + 1;
+    setSubmitting(true); setError(''); setSuggestions([]); setInput('');
 
-      const guessNumber = guesses.length + 1;
-      setSubmitting(true);
-      setError('');
-      setSuggestions([]);
-      setInput('');
+    try {
+      const result = await wordleApi.submitGuess(gname, guessNumber);
+      const row: GuessRow = {
+        guess: gname,
+        hints: result.hintRow as Record<string, HintCell> | null,
+        valid: result.playerFound,
+      };
+      const next = [...guesses, row];
+      setGuesses(next);
 
-      try {
-        const result = await wordleApi.submitGuess(guessName.trim(), guessNumber);
-
-        const newRow: GuessRow = {
-          guess: guessName.trim(),
-          hints: result.hintRow as Record<string, HintCell> | null,
-          valid: result.playerFound,
-        };
-
-        const newGuesses = [...guesses, newRow];
-        setGuesses(newGuesses);
-
-        if (result.isCorrect) {
-          setWon(true);
-          setGameOver(true);
-          setAnswer(result.answer);
-        } else if (guessNumber >= MAX_GUESSES || result.answer) {
-          setGameOver(true);
-          setAnswer(result.answer);
-          // Reveal a new clue after each wrong guess
-        } else {
-          // Reveal next clue after each wrong guess
-          setRevealedClues((prev) => Math.min(prev + 1, clues.length));
-        }
-
-        if (result.answer) setAnswer(result.answer);
-      } catch (err: any) {
-        setError(err.message || 'Failed to submit guess');
-      } finally {
-        setSubmitting(false);
-        inputRef.current?.focus();
+      if (result.isCorrect) {
+        setWon(true); setGameOver(true); if (result.answer) setAnswer(result.answer);
+      } else if (guessNumber >= MAX_GUESSES || result.answer) {
+        setGameOver(true); if (result.answer) setAnswer(result.answer);
+      } else {
+        setRevealedClues(p => Math.min(p + 1, clues.length));
       }
-    },
-    [guesses, input, submitting, gameOver, clues.length]
-  );
+    } catch (e: any) {
+      setError(e.message || 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [guesses, input, submitting, gameOver, clues.length]);
 
-  const buildShareText = () => {
-    const emojiGrid = guesses
-      .map((g) => {
-        if (!g.hints) return '🟥🟥🟥🟥🟥🟥🟥';
-        return COLUMNS.map((col) => {
-          const h = g.hints?.[col.key];
-          if (!h) return '⬛';
-          if (h.match === 'correct') return '🟩';
-          if (h.match === 'close') return '🟨';
-          return '🟥';
-        }).join('');
-      })
-      .join('\n');
-
-    return `🏏 Cricket Wordle ${date}\n${won ? `Got it in ${guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`}\n\n${emojiGrid}\n\ncricketclash.app/wordle`;
+  const shareText = () => {
+    const grid = guesses.map(g => {
+      if (!g.hints) return '🟥'.repeat(7);
+      return COLUMNS.map(c => emojiForMatch(g.hints?.[c.key]?.match || 'wrong')).join('');
+    }).join('\n');
+    return `🏏 Cricket Wordle ${date}\n${won ? `${guesses.length}/${MAX_GUESSES} ✅` : `X/${MAX_GUESSES}`}\n\n${grid}\n\ncricketclash.app/wordle`;
   };
 
   const handleShare = async () => {
-    const text = buildShareText();
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback
-    }
+    try { await navigator.clipboard.writeText(shareText()); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* ignore */ }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 mb-4"
-          >
-            <Clock className="w-4 h-4 text-amber-400 mr-2" />
-            <span className="text-amber-400 text-sm font-body font-semibold">
-              New puzzle in {countdown}
-            </span>
-          </motion.div>
-          <h1 className="text-5xl font-display font-black gradient-text mb-2">Cricket Wordle</h1>
-          <p className="text-gray-400 font-body">Guess today's mystery cricketer in {MAX_GUESSES} tries</p>
+      <div className="max-w-5xl mx-auto">
 
-          <button
-            onClick={() => setShowInstructions((s) => !s)}
-            className="mt-3 inline-flex items-center space-x-1 text-sm text-gray-400 hover:text-amber-400 transition-colors font-body"
-          >
-            <Info className="w-4 h-4" />
-            <span>How to play</span>
-            {showInstructions ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
+        {/* ── Header ── */}
+        <div className="text-center mb-8">
+          <motion.div initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mb-4">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-amber-400 text-xs font-body font-semibold">Next puzzle in {timer}</span>
+          </motion.div>
+
+          <h1 className="text-5xl sm:text-6xl font-display font-black gradient-text mb-2">Cricket Wordle</h1>
+          <p className="text-gray-400 font-body mb-3">Deduce the mystery cricketer — {MAX_GUESSES} guesses, real cricket knowledge</p>
+
+          <div className="flex items-center justify-center gap-4">
+            <button onClick={() => setShowHow(s => !s)}
+              className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-amber-400 transition-colors font-body">
+              <Info className="w-4 h-4" />
+              How to play
+              {showHow ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            <Link href="/face-reveal"
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-400 hover:bg-purple-500/25 transition-all font-body">
+              👁️ Face Reveal Mode
+            </Link>
+          </div>
         </div>
 
-        {/* Instructions */}
+        {/* ── How to Play ── */}
         <AnimatePresence>
-          {showInstructions && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 overflow-hidden"
-            >
-              <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-display font-bold text-white mb-4">How to Play</h3>
-                <ul className="space-y-2 text-sm text-gray-300 font-body">
-                  <li>🏏 Guess the mystery cricket player in {MAX_GUESSES} tries</li>
-                  <li>🟩 <strong className="text-white">Green</strong> = exact match</li>
-                  <li>🟨 <strong className="text-white">Yellow</strong> = within 10 points (for stats)</li>
-                  <li>🟥 <strong className="text-white">Red</strong> = no match</li>
-                  <li>⬆️ <strong className="text-white">Arrow up</strong> = actual value is higher</li>
-                  <li>⬇️ <strong className="text-white">Arrow down</strong> = actual value is lower</li>
-                  <li>💡 A new clue is revealed after each wrong guess</li>
-                  <li>📅 A new player every day at midnight</li>
-                </ul>
+          {showHow && (
+            <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }}
+              exit={{ opacity:0, height:0 }} className="mb-6 overflow-hidden">
+              <div className="glass rounded-2xl p-6 grid sm:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-3">Rules</h3>
+                  <ul className="space-y-1.5 text-sm text-gray-300 font-body">
+                    <li>• Guess the mystery cricketer in {MAX_GUESSES} tries</li>
+                    <li>• A new clue unlocks after every wrong guess</li>
+                    <li>• Clues go from broad → specific</li>
+                    <li>• New puzzle every day at midnight</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-3">Color Guide</h3>
+                  <div className="space-y-1.5 text-sm font-body">
+                    <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-green-500/30 border border-green-500/70 flex-shrink-0" /><span className="text-gray-300">Exact match</span></div>
+                    <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-yellow-500/30 border border-yellow-500/70 flex-shrink-0" /><span className="text-gray-300">Close / same category</span></div>
+                    <div className="flex items-center gap-2"><ArrowUp className="w-4 h-4 text-blue-400 flex-shrink-0" /><span className="text-gray-300">Target is higher (age/year)</span></div>
+                    <div className="flex items-center gap-2"><ArrowDown className="w-4 h-4 text-orange-400 flex-shrink-0" /><span className="text-gray-300">Target is lower</span></div>
+                    <div className="flex items-center gap-2"><span className="w-5 h-5 rounded bg-white/5 border border-white/10 flex-shrink-0" /><span className="text-gray-300">No match</span></div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Clues Panel */}
+        {/* ── Clue Cards ── */}
         <div className="mb-8">
-          <h2 className="text-sm text-gray-400 font-body font-semibold uppercase tracking-wider mb-4 flex items-center">
-            <HelpCircle className="w-4 h-4 mr-2" />
-            Clues Revealed ({Math.min(revealedClues, clues.length)}/{clues.length})
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Lock className="w-3.5 h-3.5" />
+            Progressive Clues — {Math.min(revealedClues, clues.length)} of {clues.length} revealed
+          </p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {clues.map((clue, i) => {
-              const revealed = i < revealedClues;
+              const revealed = i < revealedClues || gameOver;
               return (
-                <motion.div
-                  key={clue.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={revealed ? { opacity: 1, scale: 1 } : { opacity: 0.3, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
+                <motion.div key={clue.id}
+                  animate={revealed ? { opacity:1, scale:1 } : { opacity:0.35, scale:0.97 }}
+                  transition={{ duration:0.4, delay: revealed ? i*0.05 : 0 }}
                   className={cn(
-                    'rounded-xl p-4 border transition-all duration-500',
-                    revealed
-                      ? 'glass border-amber-500/30 bg-amber-500/5'
-                      : 'glass-dark border-white/5'
-                  )}
-                >
-                  <div className="text-2xl mb-1">{revealed ? clue.emoji : '🔒'}</div>
-                  <div className="text-xs text-gray-400 font-body mb-1">{clue.label}</div>
-                  <div
-                    className={cn(
-                      'text-sm font-display font-bold',
-                      revealed ? 'text-amber-300' : 'text-gray-600'
-                    )}
-                  >
+                    'rounded-xl p-3 border text-center transition-all',
+                    revealed ? 'glass border-amber-500/30' : 'glass-dark border-white/5'
+                  )}>
+                  <div className="text-xl mb-1">{revealed ? clue.emoji : '🔒'}</div>
+                  <div className="text-[10px] text-gray-400 font-body leading-tight mb-1">{clue.label}</div>
+                  <div className={cn('text-xs font-display font-bold leading-tight', revealed ? 'text-amber-300' : 'text-gray-700')}>
                     {revealed ? clue.value : '???'}
                   </div>
                 </motion.div>
@@ -342,221 +264,175 @@ export default function WordlePage() {
           </div>
         </div>
 
-        {/* Guess History Table */}
+        {/* ── Guess Grid ── */}
         {guesses.length > 0 && (
-          <div className="mb-8 overflow-x-auto">
-            <h2 className="text-sm text-gray-400 font-body font-semibold uppercase tracking-wider mb-4">
-              Your Guesses
-            </h2>
-            <div className="rounded-2xl overflow-hidden border border-white/10">
-              {/* Column headers */}
-              <div className="grid grid-cols-8 bg-white/5 p-2 gap-2 min-w-[700px]">
-                <div className="text-xs text-gray-400 font-body font-semibold p-2">Player</div>
-                {COLUMNS.map((col) => (
-                  <div key={col.key} className="text-xs text-gray-400 font-body font-semibold text-center p-2">
-                    {col.emoji} {col.label}
-                  </div>
-                ))}
-              </div>
-              {/* Guess rows */}
-              {guesses.map((row, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="grid grid-cols-8 p-2 gap-2 border-t border-white/5 min-w-[700px]"
-                >
-                  <div className="flex items-center p-2">
-                    <span className="text-white text-sm font-display font-semibold truncate">
-                      {row.guess}
-                    </span>
-                    {!row.valid && (
-                      <span className="ml-1 text-xs text-red-400">(not found)</span>
-                    )}
-                  </div>
-                  {COLUMNS.map((col) => {
-                    const hint = row.hints?.[col.key];
-                    if (!hint) {
+          <div className="mb-8">
+            <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3">Your Guesses</p>
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px]">
+                {/* Header row */}
+                <div className="grid grid-cols-8 gap-1.5 mb-1.5 px-1">
+                  <div className="text-xs text-gray-500 font-body p-2">Player</div>
+                  {COLUMNS.map(c => (
+                    <div key={c.key} className="text-xs text-gray-500 font-body text-center p-2 leading-tight">
+                      <div>{c.emoji}</div>
+                      <div>{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Guess rows */}
+                {guesses.map((row, idx) => (
+                  <motion.div key={idx}
+                    initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay:0.05 }}
+                    className="grid grid-cols-8 gap-1.5 mb-1.5">
+                    {/* Player name cell */}
+                    <div className={cn(
+                      'rounded-xl px-3 py-2 flex items-center border',
+                      row.valid
+                        ? 'glass border-white/10'
+                        : 'bg-red-500/10 border-red-500/20'
+                    )}>
+                      <span className="text-white text-xs font-display font-bold truncate leading-tight">
+                        {row.guess}
+                      </span>
+                    </div>
+                    {/* Hint cells */}
+                    {COLUMNS.map(col => {
+                      const hint = row.hints?.[col.key];
+                      const match = (hint?.match as MatchState) || 'wrong';
                       return (
-                        <div key={col.key} className="p-2 rounded-lg bg-gray-800/50 border border-white/5 flex flex-col items-center justify-center text-center">
-                          <span className="text-gray-500 text-xs">—</span>
+                        <div key={col.key}
+                          className={cn(
+                            'rounded-xl px-2 py-2 border flex flex-col items-center justify-center text-center gap-0.5 min-h-[52px]',
+                            hint ? CELL_STYLES[match] : 'bg-white/5 border-white/5'
+                          )}>
+                          {hint && <MatchIcon match={match} />}
+                          <span className="text-[10px] font-body font-semibold leading-tight break-words max-w-full">
+                            {hint ? String(hint.value) : '—'}
+                          </span>
                         </div>
                       );
-                    }
-                    const matchStyle = MATCH_STYLES[hint.match as MatchState] || MATCH_STYLES.wrong;
-                    const icon = MATCH_ICONS[hint.match as MatchState] || '❌';
-                    return (
-                      <div
-                        key={col.key}
-                        className={cn(
-                          'p-2 rounded-lg border flex flex-col items-center justify-center text-center transition-all',
-                          matchStyle
-                        )}
-                      >
-                        <span className="text-xs mb-0.5">{icon}</span>
-                        <span className="text-xs font-body font-semibold leading-tight">
-                          {String(hint.value)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </motion.div>
-              ))}
+                    })}
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Remaining guesses indicator */}
+        {/* ── Attempt dots ── */}
         {!gameOver && (
-          <div className="flex items-center justify-center space-x-2 mb-6">
+          <div className="flex items-center justify-center gap-2 mb-6">
             {Array.from({ length: MAX_GUESSES }).map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'w-3 h-3 rounded-full transition-all',
-                  i < guesses.length
-                    ? 'bg-amber-400'
-                    : 'bg-white/10'
-                )}
-              />
+              <div key={i} className={cn('w-2.5 h-2.5 rounded-full transition-all',
+                i < guesses.length ? 'bg-amber-400 scale-110' : 'bg-white/10')} />
             ))}
+            <span className="text-xs text-gray-500 font-body ml-2">
+              {MAX_GUESSES - guesses.length} guesses left
+            </span>
           </div>
         )}
 
-        {/* Input */}
+        {/* ── Input ── */}
         {!gameOver && (
-          <div className="mb-6">
-            <div className="relative">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleGuess();
-                  if (e.key === 'Escape') setSuggestions([]);
-                }}
-                placeholder="Type a player name..."
-                className="w-full px-5 py-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/60 font-body text-lg transition-all"
-                disabled={submitting}
-                autoComplete="off"
-              />
-              <button
-                onClick={() => handleGuess()}
-                disabled={!input.trim() || submitting}
+          <div className="mb-8 relative">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input ref={inputRef} type="text" value={input}
+                  onChange={e => handleInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submitGuess(); if (e.key === 'Escape') setSuggestions([]); }}
+                  placeholder="Type a player name…"
+                  className="w-full px-5 py-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/60 font-body text-base transition-all"
+                  disabled={submitting} autoComplete="off" />
+
+                <AnimatePresence>
+                  {suggestions.length > 0 && (
+                    <motion.div initial={{ opacity:0, y:-6 }} animate={{ opacity:1, y:0 }}
+                      exit={{ opacity:0, y:-6 }}
+                      className="absolute top-full left-0 right-0 mt-1 z-30 glass-dark rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                      {suggestions.map(name => (
+                        <button key={name} onClick={() => { setSuggestions([]); submitGuess(name); }}
+                          className="w-full text-left px-5 py-3 text-white font-body text-sm hover:bg-amber-500/10 hover:text-amber-300 transition-colors border-b border-white/5 last:border-0">
+                          {name}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <button onClick={() => submitGuess()} disabled={!input.trim() || submitting}
                 className={cn(
-                  'absolute right-3 top-1/2 -translate-y-1/2 px-5 py-2 rounded-xl font-display font-bold text-sm transition-all',
+                  'px-6 py-4 rounded-2xl font-display font-bold text-sm transition-all flex items-center gap-2 flex-shrink-0',
                   input.trim() && !submitting
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-lg hover:shadow-amber-500/30'
-                    : 'bg-white/10 text-gray-500 cursor-not-allowed'
-                )}
-              >
+                    : 'bg-white/5 text-gray-600 cursor-not-allowed'
+                )}>
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guess'}
               </button>
-
-              {/* Autocomplete Suggestions */}
-              <AnimatePresence>
-                {suggestions.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="absolute top-full left-0 right-0 mt-2 z-20 glass-dark rounded-xl overflow-hidden border border-white/10 shadow-2xl"
-                  >
-                    {suggestions.map((name) => (
-                      <button
-                        key={name}
-                        onClick={() => {
-                          setSuggestions([]);
-                          handleGuess(name);
-                        }}
-                        className="w-full text-left px-5 py-3 text-white font-body hover:bg-amber-500/10 hover:text-amber-300 transition-colors text-sm border-b border-white/5 last:border-0"
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
-            {error && (
-              <p className="mt-2 text-sm text-red-400 font-body text-center">{error}</p>
-            )}
-            <p className="mt-2 text-xs text-gray-500 font-body text-center">
-              Guess {guesses.length + 1} of {MAX_GUESSES}
-            </p>
+
+            {error && <p className="mt-2 text-xs text-red-400 font-body text-center">{error}</p>}
           </div>
         )}
 
-        {/* Game Over Panel */}
+        {/* ── Game Over ── */}
         <AnimatePresence>
           {gameOver && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <motion.div initial={{ opacity:0, scale:0.92 }} animate={{ opacity:1, scale:1 }}
               className={cn(
-                'rounded-2xl p-8 text-center border-2',
-                won
-                  ? 'bg-green-500/10 border-green-500/40'
-                  : 'bg-red-500/10 border-red-500/40'
-              )}
-            >
-              <div className="text-5xl mb-4">{won ? '🏆' : '😢'}</div>
-              <h2 className="text-3xl font-display font-black text-white mb-2">
-                {won
-                  ? `Brilliant! Got it in ${guesses.length}!`
-                  : "Better luck tomorrow!"}
+                'rounded-3xl p-8 text-center border-2',
+                won ? 'bg-green-500/8 border-green-500/30' : 'bg-white/3 border-white/10'
+              )}>
+              <div className="text-5xl mb-3">{won ? '🏆' : '😔'}</div>
+              <h2 className="text-3xl font-display font-black text-white mb-1">
+                {won ? `Cracked it in ${guesses.length}!` : 'Better luck tomorrow!'}
               </h2>
 
               {answer && (
-                <div className="mt-4 mb-6 inline-block glass rounded-xl px-8 py-4">
-                  <p className="text-sm text-gray-400 font-body mb-1">Today's player was</p>
-                  <p className="text-3xl font-display font-black text-amber-400">{answer.name}</p>
-                  <div className="flex items-center justify-center space-x-4 mt-2 text-sm text-gray-300 font-body">
-                    <span>{answer.country}</span>
-                    <span>•</span>
-                    <span>{answer.role}</span>
-                    <span>•</span>
-                    <span className="text-amber-400">{answer.rarity}</span>
-                    <span>•</span>
-                    <span>OVR {answer.overall}</span>
+                <div className="mt-5 mb-6 inline-block">
+                  <div className="glass rounded-2xl px-8 py-5">
+                    <p className="text-xs text-gray-400 font-body mb-2 uppercase tracking-wider">Today's player</p>
+                    <p className="text-3xl font-display font-black text-amber-400 mb-3">{answer.name}</p>
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-body">
+                      {[
+                        { label: answer.country, color: 'bg-blue-500/20 text-blue-300' },
+                        { label: answer.role,    color: 'bg-green-500/20 text-green-300' },
+                        { label: answer.battingHand, color: 'bg-purple-500/20 text-purple-300' },
+                        { label: answer.bowlingStyle, color: 'bg-orange-500/20 text-orange-300' },
+                        { label: answer.iplTeam, color: 'bg-amber-500/20 text-amber-300' },
+                        { label: answer.debutEra, color: 'bg-cyan-500/20 text-cyan-300' },
+                        { label: answer.specialty, color: 'bg-pink-500/20 text-pink-300' },
+                      ].map((tag, i) => tag.label && (
+                        <span key={i} className={cn('px-2.5 py-1 rounded-full border border-white/10', tag.color)}>
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-center space-x-4 mt-6">
-                <button
-                  onClick={handleShare}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold hover:shadow-lg hover:shadow-amber-500/30 transition-all"
-                >
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button onClick={handleShare}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold hover:shadow-lg hover:shadow-amber-500/30 transition-all">
                   <Share2 className="w-4 h-4" />
-                  <span>{copied ? 'Copied!' : 'Share Result'}</span>
+                  {copied ? 'Copied!' : 'Share Score'}
                 </button>
-                <div className="flex items-center space-x-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm font-body">
+                <Link href="/face-reveal"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-display font-bold hover:bg-purple-500/30 transition-all">
+                  👁️ Try Face Reveal
+                </Link>
+                <div className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm font-body">
                   <Clock className="w-4 h-4" />
-                  <span>Next puzzle in {countdown}</span>
+                  Next in {timer}
                 </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Legend */}
-        {!gameOver && guesses.length === 0 && (
-          <div className="mt-8 glass rounded-2xl p-6">
-            <h3 className="text-sm font-display font-bold text-gray-400 uppercase tracking-wider mb-4">
-              Color Guide
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Object.entries(MATCH_STYLES).map(([state, style]) => (
-                <div key={state} className={cn('px-3 py-2 rounded-lg border text-center text-xs font-body', style)}>
-                  {MATCH_ICONS[state as MatchState]} {state.charAt(0).toUpperCase() + state.slice(1)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

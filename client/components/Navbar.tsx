@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Trophy, Sparkles, Swords, Users, Home, LogIn, UserPlus,
-  LogOut, Radio, Hash, HelpCircle, Gamepad2, ChevronDown,
+  LogOut, Radio, Hash, HelpCircle, Gamepad2, ChevronDown, Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +15,7 @@ const GAME_ITEMS = [
     href: '/wordle',
     label: 'Cricket Wordle',
     icon: Hash,
-    desc: 'Guess the daily mystery player',
+    desc: 'Deduce the daily mystery player',
     badge: 'Daily',
     badgeColor: 'bg-green-500/20 text-green-400 border-green-500/30',
     iconBg: 'from-amber-400 to-orange-500',
@@ -28,6 +28,15 @@ const GAME_ITEMS = [
     badge: 'Quiz',
     badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     iconBg: 'from-purple-500 to-blue-600',
+  },
+  {
+    href: '/face-reveal',
+    label: 'Face Reveal',
+    icon: Eye,
+    desc: 'Identify cricketers from hidden photos',
+    badge: 'Daily',
+    badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    iconBg: 'from-cyan-500 to-teal-600',
   },
 ];
 

@@ -178,7 +178,7 @@ export const wordleApi = {
   getDaily: () =>
     api<{
       date: string;
-      clues: { id: number; category: string; label: string; value: string; emoji: string }[];
+      clues: { id: number; category: string; label: string; value: string; emoji: string; type: string }[];
       playerNames: string[];
       totalClues: number;
     }>('/wordle/daily', { auth: false }),
@@ -189,17 +189,25 @@ export const wordleApi = {
       hintRow: Record<string, { value: any; match: string }> | null;
       playerFound: boolean;
       answer?: {
-        name: string;
-        country: string;
-        role: string;
-        rarity: string;
-        overall: number;
-        batting: number;
-        bowling: number;
-        specialty: string;
-        image: string;
+        name: string; country: string; role: string; battingHand: string;
+        bowlingStyle: string; iplTeam: string; debutEra: string;
+        specialty: string; overall: number; image: string; rarity: string;
       };
     }>('/wordle/guess', { method: 'POST', body: { guess, guessNumber } }),
+  getFaceReveal: () =>
+    api<{
+      date: string;
+      image: string;
+      playerNames: string[];
+      hints: { id: number; label: string; value: string; emoji: string }[];
+      totalHints: number;
+    }>('/wordle/face-reveal', { auth: false }),
+  submitFaceRevealGuess: (guess: string, guessNumber: number, difficulty: string) =>
+    api<{
+      isCorrect: boolean;
+      pointsEarned: number;
+      answer?: { name: string; country: string; role: string; iplTeam: string; specialty: string; image: string };
+    }>('/wordle/face-reveal/guess', { method: 'POST', body: { guess, guessNumber, difficulty } }),
 };
 
 // Quiz API

@@ -30,11 +30,14 @@ router.get('/live', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error in live matches route:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error in live matches route:', message);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch live matches',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            message,
+            data: [],
+            cached: false,
+            timestamp: Date.now(),
         });
     }
 });
@@ -54,12 +57,35 @@ router.get('/upcoming', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error in upcoming matches route:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error in upcoming matches route:', message);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch upcoming matches',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            message,
+            data: [],
+            cached: false,
+            timestamp: Date.now(),
         });
+    }
+});
+/**
+ * GET /api/cricbuzz/players/search
+ * Search players by name using Cricbuzz API
+ */
+router.get('/players/search', async (req, res) => {
+    try {
+        const name = (req.query.name || '').trim();
+        if (name.length < 2) {
+            res.status(400).json({ error: 'Query too short' });
+            return;
+        }
+        const players = await cricbuzz_service_1.default.searchPlayers(name);
+        res.json({ success: true, data: players });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error in player search route:', message);
+        res.status(500).json({ error: message });
     }
 });
 exports.default = router;

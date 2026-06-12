@@ -10,25 +10,19 @@ const morgan_1 = __importDefault(require("morgan"));
 const config_1 = require("./config");
 const database_1 = require("./config/database");
 const routes_1 = __importDefault(require("./routes"));
+const cricbuzzRoutes_1 = __importDefault(require("./routes/cricbuzzRoutes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const socket_1 = require("./socket");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
-const allowedOrigins = [
-    config_1.config.frontendUrl.replace(/\/$/, ''),
-    'http://localhost:3000',
-    'http://localhost:5173',
-];
+app.set('trust proxy', 1);
 app.use((0, cors_1.default)({
-    origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        }
-        else {
-            callback(new Error(`Origin ${origin} not allowed by CORS`));
-        }
-    },
+    origin: [
+        'http://localhost:3000',
+        'https://cricket-attacks.vercel.app',
+        'https://cricket-attacks-biwdbejwt-anmolgoyal2006s-projects.vercel.app',
+    ],
     credentials: true,
 }));
 app.use(express_1.default.json({ limit: '10mb' }));
@@ -38,7 +32,11 @@ app.use(rateLimiter_1.generalLimiter);
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
+app.use('/api/cricbuzz', cricbuzzRoutes_1.default);
 app.use('/api', routes_1.default);
+app.use('/api/*', (_req, res) => {
+    res.status(404).json({ error: 'API route not found' });
+});
 app.use(errorHandler_1.errorHandler);
 async function start() {
     await (0, database_1.connectDatabase)();

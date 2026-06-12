@@ -82,15 +82,18 @@ async function playRoundHandler(req, res, next) {
                     : ai.name === result.computerCard.name || ai.used,
             }));
         }
+        if (!result.computerCard || !result.computerCard.name) {
+            console.error('Missing computerCard.name in playRound result:', JSON.stringify(result.computerCard));
+        }
         const roundResult = {
             roundNumber: result.roundNumber,
             playerCardId: new mongoose_1.default.Types.ObjectId(playerCardId),
             playerCardName: result.playerCard.name,
             playerStat: result.playerCard.stat,
             attribute: result.attribute,
-            aiId: result.computerCard.aiId,
-            computerCardName: result.computerCard.name,
-            computerStat: result.computerCard.stat,
+            aiId: result.computerCard?.aiId,
+            computerCardName: result.computerCard?.name || 'Unknown AI',
+            computerStat: result.computerCard?.stat ?? 0,
             winner: result.winner,
         };
         battle.rounds.push(roundResult);

@@ -8,6 +8,8 @@ import {
 
 // Cache configuration
 const CACHE_DURATION = 60 * 1000; // 60 seconds
+const SEARCH_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const PLAYER_LIST_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 interface CacheEntry<T> {
   data: T;
@@ -17,6 +19,8 @@ interface CacheEntry<T> {
 class CricbuzzService {
   private liveMatchesCache: CacheEntry<LiveMatchesResponse> | null = null;
   private upcomingMatchesCache: CacheEntry<UpcomingMatchesResponse> | null = null;
+  private searchCache: Map<string, CacheEntry<any[]>> = new Map();
+  private allPlayersCache: CacheEntry<any[]> | null = null;
 
   private getHeaders() {
     return {
@@ -135,10 +139,64 @@ class CricbuzzService {
     }
   }
 
+  private async fetchAllPlayers(): Promise<any[]> {
+    if (this.allPlayersCache && Date.now() - this.allPlayersCache.timestamp < PLAYER_LIST_CACHE_DURATION) {
+      return this.allPlayersCache.data;
+    }
+
+    try {
+      const response = await axios.get(
+        'https://cricbuzz-cricket.p.rapidapi.com/players/v1/list',
+        {
+          headers: this.getHeaders(),
+          timeout: 10000,
+        }
+      );
+
+      const players: any[] = Array.isArray(response.data) ? response.data : response.data?.players || response.data?.data || [];
+      this.allPlayersCache = { data: players, timestamp: Date.now() };
+      return players;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error fetching player list from Cricbuzz API:', message);
+
+      if (this.allPlayersCache) {
+        console.log('Returning expired cached player list due to API failure');
+        return this.allPlayersCache.data;
+      }
+
+      throw new Error(`Player list fetch failed: ${message}`);
+    }
+  }
+
+  async searchPlayers(query: string): Promise<{ id: string; name: string; slug: string; image: string }[]> {
+    try {
+      const allPlayers = await this.fetchAllPlayers();
+
+      const normalizedQuery = query.toLowerCase().trim();
+      const filtered = normalizedQuery.length < 2
+        ? allPlayers
+        : allPlayers.filter((p: any) => (p.title || '').toLowerCase().includes(normalizedQuery));
+
+      return filtered.map((p: any) => ({
+        id: String(p.id || ''),
+        name: p.title || '',
+        slug: p.slug || '',
+        image: p.image || '',
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error searching players:', message);
+      throw new Error(`Player search failed: ${message}`);
+    }
+  }
+
   // Clear cache (useful for testing or manual refresh)
   clearCache(): void {
     this.liveMatchesCache = null;
     this.upcomingMatchesCache = null;
+    this.searchCache.clear();
+    this.allPlayersCache = null;
   }
 }
 

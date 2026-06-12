@@ -111,9 +111,10 @@ export default function ComparePage() {
       role: '',
       country: '',
       batting: 75, bowling: 70, fielding: 70, overall: 72,
-      specialty: '', rarity: 'common', image: result.image || '',
+      specialty: '', rarity: 'common', image: '',
       formats: {},
     };
+    if (result.image) player.image = result.image;
     if (slot === 'A') {
       setPlayerA(player);
       setSearchA(result.name);

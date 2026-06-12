@@ -9,7 +9,7 @@ import {
 // Cache configuration
 const CACHE_DURATION = 60 * 1000; // 60 seconds
 const SEARCH_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
-const PLAYER_LIST_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const PLAYER_LIST_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
 
 interface CacheEntry<T> {
   data: T;
@@ -144,22 +144,43 @@ class CricbuzzService {
       return this.allPlayersCache.data;
     }
 
+    const teamIds = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    const headers = {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY as string,
+      'x-rapidapi-host': 'free-cricbuzz-cricket-api.p.rapidapi.com',
+    };
+
     try {
-      const response = await axios.get(
-        'https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-players',
-        {
-          params: { teamid: 2 },
-          headers: {
-            'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-            'x-rapidapi-host': 'free-cricbuzz-cricket-api.p.rapidapi.com',
-          },
-          timeout: 10000,
-        }
+      const responses = await Promise.all(
+        teamIds.map(id =>
+          axios.get(
+            'https://free-cricbuzz-cricket-api.p.rapidapi.com/cricket-players',
+            { params: { teamid: id }, headers, timeout: 10000 }
+          ).then(r => r.data).catch(err => {
+            console.error(`Failed to fetch players for team ${id}:`, err.message);
+            return null;
+          })
+        )
       );
 
-      const players: any[] = Array.isArray(response.data) ? response.data : response.data?.players || response.data?.data || [];
-      this.allPlayersCache = { data: players, timestamp: Date.now() };
-      return players;
+      const seen = new Set<string>();
+      const combined: any[] = [];
+
+      for (const data of responses) {
+        if (!data) continue;
+        const list: any[] = data?.response || (Array.isArray(data) ? data : data?.players || data?.data || []);
+        for (const player of list) {
+          const pid = String(player.id || '');
+          if (pid && !seen.has(pid)) {
+            seen.add(pid);
+            combined.push(player);
+          }
+        }
+      }
+
+      this.allPlayersCache = { data: combined, timestamp: Date.now() };
+      console.log(`Cached ${combined.length} unique players from ${teamIds.length} teams`);
+      return combined;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error fetching player list from Free Cricbuzz Cricket API:', message);

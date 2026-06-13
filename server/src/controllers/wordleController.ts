@@ -122,13 +122,17 @@ function getTodayKey(): string {
 function enrichPlayer(player: any) {
   const key = player.name.toLowerCase().trim();
   const extra = ENRICHMENT[key] || {};
+  
+  // Helper to check if a value is valid (not null/undefined/0)
+  const isValid = (val: any) => val !== null && val !== undefined && val !== '' && val !== 0;
+  
   return {
     ...player,
-    battingHand: player.battingHand || extra.battingHand || 'Right-handed',
-    bowlingStyle: player.bowlingStyle || extra.bowlingStyle || 'Medium',
-    iplTeam: player.iplTeam || extra.iplTeam || 'N/A',
-    debutYear: player.debutYear || extra.debutYear || 2000,
-    age: player.age || extra.age || 30,
+    battingHand: isValid(player.battingHand) ? player.battingHand : extra.battingHand || 'Right-handed',
+    bowlingStyle: isValid(player.bowlingStyle) ? player.bowlingStyle : extra.bowlingStyle || 'Medium',
+    iplTeam: isValid(player.iplTeam) ? player.iplTeam : extra.iplTeam || 'N/A',
+    debutYear: isValid(player.debutYear) ? player.debutYear : extra.debutYear || 2000,
+    age: isValid(player.age) ? player.age : extra.age || 30,
   };
 }
 
@@ -194,8 +198,18 @@ const PLAYERS_PER_DAY = 5;
 export async function getDailyWordle(req: Request, res: Response, next: NextFunction) {
   try {
     const allPlayers = await Player.find({}).sort({ _id: 1 }).lean();
-    const total = allPlayers.length;
-    if (total === 0) return res.status(404).json({ error: 'No players found' });
+    if (allPlayers.length === 0) return res.status(404).json({ error: 'No players found' });
+
+    // Deduplicate by name to avoid duplicates from multiple seed runs
+    const seen = new Set<string>();
+    const uniquePlayers = allPlayers.filter(p => {
+      const key = p.name.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const total = uniquePlayers.length;
 
     // Get daily seed index
     const baseIdx = getDailyIndex(total);
@@ -217,7 +231,7 @@ export async function getDailyWordle(req: Request, res: Response, next: NextFunc
       
       if (!usedIndices.has(idx)) {
         usedIndices.add(idx);
-        const player = allPlayers[idx];
+        const player = uniquePlayers[idx];
         dailyPlayers.push({
           id: player._id.toString(),
           name: player.name,
@@ -227,7 +241,7 @@ export async function getDailyWordle(req: Request, res: Response, next: NextFunc
       step += 13; // Another prime to avoid patterns
     }
 
-    const playerNames = allPlayers.map((p) => p.name);
+    const playerNames = [...new Set(uniquePlayers.map((p) => p.name))];
 
     res.json({
       date: getTodayKey(),
@@ -249,25 +263,34 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
     if (!guessNumber || guessNumber < 1 || guessNumber > 6) throw new BadRequestError('guessNumber must be 1–6');
 
     const allFull = await Player.find({}).sort({ _id: 1 }).lean();
-    const total = allFull.length;
-    if (total === 0) return res.status(404).json({ error: 'No players found' });
+    if (allFull.length === 0) return res.status(404).json({ error: 'No players found' });
+
+    // Deduplicate by name to be consistent with getDailyWordle
+    const seen = new Set<string>();
+    const uniquePlayers = allFull.filter(p => {
+      const key = p.name.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const total = uniquePlayers.length;
 
     // Determine target player - by playerId or daily index
     let rawTarget;
     if (playerId) {
-      rawTarget = allFull.find(p => p._id.toString() === playerId);
+      rawTarget = uniquePlayers.find(p => p._id.toString() === playerId);
     }
     if (!rawTarget) {
       // Fall back to first player in daily pool
       const baseIdx = getDailyIndex(total);
-      rawTarget = allFull[(baseIdx) % total];
+      rawTarget = uniquePlayers[baseIdx % total];
     }
     const target = enrichPlayer(rawTarget);
 
     const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
     const isLastGuess = guessNumber >= 6;
 
-    const rawGuessed = allFull.find(
+    const rawGuessed = uniquePlayers.find(
       (p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim()
     );
     const guessed = rawGuessed ? enrichPlayer(rawGuessed) : null;
@@ -322,12 +345,21 @@ const faceRevealSessions = new Map<string, { playerName: string; expiresAt: numb
 export async function getDailyFaceReveal(req: Request, res: Response, next: NextFunction) {
   try {
     const allFull = await Player.find({}).sort({ _id: 1 }).lean();
-    const total = allFull.length;
-    if (total === 0) return res.status(404).json({ error: 'No players found' });
+    if (allFull.length === 0) return res.status(404).json({ error: 'No players found' });
+
+    // Deduplicate by name
+    const seen = new Set<string>();
+    const uniquePlayers = allFull.filter(p => {
+      const key = p.name.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const total = uniquePlayers.length;
 
     // Truly random each request
     const idx = Math.floor(Math.random() * total);
-    const player = enrichPlayer(allFull[idx]);
+    const player = enrichPlayer(uniquePlayers[idx]);
 
     // Create a session ID so the guess endpoint knows the answer
     const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -352,7 +384,7 @@ export async function getDailyFaceReveal(req: Request, res: Response, next: Next
     res.json({
       sessionId,
       image: player.image,
-      playerNames: allFull.map(p => p.name),
+      playerNames: [...new Set(allFull.map(p => p.name))],
       hints,
       totalHints: hints.length,
     });
@@ -383,8 +415,15 @@ export async function submitFaceRevealGuess(req: AuthRequest, res: Response, nex
     if (isCorrect || (guessNumber >= 5)) {
       // Fetch full player data for the reveal
       const allFull = await Player.find({}).sort({ _id: 1 }).lean();
+      const seen = new Set<string>();
+      const uniquePlayers = allFull.filter(p => {
+        const key = p.name.toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
       const target = enrichPlayer(
-        allFull.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || allFull[0]
+        uniquePlayers.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || uniquePlayers[0]
       );
       response.answer = {
         name:      target.name,

@@ -23,6 +23,11 @@ interface PlayerSeed {
   specialty: string;
   rarity: 'Common' | 'Rare' | 'Epic' | 'Legend';
   image: string;
+  battingHand?: string;
+  bowlingStyle?: string;
+  iplTeam?: string;
+  debutYear?: number;
+  age?: number;
   formats: {
     odi:      { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
     test:     { matches: number; runs: number; avg: number; sr: number; hundreds: number; fifties: number; wickets: number; economy: number; bestScore?: string };
@@ -41,6 +46,11 @@ const playersData: PlayerSeed[] = [
     name: "Virat Kohli", role: "Batsman", country: "India",
     batting: 96, bowling: 22, fielding: 92, captaincy: 90, pressure: 95, overall: 90,
     specialty: "Chase Master", rarity: "Legend",
+    battingHand: "Right-handed",
+    bowlingStyle: "Medium",
+    iplTeam: "RCB",
+    debutYear: 2008,
+    age: 35,
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Virat_Kohli.jpg/220px-Virat_Kohli.jpg",
     formats: {
       odi:      { matches: 308, runs: 14058, avg: 58.82, sr: 93.63, hundreds: 51, fifties: 72, wickets: 4,  economy: 6.34, bestScore: "183" },
@@ -55,6 +65,11 @@ const playersData: PlayerSeed[] = [
     name: "Rohit Sharma", role: "Batsman", country: "India",
     batting: 94, bowling: 22, fielding: 85, captaincy: 86, pressure: 88, overall: 88,
     specialty: "Hitman", rarity: "Legend",
+    battingHand: "Right-handed",
+    bowlingStyle: "Off Spin",
+    iplTeam: "MI",
+    debutYear: 2007,
+    age: 36,
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Rohit_Sharma_%28cropped%29.jpg/220px-Rohit_Sharma_%28cropped%29.jpg",
     formats: {
       odi:      { matches: 267, runs: 10709, avg: 48.96, sr: 89.78, hundreds: 31, fifties: 55, wickets: 8,  economy: 5.14, bestScore: "264" },
@@ -69,6 +84,11 @@ const playersData: PlayerSeed[] = [
     name: "Shubman Gill", role: "Batsman", country: "India",
     batting: 88, bowling: 10, fielding: 84, captaincy: 62, pressure: 74, overall: 76,
     specialty: "Elegant Stroker", rarity: "Epic",
+    battingHand: "Right-handed",
+    bowlingStyle: "Off Spin",
+    iplTeam: "GT",
+    debutYear: 2019,
+    age: 24,
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Shubman_Gill_%28cropped%29.jpg/220px-Shubman_Gill_%28cropped%29.jpg",
     formats: {
       odi:      { matches: 53,  runs: 2607, avg: 58.27, sr: 104.12, hundreds: 8, fifties: 14, wickets: 0, economy: 0, bestScore: "208" },

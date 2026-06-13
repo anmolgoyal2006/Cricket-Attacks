@@ -123,13 +123,15 @@ function getTodayKey() {
 function enrichPlayer(player) {
     const key = player.name.toLowerCase().trim();
     const extra = ENRICHMENT[key] || {};
+    // Helper to check if a value is valid (not null/undefined/0)
+    const isValid = (val) => val !== null && val !== undefined && val !== '' && val !== 0;
     return {
         ...player,
-        battingHand: player.battingHand || extra.battingHand || 'Right-handed',
-        bowlingStyle: player.bowlingStyle || extra.bowlingStyle || 'Medium',
-        iplTeam: player.iplTeam || extra.iplTeam || 'N/A',
-        debutYear: player.debutYear || extra.debutYear || 2000,
-        age: player.age || extra.age || 30,
+        battingHand: isValid(player.battingHand) ? player.battingHand : extra.battingHand || 'Right-handed',
+        bowlingStyle: isValid(player.bowlingStyle) ? player.bowlingStyle : extra.bowlingStyle || 'Medium',
+        iplTeam: isValid(player.iplTeam) ? player.iplTeam : extra.iplTeam || 'N/A',
+        debutYear: isValid(player.debutYear) ? player.debutYear : extra.debutYear || 2000,
+        age: isValid(player.age) ? player.age : extra.age || 30,
     };
 }
 // Build the 7 progressive clues — ordered from broad → specific

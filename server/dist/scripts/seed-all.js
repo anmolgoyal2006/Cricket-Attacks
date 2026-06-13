@@ -42,6 +42,11 @@ const playersData = [
         name: "Shubman Gill", role: "Batsman", country: "India",
         batting: 88, bowling: 10, fielding: 84, captaincy: 62, pressure: 74, overall: 76,
         specialty: "Elegant Stroker", rarity: "Epic",
+        battingHand: "Right-handed",
+        bowlingStyle: "Off Spin",
+        iplTeam: "GT",
+        debutYear: 2019,
+        age: 24,
         image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Shubman_Gill_%28cropped%29.jpg/220px-Shubman_Gill_%28cropped%29.jpg",
         formats: {
             odi: { matches: 53, runs: 2607, avg: 58.27, sr: 104.12, hundreds: 8, fifties: 14, wickets: 0, economy: 0, bestScore: "208" },

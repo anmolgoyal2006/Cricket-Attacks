@@ -200,16 +200,31 @@ export async function getDailyWordle(req: Request, res: Response, next: NextFunc
     // Get daily seed index
     const baseIdx = getDailyIndex(total);
 
-    // Pick multiple players using daily seed + offset
+    // Pick multiple players using daily seed + prime step, ensuring no duplicates
     const dailyPlayers: any[] = [];
-    for (let i = 0; i < PLAYERS_PER_DAY; i++) {
-      const idx = (baseIdx + i * 37) % total; // 37 is a prime for better distribution
-      const player = allPlayers[idx];
-      dailyPlayers.push({
-        id: player._id.toString(),
-        name: player.name,
-        clues: buildClues(player),
-      });
+    const usedIndices = new Set<number>();
+    let step = 1;
+    
+    for (let i = 0; i < Math.min(PLAYERS_PER_DAY, total); i++) {
+      let idx = (baseIdx + i * 37 + step) % total;
+      
+      // Find next unused index
+      let attempts = 0;
+      while (usedIndices.has(idx) && attempts < total) {
+        idx = (idx + 1) % total;
+        attempts++;
+      }
+      
+      if (!usedIndices.has(idx)) {
+        usedIndices.add(idx);
+        const player = allPlayers[idx];
+        dailyPlayers.push({
+          id: player._id.toString(),
+          name: player.name,
+          clues: buildClues(player),
+        });
+      }
+      step += 13; // Another prime to avoid patterns
     }
 
     const playerNames = allPlayers.map((p) => p.name);

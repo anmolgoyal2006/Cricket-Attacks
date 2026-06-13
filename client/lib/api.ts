@@ -196,18 +196,18 @@ export const wordleApi = {
     }>('/wordle/guess', { method: 'POST', body: { guess, guessNumber } }),
   getFaceReveal: () =>
     api<{
-      date: string;
+      sessionId: string;
       image: string;
       playerNames: string[];
       hints: { id: number; label: string; value: string; emoji: string }[];
       totalHints: number;
     }>('/wordle/face-reveal', { auth: false }),
-  submitFaceRevealGuess: (guess: string, guessNumber: number, difficulty: string) =>
+  submitFaceRevealGuess: (guess: string, guessNumber: number, difficulty: string, sessionId: string) =>
     api<{
       isCorrect: boolean;
       pointsEarned: number;
       answer?: { name: string; country: string; role: string; iplTeam: string; specialty: string; image: string };
-    }>('/wordle/face-reveal/guess', { method: 'POST', body: { guess, guessNumber, difficulty } }),
+    }>('/wordle/face-reveal/guess', { method: 'POST', body: { guess, guessNumber, difficulty, sessionId } }),
 };
 
 // Quiz API

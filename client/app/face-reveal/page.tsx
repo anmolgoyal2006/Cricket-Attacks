@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye, EyeOff, Share2, Loader2, ChevronDown, ChevronUp,
-  Star, CheckCircle2, XCircle, Lock,
+  Star, CheckCircle2, XCircle, Lock, RotateCcw,
 } from 'lucide-react';
 import { wordleApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -16,10 +16,10 @@ type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
 interface Hint { id: number; label: string; value: string; emoji: string }
 
 interface Region {
-  top: number;    // % from top
-  bottom: number; // % from top
-  left: number;   // % from left
-  right: number;  // % from left
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
 }
 
 interface DifficultyConfig {
@@ -30,14 +30,13 @@ interface DifficultyConfig {
   regions: Region[];
 }
 
-// Each region defines a rectangle that IS visible — everything else is covered.
 const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   easy: {
     label: 'Easy', description: 'Left half of face', emoji: '😊', points: 5,
     regions: [{ top: 0, bottom: 100, left: 0, right: 50 }],
   },
   medium: {
-    label: 'Medium', description: 'Eyes only', emoji: '🤔', points: 10,
+    label: 'Medium', description: 'Eyes region only', emoji: '🤔', points: 10,
     regions: [{ top: 28, bottom: 52, left: 0, right: 100 }],
   },
   hard: {
@@ -50,10 +49,7 @@ const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   },
 };
 
-// ─── MaskedImage ──────────────────────────────────────────────────────────────
-// Strategy: render the image at full size, then overlay 4 dark cover panels
-// that hide everything OUTSIDE the visible region(s).
-// This avoids SVG cross-origin issues entirely.
+// ─── Masked image: cover panels hide everything outside the visible region ────
 function MaskedImage({
   url, difficulty, revealed,
 }: {
@@ -68,85 +64,49 @@ function MaskedImage({
   }
 
   if (revealed) {
-    return (
-      <img src={url} alt="Player" className="w-full h-full object-cover object-top" />
-    );
+    return <img src={url} alt="Player" className="w-full h-full object-cover object-top" />;
   }
 
-  const { regions } = DIFFICULTIES[difficulty];
-  // For now we only use the first region (all difficulties have 1)
-  const r = regions[0];
+  const r = DIFFICULTIES[difficulty].regions[0];
 
-  // We build 4 overlay panels that cover the 4 sides OUTSIDE the visible rect.
-  // Each panel is absolutely positioned and solid dark.
-  const overlays: React.CSSProperties[] = [];
-
-  // Top cover (above the visible region)
-  if (r.top > 0) {
-    overlays.push({ position: 'absolute', top: 0, left: 0, right: 0, height: `${r.top}%`, background: 'rgb(8,8,12)' });
-  }
-  // Bottom cover (below the visible region)
-  if (r.bottom < 100) {
-    overlays.push({ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${100 - r.bottom}%`, background: 'rgb(8,8,12)' });
-  }
-  // Left cover (left of the visible region)
-  if (r.left > 0) {
-    overlays.push({
-      position: 'absolute',
-      top: `${r.top}%`, height: `${r.bottom - r.top}%`,
-      left: 0, width: `${r.left}%`,
-      background: 'rgb(8,8,12)',
-    });
-  }
-  // Right cover (right of the visible region)
-  if (r.right < 100) {
-    overlays.push({
-      position: 'absolute',
-      top: `${r.top}%`, height: `${r.bottom - r.top}%`,
-      right: 0, width: `${100 - r.right}%`,
-      background: 'rgb(8,8,12)',
-    });
-  }
+  // Build 4 cover panels around the visible rectangle
+  const covers: React.CSSProperties[] = [];
+  if (r.top > 0)
+    covers.push({ position: 'absolute', top: 0, left: 0, right: 0, height: `${r.top}%`, background: 'rgb(5,5,10)' });
+  if (r.bottom < 100)
+    covers.push({ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${100 - r.bottom}%`, background: 'rgb(5,5,10)' });
+  if (r.left > 0)
+    covers.push({ position: 'absolute', top: `${r.top}%`, height: `${r.bottom - r.top}%`, left: 0, width: `${r.left}%`, background: 'rgb(5,5,10)' });
+  if (r.right < 100)
+    covers.push({ position: 'absolute', top: `${r.top}%`, height: `${r.bottom - r.top}%`, right: 0, width: `${100 - r.right}%`, background: 'rgb(5,5,10)' });
 
   return (
     <div className="relative w-full h-full">
-      {/* Full image always visible underneath */}
       <img
         src={url}
         alt="Mystery player"
         className="absolute inset-0 w-full h-full object-cover object-top"
         draggable={false}
       />
-
-      {/* Cover panels hiding everything outside the visible region */}
-      {overlays.map((style, i) => (
-        <div key={i} style={style} />
-      ))}
-
-      {/* Amber border around the visible window */}
+      {covers.map((style, i) => <div key={i} style={style} />)}
+      {/* Amber border around visible window */}
       <div
         className="absolute pointer-events-none"
         style={{
-          top: `${r.top}%`,
-          left: `${r.left}%`,
-          width: `${r.right - r.left}%`,
-          height: `${r.bottom - r.top}%`,
-          boxShadow: 'inset 0 0 0 2px rgba(251,191,36,0.5)',
+          top: `${r.top}%`, left: `${r.left}%`,
+          width: `${r.right - r.left}%`, height: `${r.bottom - r.top}%`,
+          boxShadow: 'inset 0 0 0 2px rgba(251,191,36,0.6)',
         }}
       />
     </div>
   );
 }
 
-function todayKey() {
-  const t = new Date();
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-}
-
 export default function FaceRevealPage() {
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [phase, setPhase]           = useState<'select' | 'play' | 'done'>('select');
   const [imageUrl, setImageUrl]     = useState('');
+  const [sessionId, setSessionId]   = useState('');
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [hints, setHints]           = useState<Hint[]>([]);
   const [revealedHints, setRevealedHints] = useState(0);
@@ -159,36 +119,21 @@ export default function FaceRevealPage() {
   const [won, setWon]               = useState(false);
   const [answer, setAnswer]         = useState<any>(null);
   const [score, setScore]           = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
   const [revealImage, setRevealImage] = useState(false);
   const [copied, setCopied]         = useState(false);
   const [showHow, setShowHow]       = useState(false);
+  const [error, setError]           = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Restore saved state
-  useEffect(() => {
-    const saved = localStorage.getItem(`face-reveal-${todayKey()}`);
-    if (!saved) return;
-    try {
-      const s = JSON.parse(saved);
-      if (s.phase === 'done') {
-        setPhase('done');
-        setGuesses(s.guesses || []);
-        setWon(s.won || false);
-        setScore(s.score || 0);
-        setDifficulty(s.difficulty || 'medium');
-        setAnswer(s.answer || null);
-        setImageUrl(s.imageUrl || '');
-        setRevealedHints(s.revealedHints || 0);
-        setRevealImage(true);
-      }
-    } catch { /* ignore */ }
-  }, []);
 
   const startGame = async () => {
     setLoading(true);
+    setError('');
     try {
       const data = await wordleApi.getFaceReveal();
       setImageUrl(data.image);
+      setSessionId(data.sessionId);
       setPlayerNames(data.playerNames);
       setHints(data.hints);
       setRevealedHints(0);
@@ -197,9 +142,18 @@ export default function FaceRevealPage() {
       setWon(false);
       setAnswer(null);
       setRevealImage(false);
+      setInput('');
+      setSuggestions([]);
       setPhase('play');
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      setError(e.message || 'Failed to load challenge. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const playAgain = () => {
+    setPhase('select');
   };
 
   const handleInput = (v: string) => {
@@ -214,46 +168,45 @@ export default function FaceRevealPage() {
     const gname = (name || input).trim();
     if (!gname || submitting || gameOver) return;
     const guessNum = guesses.length + 1;
-    setSubmitting(true); setSuggestions([]); setInput('');
+    setSubmitting(true); setSuggestions([]); setInput(''); setError('');
 
     try {
-      const result = await wordleApi.submitFaceRevealGuess(gname, guessNum, difficulty);
+      const result = await wordleApi.submitFaceRevealGuess(gname, guessNum, difficulty, sessionId);
       const newGuesses = [...guesses, gname];
       setGuesses(newGuesses);
 
       if (result.isCorrect) {
-        const finalScore = result.pointsEarned;
-        setWon(true); setGameOver(true); setScore(finalScore); setRevealImage(true);
+        setWon(true); setGameOver(true);
+        setScore(result.pointsEarned);
+        setTotalScore(t => t + result.pointsEarned);
+        setGamesPlayed(g => g + 1);
+        setRevealImage(true);
         if (result.answer) setAnswer(result.answer);
         setPhase('done');
-        localStorage.setItem(`face-reveal-${todayKey()}`, JSON.stringify({
-          phase: 'done', guesses: newGuesses, won: true, imageUrl,
-          score: finalScore, difficulty, answer: result.answer, revealedHints,
-        }));
       } else if (guessNum >= MAX_GUESSES || result.answer) {
         setGameOver(true); setRevealImage(true);
+        setGamesPlayed(g => g + 1);
         if (result.answer) setAnswer(result.answer);
         setPhase('done');
-        localStorage.setItem(`face-reveal-${todayKey()}`, JSON.stringify({
-          phase: 'done', guesses: newGuesses, won: false, imageUrl,
-          score: 0, difficulty, answer: result.answer, revealedHints,
-        }));
       } else {
         setRevealedHints(p => Math.min(p + 1, hints.length));
       }
-    } catch { /* silent */ }
-    finally {
+    } catch (e: any) {
+      setError(e.message || 'Failed to submit guess');
+    } finally {
       setSubmitting(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [guesses, input, submitting, gameOver, difficulty, hints.length, revealedHints, imageUrl]);
+  }, [guesses, input, submitting, gameOver, difficulty, hints.length, sessionId]);
 
   const handleShare = async () => {
     const cfg = DIFFICULTIES[difficulty];
     const lines = guesses.map((_, i) => i === guesses.length - 1 && won ? '🟩' : '🟥').join('');
     const text = `👁️ Cricket Face Reveal — ${cfg.label}\n${won ? `✅ Got it in ${guesses.length}/${MAX_GUESSES}` : `❌ X/${MAX_GUESSES}`}\n${lines}\n\nScore: ${score} pts\ncricketclash.app/face-reveal`;
-    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2500); }
-    catch { /* ignore */ }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true); setTimeout(() => setCopied(false), 2500);
+    } catch { /* ignore */ }
   };
 
   const cfg = DIFFICULTIES[difficulty];
@@ -266,8 +219,24 @@ export default function FaceRevealPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
             <div className="text-6xl mb-4">👁️</div>
             <h1 className="text-5xl font-display font-black gradient-text mb-2">Face Reveal</h1>
-            <p className="text-gray-400 font-body">Identify the cricketer from a slice of their face — no blur, just a clean crop</p>
+            <p className="text-gray-400 font-body mb-2">
+              Identify the cricketer from a slice of their face
+            </p>
+            {gamesPlayed > 0 && (
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mt-2">
+                <Star className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs text-amber-400 font-body font-semibold">
+                  {gamesPlayed} game{gamesPlayed > 1 ? 's' : ''} played · {totalScore} pts total
+                </span>
+              </div>
+            )}
           </motion.div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400 font-body text-center">
+              {error}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             {(Object.entries(DIFFICULTIES) as [Difficulty, DifficultyConfig][]).map(([key, d]) => (
@@ -293,11 +262,9 @@ export default function FaceRevealPage() {
                   )}>{d.label}</span>
                 </div>
 
-                {/* Preview diagram showing which slice is revealed */}
-                <div className="w-10 h-14 rounded-lg overflow-hidden border border-white/10 mb-3 relative bg-gray-800">
-                  {/* Dark background = hidden */}
-                  <div className="absolute inset-0 bg-gray-900" />
-                  {/* Amber highlight = visible slice */}
+                {/* Preview diagram */}
+                <div className="w-10 h-14 rounded-lg overflow-hidden border border-white/10 mb-3 relative bg-gray-900">
+                  <div className="absolute inset-0 bg-gray-950" />
                   {d.regions.map((r, i) => (
                     <div key={i} className="absolute bg-amber-400/70" style={{
                       top: `${r.top}%`, left: `${r.left}%`,
@@ -329,8 +296,9 @@ export default function FaceRevealPage() {
                     <li>🤔 <strong className="text-white">Medium</strong> — eyes region</li>
                     <li>😰 <strong className="text-white">Hard</strong> — forehead only</li>
                     <li>💀 <strong className="text-white">Expert</strong> — lips only</li>
-                    <li>💡 A text clue unlocks after each wrong guess</li>
+                    <li>💡 A text hint unlocks after each wrong guess</li>
                     <li>🏆 Fewer guesses = more points</li>
+                    <li>🔄 Play as many times as you want — new player each time</li>
                   </ul>
                 </motion.div>
               )}
@@ -371,10 +339,11 @@ export default function FaceRevealPage() {
             )}
 
             {/* Revealed photo */}
-            {imageUrl && (
+            {(imageUrl || answer) && (
               <div className="mt-5 mb-4">
                 <div className="w-36 h-44 mx-auto rounded-2xl overflow-hidden border-4 border-amber-500/40 mb-3">
-                  <img src={imageUrl} alt="Player" className="w-full h-full object-cover object-top" />
+                  <img src={imageUrl || answer?.image} alt="Player"
+                    className="w-full h-full object-cover object-top" />
                 </div>
                 <p className="text-2xl font-display font-black text-amber-400 mb-2">{answer?.name}</p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs font-body">
@@ -386,7 +355,7 @@ export default function FaceRevealPage() {
             )}
 
             {/* Guess log */}
-            <div className="space-y-1.5 my-5">
+            <div className="space-y-1.5 my-4">
               {guesses.map((g, i) => (
                 <div key={i} className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-body',
@@ -403,21 +372,29 @@ export default function FaceRevealPage() {
               ))}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
               <button onClick={handleShare}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-sm">
                 <Share2 className="w-4 h-4" />
                 {copied ? 'Copied!' : 'Share'}
               </button>
-              <button onClick={() => { setPhase('select'); setRevealImage(false); }}
-                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-display font-bold text-sm hover:bg-white/10 transition-all">
-                Change Difficulty
+              {/* Play Again — same difficulty */}
+              <button onClick={startGame} disabled={loading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-display font-bold text-sm hover:bg-white/10 transition-all">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Play Again
               </button>
-              <Link href="/wordle"
-                className="px-5 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-display font-bold text-sm hover:bg-amber-500/25 transition-all">
-                🏏 Try Wordle
-              </Link>
+              <button onClick={playAgain}
+                className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold text-sm hover:bg-white/10 transition-all">
+                Change Mode
+              </button>
             </div>
+
+            {gamesPlayed > 1 && (
+              <p className="mt-4 text-xs text-gray-500 font-body">
+                Session: {gamesPlayed} games · {totalScore} pts total
+              </p>
+            )}
           </motion.div>
         </div>
       </div>
@@ -449,8 +426,7 @@ export default function FaceRevealPage() {
         {/* Image */}
         <div className="mb-6 mx-auto" style={{ maxWidth: 280 }}>
           <div className={cn(
-            'rounded-2xl overflow-hidden border-2 aspect-[3/4] relative',
-            'bg-gray-950',
+            'rounded-2xl overflow-hidden border-2 aspect-[3/4] relative bg-gray-950',
             difficulty === 'easy'   ? 'border-green-500/30' :
             difficulty === 'medium' ? 'border-yellow-500/30' :
             difficulty === 'hard'   ? 'border-orange-500/30' :
@@ -469,7 +445,7 @@ export default function FaceRevealPage() {
           </div>
         )}
 
-        {/* Unlocked Hints */}
+        {/* Hints */}
         {revealedHints > 0 && (
           <div className="mb-5">
             <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -522,6 +498,11 @@ export default function FaceRevealPage() {
           </div>
         )}
 
+        {/* Error */}
+        {error && (
+          <p className="mb-3 text-xs text-red-400 font-body text-center">{error}</p>
+        )}
+
         {/* Input */}
         {!gameOver && (
           <div className="relative">
@@ -568,6 +549,14 @@ export default function FaceRevealPage() {
               Correct now = <span className="text-amber-400 font-semibold">{cfg.points} pts</span>
             </p>
           </div>
+        )}
+
+        {/* Quit mid-game */}
+        {!gameOver && (
+          <button onClick={playAgain}
+            className="mt-4 w-full text-xs text-gray-600 hover:text-gray-400 font-body transition-colors">
+            ← Back to difficulty select
+          </button>
         )}
       </div>
     </div>

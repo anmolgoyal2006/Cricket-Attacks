@@ -96,15 +96,21 @@ function ageBucket(age: number): string {
   return '40+';
 }
 
-// Deterministic daily index
+// Deterministic daily index — uses a string hash that distributes evenly
+// across the full player pool regardless of pool size.
 function getDailyIndex(total: number): number {
   const today = new Date();
-  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-  let hash = seed;
-  hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-  hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-  hash = (hash >>> 16) ^ hash;
-  return Math.abs(hash) % total;
+  // Zero-padded date string so the seed changes meaningfully each day
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  // FNV-1a 32-bit hash — much better distribution than the old LCG on small seeds
+  let hash = 2166136261; // FNV offset basis
+  for (let i = 0; i < dateStr.length; i++) {
+    hash ^= dateStr.charCodeAt(i);
+    // Multiply by FNV prime (keep within 32-bit unsigned range)
+    hash = (hash * 16777619) >>> 0;
+  }
+  return hash % total;
 }
 
 function getTodayKey(): string {
@@ -270,34 +276,42 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
   }
 }
 
-// GET /api/wordle/face-reveal  — daily player for face reveal mode
+// In-memory session store for face reveal answers (TTL: 2 hours)
+const faceRevealSessions = new Map<string, { playerName: string; expiresAt: number }>();
+
+// GET /api/wordle/face-reveal  — random player each session (no daily lock)
 export async function getDailyFaceReveal(req: Request, res: Response, next: NextFunction) {
   try {
     const allFull = await Player.find({}).sort({ _id: 1 }).lean();
     const total = allFull.length;
     if (total === 0) return res.status(404).json({ error: 'No players found' });
 
-    // Use next day's index so face reveal has a different player than wordle
-    const today = new Date();
-    const seed = (today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()) + 1337;
-    let hash = seed;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = (hash >>> 16) ^ hash;
-    const idx = Math.abs(hash) % total;
+    // Truly random each request
+    const idx = Math.floor(Math.random() * total);
     const player = enrichPlayer(allFull[idx]);
 
-    // Progressive hints (revealed after each wrong guess)
+    // Create a session ID so the guess endpoint knows the answer
+    const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    faceRevealSessions.set(sessionId, {
+      playerName: player.name,
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours
+    });
+
+    // Clean up expired sessions
+    for (const [key, val] of faceRevealSessions.entries()) {
+      if (val.expiresAt < Date.now()) faceRevealSessions.delete(key);
+    }
+
     const hints = [
-      { id: 1, label: 'Country',     value: player.country,             emoji: '🌍' },
-      { id: 2, label: 'Role',        value: player.role,                emoji: '🏏' },
-      { id: 3, label: 'IPL Team',    value: player.iplTeam,             emoji: '🏟️' },
-      { id: 4, label: 'Debut Era',   value: debutEra(player.debutYear), emoji: '📅' },
-      { id: 5, label: 'Specialty',   value: player.specialty,           emoji: '⚡' },
+      { id: 1, label: 'Country',   value: player.country,             emoji: '🌍' },
+      { id: 2, label: 'Role',      value: player.role,                emoji: '🏏' },
+      { id: 3, label: 'IPL Team',  value: player.iplTeam,             emoji: '🏟️' },
+      { id: 4, label: 'Debut Era', value: debutEra(player.debutYear), emoji: '📅' },
+      { id: 5, label: 'Specialty', value: player.specialty,           emoji: '⚡' },
     ];
 
     res.json({
-      date: getTodayKey(),
+      sessionId,
       image: player.image,
       playerNames: allFull.map(p => p.name),
       hints,
@@ -311,38 +325,38 @@ export async function getDailyFaceReveal(req: Request, res: Response, next: Next
 // POST /api/wordle/face-reveal/guess
 export async function submitFaceRevealGuess(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { guess, guessNumber, difficulty } = req.body;
+    const { guess, guessNumber, difficulty, sessionId } = req.body;
     if (!guess || typeof guess !== 'string') throw new BadRequestError('guess is required');
+    if (!sessionId) throw new BadRequestError('sessionId is required');
 
-    const allFull = await Player.find({}).sort({ _id: 1 }).lean();
-    const total = allFull.length;
-    if (total === 0) return res.status(404).json({ error: 'No players found' });
+    const session = faceRevealSessions.get(sessionId);
+    if (!session || session.expiresAt < Date.now()) {
+      throw new BadRequestError('Session expired. Please start a new game.');
+    }
 
-    const today = new Date();
-    const seed = (today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()) + 1337;
-    let hash = seed;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = (hash >>> 16) ^ hash;
-    const idx = Math.abs(hash) % total;
-    const target = enrichPlayer(allFull[idx]);
+    const isCorrect = session.playerName.toLowerCase().trim() === guess.toLowerCase().trim();
 
-    const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
-
-    // Points by difficulty
     const POINTS: Record<string, number> = { easy: 5, medium: 10, hard: 20, expert: 40 };
     const pointsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
 
     const response: any = { isCorrect, pointsEarned };
-    if (isCorrect || guessNumber >= 5) {
+
+    if (isCorrect || (guessNumber >= 5)) {
+      // Fetch full player data for the reveal
+      const allFull = await Player.find({}).sort({ _id: 1 }).lean();
+      const target = enrichPlayer(
+        allFull.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || allFull[0]
+      );
       response.answer = {
-        name:     target.name,
-        country:  target.country,
-        role:     target.role,
-        iplTeam:  target.iplTeam,
-        specialty:target.specialty,
-        image:    target.image,
+        name:      target.name,
+        country:   target.country,
+        role:      target.role,
+        iplTeam:   target.iplTeam,
+        specialty: target.specialty,
+        image:     target.image,
       };
+      // Clean up session when game ends
+      if (isCorrect || guessNumber >= 5) faceRevealSessions.delete(sessionId);
     }
 
     res.json(response);

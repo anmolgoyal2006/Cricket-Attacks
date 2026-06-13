@@ -52,10 +52,18 @@ function roleBaseStats(role: string, difficulty: number): { batting: number; bow
 
 function generateAISquad(playerCards: any[]): any[] {
   const roles = ['Batsman', 'Bowler', 'All-rounder', 'Batsman', 'Bowler'];
+
+  // Large enough pool so we never repeat — shuffled and sliced to 5
   const aiNames = [
     'Shaheen Afridi', 'Mitchell Starc', 'Trent Boult', 'Kagiso Rabada', 'Rashid Khan',
-    'David Warner', 'Quinton de Kock', 'AB de Villiers',
+    'David Warner', 'Quinton de Kock', 'AB de Villiers', 'Pat Cummins', 'Jasprit Bumrah',
+    'Ben Stokes', 'Steve Smith', 'Kane Williamson', 'Babar Azam', 'Rohit Sharma',
+    'Jos Buttler', 'Rishabh Pant', 'Glenn Maxwell', 'Hardik Pandya', 'Suryakumar Yadav',
+    'Tim Southee', 'Anrich Nortje', 'Lockie Ferguson', 'Mark Wood', 'Wanindu Hasaranga',
   ];
+
+  // Shuffle and take exactly 5 unique names
+  const shuffledNames = shuffleArray(aiNames).slice(0, 5);
 
   const playerAvg = playerCards.reduce((sum: number, c: any) => {
     const attrSum = ATTRIBUTES.reduce((s: number, a: string) => s + getAttributeValue(c, a), 0);
@@ -68,7 +76,7 @@ function generateAISquad(playerCards: any[]): any[] {
     const avg = Math.round(ATTRIBUTES.reduce((s, a) => s + base[a as keyof typeof base], 0) / ATTRIBUTES.length);
     return {
       aiId: `ai_${i}`,
-      name: aiNames[Math.floor(Math.random() * aiNames.length)],
+      name: shuffledNames[i],
       role,
       ...base,
       overall: avg,

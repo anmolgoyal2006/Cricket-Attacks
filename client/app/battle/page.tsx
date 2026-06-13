@@ -98,7 +98,7 @@ export default function BattlePage() {
   const addToSquad = (card: any) => {
     if (mySquad.length < 5) {
       setMySquad([...mySquad, {
-        userCardId: card._id,
+        userCardId: card.cardId, // Use unique cardId
         cardId: card._id,
         name: card.name,
         role: card.role,
@@ -395,7 +395,7 @@ export default function BattlePage() {
               <h3 className="text-2xl font-display font-bold text-white mb-6">Your Cards</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {availableCards.map((card: any, index: number) => {
-                  const isInSquad = mySquad.some(c => c.userCardId === card._id);
+                  const isInSquad = mySquad.some(c => c.userCardId === card.cardId);
                   return (
                     <motion.div
                       key={card.cardId || card._id}

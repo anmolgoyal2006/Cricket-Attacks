@@ -338,7 +338,7 @@ export default function BattlePage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                 {mySquad.map((player, index) => (
                   <motion.div
-                    key={player.userCardId}
+                    key={player.userCardId + index}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
@@ -398,7 +398,7 @@ export default function BattlePage() {
                   const isInSquad = mySquad.some(c => c.userCardId === card._id);
                   return (
                     <motion.div
-                      key={card._id}
+                      key={card.cardId || card._id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}

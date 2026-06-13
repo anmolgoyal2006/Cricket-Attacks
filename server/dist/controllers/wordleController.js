@@ -198,9 +198,18 @@ const PLAYERS_PER_DAY = 5;
 async function getDailyWordle(req, res, next) {
     try {
         const allPlayers = await Player_1.default.find({}).sort({ _id: 1 }).lean();
-        const total = allPlayers.length;
-        if (total === 0)
+        if (allPlayers.length === 0)
             return res.status(404).json({ error: 'No players found' });
+        // Deduplicate by name to avoid duplicates from multiple seed runs
+        const seen = new Set();
+        const uniquePlayers = allPlayers.filter(p => {
+            const key = p.name.toLowerCase().trim();
+            if (seen.has(key))
+                return false;
+            seen.add(key);
+            return true;
+        });
+        const total = uniquePlayers.length;
         // Get daily seed index
         const baseIdx = getDailyIndex(total);
         // Pick multiple players using daily seed + prime step, ensuring no duplicates
@@ -217,7 +226,7 @@ async function getDailyWordle(req, res, next) {
             }
             if (!usedIndices.has(idx)) {
                 usedIndices.add(idx);
-                const player = allPlayers[idx];
+                const player = uniquePlayers[idx];
                 dailyPlayers.push({
                     id: player._id.toString(),
                     name: player.name,
@@ -226,7 +235,7 @@ async function getDailyWordle(req, res, next) {
             }
             step += 13; // Another prime to avoid patterns
         }
-        const playerNames = allPlayers.map((p) => p.name);
+        const playerNames = [...new Set(uniquePlayers.map((p) => p.name))];
         res.json({
             date: getTodayKey(),
             players: dailyPlayers,
@@ -247,23 +256,32 @@ async function submitWordleGuess(req, res, next) {
         if (!guessNumber || guessNumber < 1 || guessNumber > 6)
             throw new errors_1.BadRequestError('guessNumber must be 1–6');
         const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
-        const total = allFull.length;
-        if (total === 0)
+        if (allFull.length === 0)
             return res.status(404).json({ error: 'No players found' });
+        // Deduplicate by name to be consistent with getDailyWordle
+        const seen = new Set();
+        const uniquePlayers = allFull.filter(p => {
+            const key = p.name.toLowerCase().trim();
+            if (seen.has(key))
+                return false;
+            seen.add(key);
+            return true;
+        });
+        const total = uniquePlayers.length;
         // Determine target player - by playerId or daily index
         let rawTarget;
         if (playerId) {
-            rawTarget = allFull.find(p => p._id.toString() === playerId);
+            rawTarget = uniquePlayers.find(p => p._id.toString() === playerId);
         }
         if (!rawTarget) {
             // Fall back to first player in daily pool
             const baseIdx = getDailyIndex(total);
-            rawTarget = allFull[(baseIdx) % total];
+            rawTarget = uniquePlayers[baseIdx % total];
         }
         const target = enrichPlayer(rawTarget);
         const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
         const isLastGuess = guessNumber >= 6;
-        const rawGuessed = allFull.find((p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim());
+        const rawGuessed = uniquePlayers.find((p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim());
         const guessed = rawGuessed ? enrichPlayer(rawGuessed) : null;
         let hintRow = {};
         if (guessed) {
@@ -311,12 +329,21 @@ const faceRevealSessions = new Map();
 async function getDailyFaceReveal(req, res, next) {
     try {
         const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
-        const total = allFull.length;
-        if (total === 0)
+        if (allFull.length === 0)
             return res.status(404).json({ error: 'No players found' });
+        // Deduplicate by name
+        const seen = new Set();
+        const uniquePlayers = allFull.filter(p => {
+            const key = p.name.toLowerCase().trim();
+            if (seen.has(key))
+                return false;
+            seen.add(key);
+            return true;
+        });
+        const total = uniquePlayers.length;
         // Truly random each request
         const idx = Math.floor(Math.random() * total);
-        const player = enrichPlayer(allFull[idx]);
+        const player = enrichPlayer(uniquePlayers[idx]);
         // Create a session ID so the guess endpoint knows the answer
         const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         faceRevealSessions.set(sessionId, {
@@ -338,7 +365,7 @@ async function getDailyFaceReveal(req, res, next) {
         res.json({
             sessionId,
             image: player.image,
-            playerNames: allFull.map(p => p.name),
+            playerNames: [...new Set(allFull.map(p => p.name))],
             hints,
             totalHints: hints.length,
         });
@@ -366,7 +393,15 @@ async function submitFaceRevealGuess(req, res, next) {
         if (isCorrect || (guessNumber >= 5)) {
             // Fetch full player data for the reveal
             const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
-            const target = enrichPlayer(allFull.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || allFull[0]);
+            const seen = new Set();
+            const uniquePlayers = allFull.filter(p => {
+                const key = p.name.toLowerCase().trim();
+                if (seen.has(key))
+                    return false;
+                seen.add(key);
+                return true;
+            });
+            const target = enrichPlayer(uniquePlayers.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || uniquePlayers[0]);
             response.answer = {
                 name: target.name,
                 country: target.country,

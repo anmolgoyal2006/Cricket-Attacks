@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Trophy, Sparkles, Swords, Users, Home, LogIn, UserPlus,
-  LogOut, Radio, Hash, HelpCircle, Gamepad2, ChevronDown, Eye,
+  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';

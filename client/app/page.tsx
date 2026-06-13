@@ -266,7 +266,7 @@ export default function HomePage() {
               </motion.div>
             </Link>
 
-            {/* Who Said This Quiz */}
+            {/* Cricket Quiz */}
             <Link href="/quiz">
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -280,16 +280,17 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="text-xl font-display font-bold text-white">Who Said This?</h3>
+                      <h3 className="text-xl font-display font-bold text-white">Cricket Quiz</h3>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 font-body">Quiz</span>
                     </div>
                     <p className="text-gray-400 font-body text-sm leading-relaxed">
-                      Famous quotes, spicy controversies, press conference moments — match the words to the cricketer.
+                      Famous quotes, iconic stats, legendary records — match the words and numbers to the right cricketer.
                     </p>
                     <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500 font-body">
-                      <span>🗣️ 10 Questions</span>
+                      <span>🗣️ Quotes</span>
+                      <span>📊 Stats</span>
                       <span>🪙 Earn Coins</span>
-                      <span>📤 Shareable Score</span>
+                      <span>📤 Share Score</span>
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-purple-400 flex-shrink-0 group-hover:translate-x-1 transition-transform" />

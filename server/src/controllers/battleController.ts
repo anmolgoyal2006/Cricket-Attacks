@@ -28,17 +28,22 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
       return raw;
     });
 
-    const playerCards = await Player.find({ _id: { $in: actualPlayerIds } });
+    // Fetch unique player documents (duplicates allowed in squad — fetch by unique IDs)
+    const uniquePlayerIds = [...new Set(actualPlayerIds)];
+    const foundPlayers = await Player.find({ _id: { $in: uniquePlayerIds } });
+    const playerMap = new Map(foundPlayers.map((p: any) => [p._id.toString(), p]));
+
+    // Build the ordered playerCards array preserving duplicates
+    const playerCards = actualPlayerIds.map((id: string) => playerMap.get(id)).filter(Boolean);
     if (playerCards.length !== 5) {
-      // Give a more helpful error indicating which IDs were missing
-      const foundIds = new Set(playerCards.map((p: any) => p._id.toString()));
-      const missing = actualPlayerIds.filter((id: string) => !foundIds.has(id));
+      const missing = actualPlayerIds.filter((id: string) => !playerMap.has(id));
       throw new BadRequestError(`Some selected cards were not found (IDs: ${missing.join(', ')})`);
     }
 
-    // Verify ownership (using actualPlayerIds)
+    // Verify ownership — each selected playerId must appear in ownedCards
+    const ownedSet = new Set(user.ownedCards.map((c: any) => c.toString()));
     for (const playerId of actualPlayerIds) {
-      if (!user.ownedCards.some((c) => c.toString() === playerId)) {
+      if (!ownedSet.has(playerId)) {
         throw new BadRequestError('You do not own all selected cards');
       }
     }

@@ -90,7 +90,13 @@ export default function BattlePage() {
         const total = first.pagination?.total || first.cards?.length || 0;
 
         if (total <= 100) {
-          setAvailableCards(first.cards || []);
+          const seen = new Set<string>();
+          setAvailableCards((first.cards || []).filter((c: any) => {
+            const key = c._id;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }));
         } else {
           // Fetch remaining pages in parallel
           const totalPages = Math.ceil(total / 100);
@@ -102,7 +108,14 @@ export default function BattlePage() {
             ...(first.cards || []),
             ...rest.flatMap(r => r.cards || []),
           ];
-          setAvailableCards(allCards);
+          // Deduplicate by player _id
+          const seen = new Set<string>();
+          setAvailableCards(allCards.filter((c: any) => {
+            const key = c._id;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }));
         }
       } catch {
         setAvailableCards([]);

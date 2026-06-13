@@ -15,14 +15,18 @@ export async function getCollection(req: AuthRequest, res: Response, next: NextF
       throw new NotFoundError('User');
     }
 
-    // Fetch all unique players — use find with lean, preserving all IDs including duplicates
+    // Build unique card list — one card per player, no duplicates
     const uniquePlayerIds = [...new Set(user.ownedCards.map(id => id.toString()))];
     const uniquePlayers = await Player.find({ _id: { $in: uniquePlayerIds } }).lean();
     const playerMap = new Map(uniquePlayers.map(p => [p._id.toString(), p]));
 
-    // Build full list including duplicates, skipping any orphaned IDs
+    // One entry per unique player (first occurrence index for cardId)
+    const seenIds = new Set<string>();
     let allCards = user.ownedCards.map((playerId, index) => {
-      const player = playerMap.get(playerId.toString());
+      const key = playerId.toString();
+      if (seenIds.has(key)) return null; // skip duplicates
+      seenIds.add(key);
+      const player = playerMap.get(key);
       if (!player) return null;
       return {
         ...player,

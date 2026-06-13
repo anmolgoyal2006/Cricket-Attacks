@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Player from '../models/Player';
+import User from '../models/User';
 import { config } from '../config';
 
 dotenv.config();
@@ -905,6 +906,9 @@ async function seed() {
     console.log('Connected to MongoDB');
     await Player.deleteMany({});
     console.log('Cleared existing players');
+    // Clear all users' owned cards since player IDs are changing
+    await User.updateMany({}, { $set: { ownedCards: [] } });
+    console.log('Cleared ownedCards for all users');
     const result = await Player.insertMany(deduped);
     console.log(`Seeded ${result.length} players successfully`);
     await mongoose.disconnect();

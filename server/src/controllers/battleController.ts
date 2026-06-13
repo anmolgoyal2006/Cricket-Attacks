@@ -18,14 +18,22 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
       throw new NotFoundError('User');
     }
 
-    // Extract actual player IDs from cardIds (cardId is like "playerId_index")
+    // Extract actual player IDs from cardIds (cardId may be "playerId_index" or just "playerId")
     const actualPlayerIds = squadCardIds.map((cardId: string) => {
-      return cardId.includes('_') ? cardId.split('_')[0] : cardId;
+      if (!cardId) throw new BadRequestError('Invalid card ID in squad');
+      const raw = cardId.includes('_') ? cardId.split('_')[0] : cardId;
+      if (!mongoose.isValidObjectId(raw)) {
+        throw new BadRequestError(`Invalid card ID format: ${cardId}`);
+      }
+      return raw;
     });
 
     const playerCards = await Player.find({ _id: { $in: actualPlayerIds } });
     if (playerCards.length !== 5) {
-      throw new BadRequestError('Some selected cards were not found');
+      // Give a more helpful error indicating which IDs were missing
+      const foundIds = new Set(playerCards.map((p: any) => p._id.toString()));
+      const missing = actualPlayerIds.filter((id: string) => !foundIds.has(id));
+      throw new BadRequestError(`Some selected cards were not found (IDs: ${missing.join(', ')})`);
     }
 
     // Verify ownership (using actualPlayerIds)

@@ -22,9 +22,9 @@ const GAME_ITEMS = [
   },
   {
     href: '/quiz',
-    label: 'Who Said This?',
+    label: 'Cricket Quiz',
     icon: HelpCircle,
-    desc: 'Match spicy quotes to cricketers',
+    desc: 'Quotes, stats & trivia — test your cricket IQ',
     badge: 'Quiz',
     badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     iconBg: 'from-purple-500 to-blue-600',

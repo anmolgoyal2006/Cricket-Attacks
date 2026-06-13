@@ -115,8 +115,11 @@ export default function BattlePage() {
 
   const addToSquad = (card: any) => {
     if (mySquad.length < 5) {
+      // cardId is the composite "playerId_index" key from the collection API.
+      // Fall back to _id if cardId is missing (edge case).
+      const userCardId = card.cardId || card._id;
       setMySquad([...mySquad, {
-        userCardId: card.cardId, // Use unique cardId
+        userCardId,
         cardId: card._id,
         name: card.name,
         role: card.role,
@@ -446,7 +449,7 @@ export default function BattlePage() {
                     return matchSearch && matchRarity;
                   })
                   .map((card: any, index: number) => {
-                    const isInSquad = mySquad.some(c => c.userCardId === card.cardId);
+                    const isInSquad = mySquad.some(c => c.userCardId === (card.cardId || card._id));
                     return (
                       <motion.div
                         key={card.cardId || card._id}

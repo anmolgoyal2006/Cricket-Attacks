@@ -49,14 +49,28 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       );
     }
 
+    // 5 random starter cards
     const starterCards = await Player.aggregate([{ $sample: { size: 5 } }]);
     const starterCardIds = starterCards.map((c) => c._id);
+
+    // Welcome bonus: 1 Rare + 1 Legend card
+    const [rareBonus] = await Player.aggregate([
+      { $match: { rarity: 'Rare' } },
+      { $sample: { size: 1 } },
+    ]);
+    const [legendBonus] = await Player.aggregate([
+      { $match: { rarity: 'Legend' } },
+      { $sample: { size: 1 } },
+    ]);
+
+    const bonusCards = [rareBonus, legendBonus].filter(Boolean);
+    const bonusCardIds = bonusCards.map((c) => c._id);
 
     const user = await User.create({
       username,
       email,
       password,
-      ownedCards: starterCardIds,
+      ownedCards: [...starterCardIds, ...bonusCardIds],
     });
     await updateLeaderboardForUser(user._id.toString());
 
@@ -65,6 +79,15 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     res.status(201).json({
       token,
       user: sanitizeUser(user),
+      welcomeBonus: bonusCards.map((c) => ({
+        _id: c._id,
+        name: c.name,
+        rarity: c.rarity,
+        overall: c.overall,
+        country: c.country,
+        role: c.role,
+        image: c.image,
+      })),
     });
   } catch (error) {
     next(error);

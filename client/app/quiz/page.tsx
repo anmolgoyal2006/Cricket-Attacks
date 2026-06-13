@@ -157,7 +157,7 @@ export default function QuizPage() {
       .map((r) => (r.correct ? '🟩' : '🟥'))
       .join('');
 
-    const text = `🏏 Cricket "Who Said This?" Quiz\n${msg.emoji} ${score}/${questions.length} (${percentage}%)\n\n${resultLines}\n\nThink you know your cricket quotes?\ncricketclash.app/quiz`;
+    const text = `🏏 Cricket Quiz — Quotes & Stats\n${msg.emoji} ${score}/${questions.length} (${percentage}%)\n\n${resultLines}\n\nThink you know your cricket trivia?\ncricketclash.app/quiz`;
 
     try {
       await navigator.clipboard.writeText(text);

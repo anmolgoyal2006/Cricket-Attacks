@@ -53,7 +53,7 @@ export async function api<T = unknown>(
 // Auth API
 export const authApi = {
   register: (data: { username: string; email: string; password: string }) =>
-    api<{ token: string; user: any }>('/auth/register', {
+    api<{ token: string; user: any; welcomeBonus?: any[] }>('/auth/register', {
       method: 'POST',
       body: data,
       auth: false,

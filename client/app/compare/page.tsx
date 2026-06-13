@@ -41,18 +41,17 @@ interface SearchResult {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-function PlayerAvatar({ image, name, size = 8 }: { image?: string; name: string; size?: number }) {
+function PlayerAvatar({ image, name, className = 'w-8 h-8' }: { image?: string; name: string; className?: string }) {
   const [imgError, setImgError] = useState(false);
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const sizeClass = `w-${size} h-${size}`;
 
   return (
-    <div className={`${sizeClass} rounded-full overflow-hidden bg-gradient-to-br from-amber-500/30 to-orange-600/30 border border-white/10 flex-shrink-0 flex items-center justify-center`}>
+    <div className={`${className} rounded-full overflow-hidden bg-gradient-to-br from-amber-500/30 to-orange-600/30 border border-white/10 flex-shrink-0 flex items-center justify-center`}>
       {image && !imgError ? (
         <img
           src={image}
           alt={name}
-          className="w-full h-full object-cover object-top"
+          className="w-full h-full object-cover object-center"
           onError={() => setImgError(true)}
         />
       ) : (
@@ -373,7 +372,7 @@ export default function ComparePage() {
                   onClick={() => selectPlayer(slot, r)}
                   className="w-full text-left px-4 py-3 flex items-center space-x-3 text-white hover:bg-white/10 transition-colors font-body border-b border-white/5 last:border-0"
                 >
-                  <PlayerAvatar image={r.image} name={r.name} size={8} />
+                  <PlayerAvatar image={r.image} name={r.name} className="w-8 h-8" />
                   <span className="font-semibold">{r.name}</span>
                 </button>
               ))}
@@ -395,7 +394,7 @@ export default function ComparePage() {
           >
             <div className={`flex items-center space-x-4 p-4 rounded-xl bg-gradient-to-br ${isA ? 'from-blue-500/20 to-blue-700/20 border-blue-500/30' : 'from-orange-500/20 to-orange-700/20 border-orange-500/30'} border`}>
               <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${isA ? 'from-blue-500 to-blue-700' : 'from-orange-500 to-orange-700'} flex items-center justify-center overflow-hidden`}>
-                <PlayerAvatar image={(isA ? playerA : playerB)!.image} name={(isA ? playerA : playerB)!.name} size={16} />
+                <PlayerAvatar image={(isA ? playerA : playerB)!.image} name={(isA ? playerA : playerB)!.name} className="w-16 h-16" />
               </div>
               <div>
                 <h3 className="text-xl font-display font-bold text-white">{(isA ? playerA : playerB)!.name}</h3>

@@ -22,11 +22,11 @@ interface Clue      { id: number; category: string; label: string; value: string
 const COLUMNS: { key: string; label: string; emoji: string }[] = [
   { key: 'country',      label: 'Country',       emoji: '🌍' },
   { key: 'role',         label: 'Role',           emoji: '🏏' },
+  { key: 'specialty',    label: 'Specialty',      emoji: '⚡' },
   { key: 'battingHand',  label: 'Bat Hand',       emoji: '🖐️' },
   { key: 'bowlingStyle', label: 'Bowl Style',     emoji: '🎳' },
   { key: 'iplTeam',      label: 'IPL Team',       emoji: '🏟️' },
   { key: 'debutYear',    label: 'Debut Era',      emoji: '📅' },
-  { key: 'specialty',    label: 'Specialty',      emoji: '⚡' },
 ];
 
 const CELL_STYLES: Record<MatchState, string> = {

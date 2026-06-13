@@ -288,11 +288,11 @@ async function submitWordleGuess(req, res, next) {
             hintRow = {
                 country: compareField('country', guessed.country, target.country),
                 role: compareField('role', guessed.role, target.role),
+                specialty: compareField('specialty', guessed.specialty, target.specialty),
                 battingHand: compareField('battingHand', guessed.battingHand, target.battingHand),
                 bowlingStyle: compareField('bowlingStyle', guessed.bowlingStyle, target.bowlingStyle),
                 iplTeam: compareField('iplTeam', guessed.iplTeam, target.iplTeam),
                 debutYear: compareField('debutYear', guessed.debutYear, target.debutYear),
-                specialty: compareField('specialty', guessed.specialty, target.specialty),
             };
         }
         const response = {

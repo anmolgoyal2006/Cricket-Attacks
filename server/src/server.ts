@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { config } from './config';
+// Render auto-deploy test
 import { connectDatabase } from './config/database';
 import routes from './routes';
 import cricbuzzRoutes from './routes/cricbuzzRoutes';

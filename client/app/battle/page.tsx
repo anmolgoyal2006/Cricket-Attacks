@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Trophy, Zap, Users, ChevronRight, Star, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
 import PlayerCard from '@/components/PlayerCard';
 import { useAuth } from '@/lib/auth-context';
-import { cardsApi, battlesApi, userCardsApi } from '@/lib/api';
-import Link from 'next/link';
+import { cardsApi, battlesApi, userCardsApi } from '@/lib/api';import Link from 'next/link';
 
 type GamePhase = 'selection' | 'battle' | 'result';
 
@@ -57,6 +56,8 @@ export default function BattlePage() {
   const [availableCards, setAvailableCards] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(true);
   const [error, setError] = useState('');
+  const [cardSearch, setCardSearch] = useState('');
+  const [cardRarityFilter, setCardRarityFilter] = useState('All');
 
   // Battle state
   const [battleId, setBattleId] = useState<string | null>(null);
@@ -84,8 +85,25 @@ export default function BattlePage() {
     }
     async function fetchCards() {
       try {
-        const data = await userCardsApi.getMyCards({ limit: '100', sort: 'overall' });
-        setAvailableCards(data.cards || []);
+        // Fetch all cards — get first page to know total, then fetch all at once
+        const first = await userCardsApi.getMyCards({ limit: '100', sort: 'overall', page: '1' });
+        const total = first.pagination?.total || first.cards?.length || 0;
+
+        if (total <= 100) {
+          setAvailableCards(first.cards || []);
+        } else {
+          // Fetch remaining pages in parallel
+          const totalPages = Math.ceil(total / 100);
+          const pageRequests = Array.from({ length: totalPages - 1 }, (_, i) =>
+            userCardsApi.getMyCards({ limit: '100', sort: 'overall', page: String(i + 2) })
+          );
+          const rest = await Promise.all(pageRequests);
+          const allCards = [
+            ...(first.cards || []),
+            ...rest.flatMap(r => r.cards || []),
+          ];
+          setAvailableCards(allCards);
+        }
       } catch {
         setAvailableCards([]);
       } finally {
@@ -392,40 +410,101 @@ export default function BattlePage() {
             </div>
 
             <div className="glass rounded-2xl p-6">
-              <h3 className="text-2xl font-display font-bold text-white mb-6">Your Cards</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {availableCards.map((card: any, index: number) => {
-                  const isInSquad = mySquad.some(c => c.userCardId === card.cardId);
-                  return (
-                    <motion.div
-                      key={card.cardId || card._id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => !isInSquad && addToSquad(card)}
-                      className={`cursor-pointer ${isInSquad ? 'opacity-40' : ''}`}
-                    >
-                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center p-2 hover:border-amber-500/50 transition-all">
-                        <div className="text-center">
-                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${
-                            card.rarity === 'Legend' ? 'from-amber-400 to-orange-600' :
-                            card.rarity === 'Epic' ? 'from-purple-500 to-purple-700' :
-                            card.rarity === 'Rare' ? 'from-blue-500 to-blue-700' :
-                            'from-gray-500 to-gray-700'
-                          } flex items-center justify-center mx-auto mb-2`}>
-                            <span className="text-white font-bold text-sm">
-                              {(card.name || '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                            </span>
-                          </div>
-                          <p className="text-xs font-display font-bold text-white truncate">{card.name}</p>
-                          <p className="text-xs text-gray-400 font-body">{card.role}</p>
-                          <p className="text-sm font-display font-bold text-amber-400">{card.overall}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-2xl font-display font-bold text-white">Your Cards</h3>
+                  <p className="text-sm text-gray-400 font-body mt-0.5">{availableCards.length} cards · click to add to squad</p>
+                </div>
+                {/* Search + filter */}
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Search cards..."
+                    value={cardSearch}
+                    onChange={e => setCardSearch(e.target.value)}
+                    className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-body text-sm w-full sm:w-48"
+                  />
+                  <select
+                    value={cardRarityFilter}
+                    onChange={e => setCardRarityFilter(e.target.value)}
+                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-body text-sm appearance-none cursor-pointer focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="All" className="bg-gray-900">All</option>
+                    <option value="Legend" className="bg-gray-900">Legend</option>
+                    <option value="Epic" className="bg-gray-900">Epic</option>
+                    <option value="Rare" className="bg-gray-900">Rare</option>
+                    <option value="Common" className="bg-gray-900">Common</option>
+                  </select>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                {availableCards
+                  .filter((card: any) => {
+                    const matchSearch = !cardSearch || card.name?.toLowerCase().includes(cardSearch.toLowerCase());
+                    const matchRarity = cardRarityFilter === 'All' || card.rarity === cardRarityFilter;
+                    return matchSearch && matchRarity;
+                  })
+                  .map((card: any, index: number) => {
+                    const isInSquad = mySquad.some(c => c.userCardId === card.cardId);
+                    return (
+                      <motion.div
+                        key={card.cardId || card._id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(index * 0.03, 0.5) }}
+                        onClick={() => !isInSquad && addToSquad(card)}
+                        className={`relative transition-all ${
+                          isInSquad
+                            ? 'opacity-30 cursor-not-allowed'
+                            : 'cursor-pointer hover:scale-[1.03] hover:-translate-y-1'
+                        }`}
+                      >
+                        <PlayerCard
+                          player={{
+                            _id: card._id,
+                            name: card.name,
+                            role: card.role,
+                            country: card.country,
+                            batting: card.batting,
+                            bowling: card.bowling,
+                            fielding: card.fielding,
+                            captaincy: card.captaincy,
+                            pressure: card.pressure,
+                            overall: card.overall,
+                            specialty: card.specialty,
+                            rarity: card.rarity,
+                            image: card.image,
+                            formats: card.formats,
+                          }}
+                        />
+                        {/* Selected checkmark */}
+                        {isInSquad && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
+                            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                              <span className="text-white text-2xl font-bold">✓</span>
+                            </div>
+                          </div>
+                        )}
+                        {/* Tap to add hint on hover */}
+                        {!isInSquad && mySquad.length < 5 && (
+                          <div className="absolute bottom-2 left-2 right-2 opacity-0 hover:opacity-100 transition-opacity">
+                            <div className="bg-amber-500/90 rounded-lg py-1 text-center text-xs font-display font-bold text-white">
+                              + Add to Squad
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+              </div>
+              {availableCards.filter((card: any) => {
+                const matchSearch = !cardSearch || card.name?.toLowerCase().includes(cardSearch.toLowerCase());
+                const matchRarity = cardRarityFilter === 'All' || card.rarity === cardRarityFilter;
+                return matchSearch && matchRarity;
+              }).length === 0 && (
+                <p className="text-center text-gray-500 font-body py-8">No cards match your filters</p>
+              )}
             </div>
           </>
         )}

@@ -136,13 +136,13 @@ function enrichPlayer(player: any) {
 function buildClues(player: any) {
   const p = enrichPlayer(player);
   return [
-    { id: 1,  category: 'country',     label: 'Country',       value: p.country,             emoji: '🌍', type: 'text' },
-    { id: 2,  category: 'role',        label: 'Role',          value: p.role,                emoji: '🏏', type: 'text' },
-    { id: 3,  category: 'battingHand', label: 'Batting Hand',  value: p.battingHand,          emoji: '🖐️', type: 'text' },
-    { id: 4,  category: 'bowlingStyle',label: 'Bowling Style', value: p.bowlingStyle,         emoji: '🎳', type: 'text' },
-    { id: 5,  category: 'iplTeam',     label: 'IPL Team',      value: p.iplTeam,              emoji: '🏟️', type: 'text' },
-    { id: 6,  category: 'debutEra',    label: 'Debut Era',     value: debutEra(p.debutYear),  emoji: '📅', type: 'text' },
-    { id: 7,  category: 'specialty',   label: 'Specialty',     value: p.specialty,            emoji: '⚡', type: 'text' },
+    { id: 1,  category: 'country',     label: 'Country',       value: p.country,            emoji: '🌍', type: 'text' },
+    { id: 2,  category: 'role',        label: 'Role',          value: p.role,               emoji: '🏏', type: 'text' },
+    { id: 3,  category: 'specialty',   label: 'Specialty',     value: p.specialty,          emoji: '⚡', type: 'text' },
+    { id: 4,  category: 'battingHand', label: 'Batting Hand',  value: p.battingHand,        emoji: '🖐️', type: 'text' },
+    { id: 5,  category: 'bowlingStyle',label: 'Bowling Style', value: p.bowlingStyle,       emoji: '🎳', type: 'text' },
+    { id: 6,  category: 'iplTeam',     label: 'IPL Team',      value: p.iplTeam,            emoji: '🏟️', type: 'text' },
+    { id: 7,  category: 'debutEra',    label: 'Debut Era',     value: debutEra(p.debutYear),emoji: '📅', type: 'text' },
   ];
 }
 

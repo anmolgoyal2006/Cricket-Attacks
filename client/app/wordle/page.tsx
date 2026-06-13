@@ -164,6 +164,20 @@ export default function WordlePage() {
     }
   }, [gameStates, selectedPlayerId, input, submitting, gameOver, clues.length]);
 
+  const retryGame = () => {
+    if (!selectedPlayerId) return;
+    setGameStates(prev => ({
+      ...prev,
+      [selectedPlayerId]: {
+        revealedClues: 1,
+        guesses: [],
+        gameOver: false,
+        won: false,
+        answer: null,
+      }
+    }));
+  };
+
   const shareText = () => {
     const grid = guesses.map(g => {
       if (!g.hints) return '🟥'.repeat(7);
@@ -456,6 +470,10 @@ export default function WordlePage() {
                   className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold hover:shadow-lg hover:shadow-amber-500/30 transition-all">
                   <Share2 className="w-4 h-4" />
                   {copied ? 'Copied!' : 'Share Score'}
+                </button>
+                <button onClick={retryGame}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-300 font-display font-bold hover:bg-blue-500/30 transition-all">
+                  🔄 Retry
                 </button>
                 <Link href="/face-reveal"
                   className="flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 font-display font-bold hover:bg-purple-500/30 transition-all">

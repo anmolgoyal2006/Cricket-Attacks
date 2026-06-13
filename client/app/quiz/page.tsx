@@ -12,6 +12,7 @@ import {
   Loader2,
   Zap,
   Star,
+  BarChart2,
 } from 'lucide-react';
 import { quizApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -23,6 +24,7 @@ interface Question {
   options: string[];
   category: string;
   difficulty: string;
+  type?: 'quote' | 'stat';
 }
 
 type GamePhase = 'intro' | 'playing' | 'result';
@@ -176,13 +178,13 @@ export default function QuizPage() {
             animate={{ opacity: 1, y: 0 }}
             className="glass rounded-3xl p-10"
           >
-            <div className="text-7xl mb-6">🗣️</div>
+            <div className="text-7xl mb-6">🏏</div>
             <h1 className="text-5xl font-display font-black gradient-text mb-4">
-              Who Said This?
+              Cricket Quiz
             </h1>
             <p className="text-gray-300 font-body text-lg mb-6 leading-relaxed">
-              Famous cricket quotes, spicy press conference moments, and legendary trash talk —
-              can you match the words to the cricketer?
+              Famous cricket quotes, spicy press conference moments, legendary stats and records —
+              can you match the words or numbers to the right cricketer?
             </p>
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="glass-dark rounded-xl p-4">
@@ -191,9 +193,9 @@ export default function QuizPage() {
                 <div className="text-xs text-gray-400 font-body">Questions</div>
               </div>
               <div className="glass-dark rounded-xl p-4">
-                <div className="text-2xl mb-2">⚡</div>
-                <div className="text-lg font-display font-bold text-white">Easy–Hard</div>
-                <div className="text-xs text-gray-400 font-body">Difficulty Mix</div>
+                <div className="text-2xl mb-2">🗣️📊</div>
+                <div className="text-lg font-display font-bold text-white">Mixed</div>
+                <div className="text-xs text-gray-400 font-body">Quotes & Stats</div>
               </div>
               <div className="glass-dark rounded-xl p-4">
                 <div className="text-2xl mb-2">🪙</div>
@@ -359,8 +361,13 @@ export default function QuizPage() {
               >
                 {currentQuestion.difficulty}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400 font-body">
-                {currentQuestion.category}
+              <span className={cn(
+                'text-xs px-2 py-0.5 rounded-full border font-body flex items-center gap-1',
+                currentQuestion.type === 'stat'
+                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                  : 'bg-white/5 border-white/10 text-gray-400'
+              )}>
+                {currentQuestion.type === 'stat' ? '📊' : '🗣️'} {currentQuestion.category}
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -393,12 +400,25 @@ export default function QuizPage() {
             transition={{ duration: 0.35 }}
           >
             <div className="glass rounded-2xl p-8 mb-6 relative">
-              <Quote className="w-8 h-8 text-amber-400/40 absolute top-6 left-6" />
-              <div className="pt-4 pb-2">
-                <p className="text-xl sm:text-2xl font-display font-semibold text-white leading-relaxed text-center italic px-6">
-                  "{currentQuestion.quote}"
-                </p>
-              </div>
+              {currentQuestion.type === 'stat' ? (
+                <>
+                  <BarChart2 className="w-8 h-8 text-cyan-400/40 absolute top-6 left-6" />
+                  <div className="pt-4 pb-2">
+                    <p className="text-xl sm:text-2xl font-display font-semibold text-white leading-relaxed text-center px-6">
+                      {currentQuestion.quote}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Quote className="w-8 h-8 text-amber-400/40 absolute top-6 left-6" />
+                  <div className="pt-4 pb-2">
+                    <p className="text-xl sm:text-2xl font-display font-semibold text-white leading-relaxed text-center italic px-6">
+                      "{currentQuestion.quote}"
+                    </p>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-center mt-4">
                 <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
                   <span className="text-xs text-amber-400 font-body">

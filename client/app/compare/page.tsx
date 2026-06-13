@@ -72,8 +72,7 @@ export default function ComparePage() {
   const [resultsA, setResultsA] = useState<SearchResult[]>([]);
   const [resultsB, setResultsB] = useState<SearchResult[]>([]);
   const [loadingA, setLoadingA] = useState(false);
-  const [loadingB, setLoadingB] = useState(false);
-  const [showDropdownA, setShowDropdownA] = useState(false);
+  const [loadingB, setLoadingB] = useState(false);  const [showDropdownA, setShowDropdownA] = useState(false);
   const [showDropdownB, setShowDropdownB] = useState(false);
 
   const dropdownRefA = useRef<HTMLDivElement>(null);
@@ -89,31 +88,25 @@ export default function ComparePage() {
 
   useEffect(() => {
     if (searchA.length < 2) { setResultsA([]); setShowDropdownA(false); return; }
-    setLoadingA(true);
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/cricbuzz/players/search?name=${encodeURIComponent(searchA)}`);
-        const data = await res.json();
-        if (data.success) { setResultsA(data.data); setShowDropdownA(true); }
-      } catch { setResultsA([]); }
-      setLoadingA(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchA]);
+    const q = searchA.toLowerCase();
+    const matches = Array.from(allCards.values())
+      .filter(c => c.name.toLowerCase().includes(q))
+      .slice(0, 8)
+      .map(c => ({ id: c._id, name: c.name, slug: '', image: c.image }));
+    setResultsA(matches);
+    setShowDropdownA(matches.length > 0);
+  }, [searchA, allCards]);
 
   useEffect(() => {
     if (searchB.length < 2) { setResultsB([]); setShowDropdownB(false); return; }
-    setLoadingB(true);
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/cricbuzz/players/search?name=${encodeURIComponent(searchB)}`);
-        const data = await res.json();
-        if (data.success) { setResultsB(data.data); setShowDropdownB(true); }
-      } catch { setResultsB([]); }
-      setLoadingB(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchB]);
+    const q = searchB.toLowerCase();
+    const matches = Array.from(allCards.values())
+      .filter(c => c.name.toLowerCase().includes(q))
+      .slice(0, 8)
+      .map(c => ({ id: c._id, name: c.name, slug: '', image: c.image }));
+    setResultsB(matches);
+    setShowDropdownB(matches.length > 0);
+  }, [searchB, allCards]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -125,17 +118,8 @@ export default function ComparePage() {
   }, []);
 
   const selectPlayer = async (slot: 'A' | 'B', result: SearchResult) => {
-    // Try exact match from already-loaded cards map first
+    // Always in allCards since we search from it
     let player: PlayerData | undefined = allCards.get(result.name.toLowerCase());
-
-    // If not in map (shouldn't happen since search uses same DB), fetch by ID
-    if (!player) {
-      try {
-        const res = await fetch(`${API_BASE}/cards/${result.id}`);
-        const data = await res.json();
-        if (data.card) player = data.card as PlayerData;
-      } catch { /* silent */ }
-    }
 
     const finalPlayer: PlayerData = player || {
       _id: result.id,
@@ -146,8 +130,6 @@ export default function ComparePage() {
       specialty: '', rarity: 'Common', image: result.image,
       formats: {},
     };
-
-    if (result.image && !finalPlayer.image) finalPlayer.image = result.image;
 
     if (slot === 'A') {
       setPlayerA(finalPlayer);

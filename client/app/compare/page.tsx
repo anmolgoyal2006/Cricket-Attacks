@@ -28,6 +28,7 @@ interface PlayerData {
     fifties: number;
     wickets: number;
     economy: number;
+    bestScore?: string;
   }>;
 }
 
@@ -103,24 +104,37 @@ export default function ComparePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const selectPlayer = (slot: 'A' | 'B', result: SearchResult) => {
-    const card = allCards.get(result.name.toLowerCase()) || allCards.get(result.name.toLowerCase().split(' ').reverse().join(' '));
-    const player: PlayerData = card || {
+  const selectPlayer = async (slot: 'A' | 'B', result: SearchResult) => {
+    // Try exact match from already-loaded cards map first
+    let player: PlayerData | undefined = allCards.get(result.name.toLowerCase());
+
+    // If not in map (shouldn't happen since search uses same DB), fetch by ID
+    if (!player) {
+      try {
+        const res = await fetch(`${API_BASE}/cards/${result.id}`);
+        const data = await res.json();
+        if (data.card) player = data.card as PlayerData;
+      } catch { /* silent */ }
+    }
+
+    const finalPlayer: PlayerData = player || {
       _id: result.id,
       name: result.name,
       role: '',
       country: '',
       batting: 75, bowling: 70, fielding: 70, overall: 72,
-      specialty: '', rarity: 'common', image: '',
+      specialty: '', rarity: 'Common', image: result.image,
       formats: {},
     };
-    if (result.image) player.image = result.image;
+
+    if (result.image && !finalPlayer.image) finalPlayer.image = result.image;
+
     if (slot === 'A') {
-      setPlayerA(player);
+      setPlayerA(finalPlayer);
       setSearchA(result.name);
       setShowDropdownA(false);
     } else {
-      setPlayerB(player);
+      setPlayerB(finalPlayer);
       setSearchB(result.name);
       setShowDropdownB(false);
     }

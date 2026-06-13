@@ -1,21 +1,20 @@
-import { Router } from 'express';
-import cricbuzzService from '../services/cricbuzz.service';
+import { Router, Request, Response } from 'express';
+import Player from '../models/Player';
 
 const router = Router();
 
 /**
  * GET /api/cricbuzz/test
- * Health check for Cricbuzz routes
  */
 router.get('/test', (_req, res) => {
   res.json({ success: true, message: 'Cricbuzz routes working' });
 });
 
 /**
- * GET /api/cricbuzz/players/search
- * Search players by name using Cricbuzz API
+ * GET /api/cricbuzz/players/search?name=query
+ * Search players by name from our own Player collection.
  */
-router.get('/players/search', async (req, res) => {
+router.get('/players/search', async (req: Request, res: Response) => {
   try {
     const name = (req.query.name as string || '').trim();
 
@@ -24,8 +23,22 @@ router.get('/players/search', async (req, res) => {
       return;
     }
 
-    const players = await cricbuzzService.searchPlayers(name);
-    res.json({ success: true, data: players });
+    const players = await Player.find(
+      { name: { $regex: name, $options: 'i' } },
+      { _id: 1, name: 1, image: 1, country: 1, role: 1 }
+    )
+      .sort({ overall: -1 })
+      .limit(20)
+      .lean();
+
+    const data = players.map((p: any) => ({
+      id: p._id.toString(),
+      name: p.name,
+      slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+      image: p.image || '',
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error in player search route:', message);

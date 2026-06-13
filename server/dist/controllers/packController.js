@@ -95,11 +95,16 @@ async function openPackHandler(req, res, next) {
                 batting: c.batting,
                 bowling: c.bowling,
                 fielding: c.fielding,
+                captaincy: c.captaincy,
+                pressure: c.pressure,
                 overall: c.overall,
                 rarity: c.rarity,
                 specialty: c.specialty,
                 image: c.image,
                 formats: c.formats,
+                isNew: !user.ownedCards
+                    .slice(0, user.ownedCards.length - cards.length)
+                    .some((id) => id.toString() === c._id.toString()),
             })),
             coins: user.coins,
             dailyPackOpenedAt: user.dailyPackOpenedAt?.toISOString() || null,

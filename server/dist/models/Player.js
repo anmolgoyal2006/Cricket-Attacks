@@ -111,6 +111,11 @@ const playerSchema = new mongoose_1.Schema({
         type: String,
         default: 'https://via.placeholder.com/300x400/1e3a8a/ffffff?text=Player',
     },
+    battingHand: { type: String, default: '' },
+    bowlingStyle: { type: String, default: '' },
+    iplTeam: { type: String, default: '' },
+    debutYear: { type: Number, default: null },
+    age: { type: Number, default: null },
     formats: {
         odi: { type: formatStatsSchema, default: () => ({}) },
         test: { type: formatStatsSchema, default: () => ({}) },

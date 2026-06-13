@@ -59,22 +59,35 @@ function emojiForMatch(m: string) {
 }
 
 export default function WordlePage() {
-  const [clues, setClues]             = useState<Clue[]>([]);
+  const [players, setPlayers]         = useState<{ id: string; name: string; clues: Clue[] }[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
-  const [revealedClues, setRevealedClues] = useState(1);
-  const [guesses, setGuesses]         = useState<GuessRow[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [gameStates, setGameStates]   = useState<Record<string, {
+    revealedClues: number;
+    guesses: GuessRow[];
+    gameOver: boolean;
+    won: boolean;
+    answer: any;
+  }>>({});
   const [input, setInput]             = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading]         = useState(true);
   const [submitting, setSubmitting]   = useState(false);
-  const [gameOver, setGameOver]       = useState(false);
-  const [won, setWon]                 = useState(false);
-  const [answer, setAnswer]           = useState<any>(null);
   const [error, setError]             = useState('');
   const [showHow, setShowHow]         = useState(false);
   const [date, setDate]               = useState('');
   const [copied, setCopied]           = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentState = selectedPlayerId ? gameStates[selectedPlayerId] : null;
+  const revealedClues = currentState?.revealedClues ?? 1;
+  const guesses = currentState?.guesses ?? [];
+  const gameOver = currentState?.gameOver ?? false;
+  const won = currentState?.won ?? false;
+  const answer = currentState?.answer ?? null;
+
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+  const clues = selectedPlayer?.clues ?? [];
 
   // Restore today's saved state
   useEffect(() => {
@@ -82,27 +95,27 @@ export default function WordlePage() {
     if (!saved) return;
     try {
       const s = JSON.parse(saved);
-      setGuesses(s.guesses || []);
-      setRevealedClues(s.revealedClues || 1);
-      setGameOver(s.gameOver || false);
-      setWon(s.won || false);
-      setAnswer(s.answer || null);
+      setGameStates(s.gameStates || {});
+      setSelectedPlayerId(s.selectedPlayerId || null);
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
     wordleApi.getDaily().then(d => {
-      setClues(d.clues);
+      setPlayers(d.players);
       setPlayerNames(d.playerNames);
       setDate(d.date);
+      if (d.players.length > 0 && !selectedPlayerId) {
+        setSelectedPlayerId(d.players[0].id);
+      }
     }).catch(() => setError('Failed to load today\'s challenge.')).finally(() => setLoading(false));
   }, []);
 
   // Persist on every change
   useEffect(() => {
-    if (!gameOver && guesses.length === 0) return;
-    localStorage.setItem(`wordle-v2-${todayKey()}`, JSON.stringify({ guesses, revealedClues, gameOver, won, answer }));
-  }, [guesses, revealedClues, gameOver, won, answer]);
+    if (players.length === 0) return;
+    localStorage.setItem(`wordle-v2-${todayKey()}`, JSON.stringify({ gameStates, selectedPlayerId }));
+  }, [gameStates, selectedPlayerId, players]);
 
   const handleInput = (v: string) => {
     setInput(v);
@@ -112,41 +125,52 @@ export default function WordlePage() {
 
   const submitGuess = useCallback(async (name?: string) => {
     const gname = (name || input).trim();
-    if (!gname || submitting || gameOver) return;
-    const guessNumber = guesses.length + 1;
+    if (!gname || submitting || !selectedPlayerId || gameOver) return;
+    const currentGuesses = gameStates[selectedPlayerId]?.guesses ?? [];
+    const guessNumber = currentGuesses.length + 1;
     setSubmitting(true); setError(''); setSuggestions([]); setInput('');
 
     try {
-      const result = await wordleApi.submitGuess(gname, guessNumber);
+      const result = await wordleApi.submitGuess(gname, guessNumber, selectedPlayerId);
       const row: GuessRow = {
         guess: gname,
         hints: result.hintRow as Record<string, HintCell> | null,
         valid: result.playerFound,
       };
-      const next = [...guesses, row];
-      setGuesses(next);
 
-      if (result.isCorrect) {
-        setWon(true); setGameOver(true); if (result.answer) setAnswer(result.answer);
-      } else if (guessNumber >= MAX_GUESSES || result.answer) {
-        setGameOver(true); if (result.answer) setAnswer(result.answer);
-      } else {
-        setRevealedClues(p => Math.min(p + 1, clues.length));
-      }
+      setGameStates(prev => {
+        const state = prev[selectedPlayerId] ?? { revealedClues: 1, guesses: [], gameOver: false, won: false, answer: null };
+        const nextGuesses = [...state.guesses, row];
+        const isWon = result.isCorrect;
+        const isGameOver = isWon || guessNumber >= MAX_GUESSES || !!result.answer;
+
+        return {
+          ...prev,
+          [selectedPlayerId]: {
+            ...state,
+            guesses: nextGuesses,
+            won: isWon,
+            gameOver: isGameOver,
+            answer: result.answer ?? state.answer,
+            revealedClues: isGameOver ? state.revealedClues : Math.min(state.revealedClues + 1, clues.length),
+          }
+        };
+      });
     } catch (e: any) {
       setError(e.message || 'Failed to submit');
     } finally {
       setSubmitting(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [guesses, input, submitting, gameOver, clues.length]);
+  }, [gameStates, selectedPlayerId, input, submitting, gameOver, clues.length]);
 
   const shareText = () => {
     const grid = guesses.map(g => {
       if (!g.hints) return '🟥'.repeat(7);
       return COLUMNS.map(c => emojiForMatch(g.hints?.[c.key]?.match || 'wrong')).join('');
     }).join('\n');
-    return `🏏 Cricket Wordle ${date}\n${won ? `${guesses.length}/${MAX_GUESSES} ✅` : `X/${MAX_GUESSES}`}\n\n${grid}\n\ncricketclash.app/wordle`;
+    const playerLabel = selectedPlayer ? ` (${selectedPlayer.name})` : '';
+    return `🏏 Cricket Wordle ${date}${playerLabel}\n${won ? `${guesses.length}/${MAX_GUESSES} ✅` : `X/${MAX_GUESSES}`}\n\n${grid}\n\ncricketclash.app/wordle`;
   };
 
   const handleShare = async () => {
@@ -212,6 +236,42 @@ export default function WordlePage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Player Selection Tabs ── */}
+        {players.length > 0 && (
+          <div className="mb-6">
+            <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3 flex items-center gap-2">
+              Select Player to Guess
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {players.map((player, idx) => {
+                const state = gameStates[player.id];
+                const isSelected = player.id === selectedPlayerId;
+                const isWon = state?.won;
+                const isComplete = state?.gameOver;
+                return (
+                  <button
+                    key={player.id}
+                    onClick={() => setSelectedPlayerId(player.id)}
+                    className={cn(
+                      'px-4 py-2 rounded-xl font-display font-bold text-sm transition-all border',
+                      isSelected
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                        : 'glass border-white/10 text-gray-400 hover:text-white hover:border-white/20',
+                      isWon && 'ring-2 ring-green-500/50',
+                      isComplete && !isWon && 'opacity-60'
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{isWon ? '✅' : isComplete ? '❌' : `${idx + 1}.`}</span>
+                      <span>{state?.guesses?.length ?? 0}/{MAX_GUESSES}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Clue Cards ── */}
         <div className="mb-8">

@@ -5,171 +5,365 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDailyWordle = getDailyWordle;
 exports.submitWordleGuess = submitWordleGuess;
+exports.getDailyFaceReveal = getDailyFaceReveal;
+exports.submitFaceRevealGuess = submitFaceRevealGuess;
 const Player_1 = __importDefault(require("../models/Player"));
 const errors_1 = require("../utils/errors");
-// Deterministically pick a player for today using a date-based seed
+// ---------------------------------------------------------------------------
+// Static enrichment: cricket-knowledge fields keyed by player name (lowercase)
+// These supplement DB records that may not have the new fields yet
+// ---------------------------------------------------------------------------
+const ENRICHMENT = {
+    'virat kohli': { battingHand: 'Right-handed', bowlingStyle: 'Medium', iplTeam: 'RCB', debutYear: 2008, age: 35 },
+    'rohit sharma': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'MI', debutYear: 2007, age: 36 },
+    'ms dhoni': { battingHand: 'Right-handed', bowlingStyle: 'Medium', iplTeam: 'CSK', debutYear: 2004, age: 42 },
+    'sachin tendulkar': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'MI', debutYear: 1989, age: 51 },
+    'sourav ganguly': { battingHand: 'Left-handed', bowlingStyle: 'Medium', iplTeam: 'N/A', debutYear: 1992, age: 51 },
+    'rahul dravid': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'N/A', debutYear: 1996, age: 51 },
+    'virender sehwag': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'DD', debutYear: 1999, age: 45 },
+    'yuvraj singh': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Spin', iplTeam: 'PBKS', debutYear: 2000, age: 42 },
+    'harbhajan singh': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'MI', debutYear: 1998, age: 43 },
+    'zaheer khan': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Fast', iplTeam: 'DD', debutYear: 2000, age: 45 },
+    'anil kumble': { battingHand: 'Right-handed', bowlingStyle: 'Leg Spin', iplTeam: 'RCB', debutYear: 1990, age: 53 },
+    'kapil dev': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'N/A', debutYear: 1978, age: 65 },
+    'jasprit bumrah': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'MI', debutYear: 2016, age: 30 },
+    'ravindra jadeja': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Spin', iplTeam: 'CSK', debutYear: 2009, age: 35 },
+    'r ashwin': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'CSK', debutYear: 2010, age: 37 },
+    'shubman gill': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'GT', debutYear: 2019, age: 24 },
+    'hardik pandya': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'MI', debutYear: 2016, age: 30 },
+    'kl rahul': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'LSG', debutYear: 2014, age: 32 },
+    // Pakistan
+    'babar azam': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'N/A', debutYear: 2015, age: 29 },
+    'shaheen afridi': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Fast', iplTeam: 'N/A', debutYear: 2018, age: 24 },
+    'wasim akram': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Fast', iplTeam: 'N/A', debutYear: 1984, age: 57 },
+    'waqar younis': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'N/A', debutYear: 1989, age: 52 },
+    'shoaib akhtar': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'N/A', debutYear: 1997, age: 48 },
+    'imran khan': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'N/A', debutYear: 1971, age: 71 },
+    'shahid afridi': { battingHand: 'Right-handed', bowlingStyle: 'Leg Spin', iplTeam: 'N/A', debutYear: 1996, age: 43 },
+    'inzamam-ul-haq': { battingHand: 'Right-handed', bowlingStyle: 'Medium', iplTeam: 'N/A', debutYear: 1991, age: 54 },
+    // Australia
+    'ricky ponting': { battingHand: 'Right-handed', bowlingStyle: 'Medium', iplTeam: 'N/A', debutYear: 1995, age: 49 },
+    'steve waugh': { battingHand: 'Right-handed', bowlingStyle: 'Medium', iplTeam: 'N/A', debutYear: 1985, age: 59 },
+    'adam gilchrist': { battingHand: 'Left-handed', bowlingStyle: 'Off Spin', iplTeam: 'PBKS', debutYear: 1996, age: 52 },
+    'glenn mcgrath': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'N/A', debutYear: 1993, age: 54 },
+    'shane warne': { battingHand: 'Right-handed', bowlingStyle: 'Leg Spin', iplTeam: 'N/A', debutYear: 1992, age: 54 },
+    'steve smith': { battingHand: 'Right-handed', bowlingStyle: 'Leg Spin', iplTeam: 'RR', debutYear: 2010, age: 35 },
+    'david warner': { battingHand: 'Left-handed', bowlingStyle: 'Off Spin', iplTeam: 'SRH', debutYear: 2009, age: 37 },
+    'pat cummins': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'KKR', debutYear: 2011, age: 31 },
+    'mitchell starc': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Fast', iplTeam: 'KKR', debutYear: 2010, age: 34 },
+    // England
+    'joe root': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'N/A', debutYear: 2012, age: 33 },
+    'ben stokes': { battingHand: 'Left-handed', bowlingStyle: 'Fast-medium', iplTeam: 'RR', debutYear: 2011, age: 33 },
+    'james anderson': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'N/A', debutYear: 2003, age: 41 },
+    'kevin pietersen': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'RCB', debutYear: 2004, age: 44 },
+    'andrew flintoff': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'CSK', debutYear: 1998, age: 46 },
+    // West Indies
+    'brian lara': { battingHand: 'Left-handed', bowlingStyle: 'Leg Spin', iplTeam: 'N/A', debutYear: 1990, age: 55 },
+    'chris gayle': { battingHand: 'Left-handed', bowlingStyle: 'Off Spin', iplTeam: 'PBKS', debutYear: 1999, age: 44 },
+    'curtly ambrose': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'N/A', debutYear: 1988, age: 60 },
+    // South Africa
+    'ab de villiers': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'RCB', debutYear: 2004, age: 40 },
+    'dale steyn': { battingHand: 'Right-handed', bowlingStyle: 'Fast', iplTeam: 'RCB', debutYear: 2004, age: 41 },
+    'jacques kallis': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'KKR', debutYear: 1995, age: 48 },
+    'hashim amla': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'N/A', debutYear: 2004, age: 41 },
+    // New Zealand
+    'kane williamson': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'GT', debutYear: 2010, age: 33 },
+    'brendon mccullum': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'KKR', debutYear: 2002, age: 42 },
+    'ross taylor': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'N/A', debutYear: 2006, age: 40 },
+    // Sri Lanka
+    'kumar sangakkara': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Spin', iplTeam: 'CSK', debutYear: 2000, age: 46 },
+    'mahela jayawardene': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'MI', debutYear: 1997, age: 47 },
+    'muttiah muralitharan': { battingHand: 'Right-handed', bowlingStyle: 'Off Spin', iplTeam: 'CSK', debutYear: 1992, age: 52 },
+    'lasith malinga': { battingHand: 'Right-handed', bowlingStyle: 'Fast-medium', iplTeam: 'MI', debutYear: 2004, age: 40 },
+    // Bangladesh
+    'shakib al hasan': { battingHand: 'Left-handed', bowlingStyle: 'Left-arm Spin', iplTeam: 'KKR', debutYear: 2006, age: 37 },
+};
+// Debut era bucket
+function debutEra(year) {
+    if (year < 2000)
+        return 'Pre-2000s';
+    if (year < 2010)
+        return '2000s';
+    if (year < 2020)
+        return '2010s';
+    return '2020s';
+}
+// Age bucket
+function ageBucket(age) {
+    if (age < 25)
+        return 'Under 25';
+    if (age < 30)
+        return '25–29';
+    if (age < 35)
+        return '30–34';
+    if (age < 40)
+        return '35–39';
+    return '40+';
+}
+// Deterministic daily index — uses a string hash that distributes evenly
+// across the full player pool regardless of pool size.
 function getDailyIndex(total) {
     const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    // Simple LCG hash
-    let hash = seed;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
-    hash = (hash >>> 16) ^ hash;
-    return Math.abs(hash) % total;
+    // Zero-padded date string so the seed changes meaningfully each day
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    // FNV-1a 32-bit hash — much better distribution than the old LCG on small seeds
+    let hash = 2166136261; // FNV offset basis
+    for (let i = 0; i < dateStr.length; i++) {
+        hash ^= dateStr.charCodeAt(i);
+        // Multiply by FNV prime (keep within 32-bit unsigned range)
+        hash = (hash * 16777619) >>> 0;
+    }
+    return hash % total;
 }
 function getTodayKey() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
-// Build clue array for a player (excluding name)
+// Merge DB player with enrichment
+function enrichPlayer(player) {
+    const key = player.name.toLowerCase().trim();
+    const extra = ENRICHMENT[key] || {};
+    return {
+        ...player,
+        battingHand: player.battingHand || extra.battingHand || 'Right-handed',
+        bowlingStyle: player.bowlingStyle || extra.bowlingStyle || 'Medium',
+        iplTeam: player.iplTeam || extra.iplTeam || 'N/A',
+        debutYear: player.debutYear || extra.debutYear || 2000,
+        age: player.age || extra.age || 30,
+    };
+}
+// Build the 7 progressive clues — ordered from broad → specific
 function buildClues(player) {
-    const batting = player.batting;
-    const bowling = player.bowling;
-    const overall = player.overall;
+    const p = enrichPlayer(player);
     return [
-        { id: 1, category: 'country', label: 'Country', value: player.country, emoji: '🌍' },
-        { id: 2, category: 'role', label: 'Role', value: player.role, emoji: '🏏' },
-        { id: 3, category: 'rarity', label: 'Rarity', value: player.rarity, emoji: '⭐' },
-        {
-            id: 4,
-            category: 'batting',
-            label: 'Batting Rating',
-            value: `${Math.floor(batting / 10) * 10}–${Math.floor(batting / 10) * 10 + 9}`,
-            emoji: '🏏',
-        },
-        {
-            id: 5,
-            category: 'bowling',
-            label: 'Bowling Rating',
-            value: `${Math.floor(bowling / 10) * 10}–${Math.floor(bowling / 10) * 10 + 9}`,
-            emoji: '🎯',
-        },
-        { id: 6, category: 'specialty', label: 'Specialty', value: player.specialty, emoji: '⚡' },
-        {
-            id: 7,
-            category: 'overall',
-            label: 'Overall Rating',
-            value: `${Math.floor(overall / 10) * 10}–${Math.floor(overall / 10) * 10 + 9}`,
-            emoji: '📊',
-        },
+        { id: 1, category: 'country', label: 'Country', value: p.country, emoji: '🌍', type: 'text' },
+        { id: 2, category: 'role', label: 'Role', value: p.role, emoji: '🏏', type: 'text' },
+        { id: 3, category: 'battingHand', label: 'Batting Hand', value: p.battingHand, emoji: '🖐️', type: 'text' },
+        { id: 4, category: 'bowlingStyle', label: 'Bowling Style', value: p.bowlingStyle, emoji: '🎳', type: 'text' },
+        { id: 5, category: 'iplTeam', label: 'IPL Team', value: p.iplTeam, emoji: '🏟️', type: 'text' },
+        { id: 6, category: 'debutEra', label: 'Debut Era', value: debutEra(p.debutYear), emoji: '📅', type: 'text' },
+        { id: 7, category: 'specialty', label: 'Specialty', value: p.specialty, emoji: '⚡', type: 'text' },
     ];
 }
-// GET /api/wordle/daily  — returns daily player clues + list of all player names for autocomplete
+// Compare two values for a hint
+function compareField(field, guessVal, targetVal) {
+    // Numeric comparisons
+    if (field === 'age') {
+        const g = Number(guessVal), t = Number(targetVal);
+        if (g === t)
+            return { value: guessVal, match: 'correct' };
+        if (Math.abs(g - t) <= 3)
+            return { value: guessVal, match: 'close' };
+        return { value: guessVal, match: g > t ? 'lower' : 'higher' };
+    }
+    if (field === 'debutYear') {
+        const g = Number(guessVal), t = Number(targetVal);
+        if (g === t)
+            return { value: debutEra(g), match: 'correct' };
+        if (debutEra(g) === debutEra(t))
+            return { value: debutEra(g), match: 'correct' };
+        return { value: debutEra(g), match: g > t ? 'lower' : 'higher' };
+    }
+    if (['batting', 'bowling', 'overall'].includes(field)) {
+        const g = Number(guessVal), t = Number(targetVal);
+        if (g === t)
+            return { value: g, match: 'correct' };
+        if (Math.abs(g - t) <= 8)
+            return { value: g, match: 'close' };
+        return { value: g, match: g > t ? 'lower' : 'higher' };
+    }
+    // Text comparisons
+    const gStr = String(guessVal || '').toLowerCase().trim();
+    const tStr = String(targetVal || '').toLowerCase().trim();
+    if (gStr === tStr)
+        return { value: guessVal, match: 'correct' };
+    // Partial match for bowling style (e.g. both spinners)
+    if (field === 'bowlingStyle') {
+        const spinTypes = ['off spin', 'leg spin', 'left-arm spin'];
+        const fastTypes = ['fast', 'fast-medium', 'left-arm fast', 'medium-fast', 'medium'];
+        const gSpin = spinTypes.some(s => gStr.includes(s.split(' ')[0]));
+        const tSpin = spinTypes.some(s => tStr.includes(s.split(' ')[0]));
+        if (gSpin && tSpin)
+            return { value: guessVal, match: 'close' };
+        if (!gSpin && !tSpin)
+            return { value: guessVal, match: 'close' };
+    }
+    return { value: guessVal, match: 'wrong' };
+}
+// Number of players available per day
+const PLAYERS_PER_DAY = 5;
+// GET /api/wordle/daily
 async function getDailyWordle(req, res, next) {
     try {
-        const allPlayers = await Player_1.default.find({}).select('name').lean();
+        const allPlayers = await Player_1.default.find({}).sort({ _id: 1 }).lean();
         const total = allPlayers.length;
-        if (total === 0) {
+        if (total === 0)
             return res.status(404).json({ error: 'No players found' });
+        // Get daily seed index
+        const baseIdx = getDailyIndex(total);
+        // Pick multiple players using daily seed + offset
+        const dailyPlayers = [];
+        for (let i = 0; i < PLAYERS_PER_DAY; i++) {
+            const idx = (baseIdx + i * 37) % total; // 37 is a prime for better distribution
+            const player = allPlayers[idx];
+            dailyPlayers.push({
+                id: player._id.toString(),
+                name: player.name,
+                clues: buildClues(player),
+            });
         }
-        const idx = getDailyIndex(total);
-        // Fetch the full daily player
-        const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
-        const dailyPlayer = allFull[idx % allFull.length];
-        const clues = buildClues(dailyPlayer);
         const playerNames = allPlayers.map((p) => p.name);
         res.json({
             date: getTodayKey(),
-            clues,
+            players: dailyPlayers,
             playerNames,
-            totalClues: clues.length,
+            totalClues: 7,
         });
     }
     catch (error) {
         next(error);
     }
 }
-// POST /api/wordle/guess  — { guess: string, guessNumber: number }
+// POST /api/wordle/guess  — { guess: string, guessNumber: number, playerId?: string }
 async function submitWordleGuess(req, res, next) {
     try {
-        const { guess, guessNumber } = req.body;
-        if (!guess || typeof guess !== 'string') {
+        const { guess, guessNumber, playerId } = req.body;
+        if (!guess || typeof guess !== 'string')
             throw new errors_1.BadRequestError('guess is required');
-        }
-        if (!guessNumber || guessNumber < 1 || guessNumber > 6) {
+        if (!guessNumber || guessNumber < 1 || guessNumber > 6)
             throw new errors_1.BadRequestError('guessNumber must be 1–6');
-        }
         const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
         const total = allFull.length;
         if (total === 0)
             return res.status(404).json({ error: 'No players found' });
-        const idx = getDailyIndex(total);
-        const dailyPlayer = allFull[idx % allFull.length];
-        const isCorrect = dailyPlayer.name.toLowerCase().trim() === guess.toLowerCase().trim();
+        // Determine target player - by playerId or daily index
+        let rawTarget;
+        if (playerId) {
+            rawTarget = allFull.find(p => p._id.toString() === playerId);
+        }
+        if (!rawTarget) {
+            // Fall back to first player in daily pool
+            const baseIdx = getDailyIndex(total);
+            rawTarget = allFull[(baseIdx) % total];
+        }
+        const target = enrichPlayer(rawTarget);
+        const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
         const isLastGuess = guessNumber >= 6;
-        const guessedPlayer = allFull.find((p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim());
-        // Build hint row comparing guess to answer
+        const rawGuessed = allFull.find((p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim());
+        const guessed = rawGuessed ? enrichPlayer(rawGuessed) : null;
         let hintRow = {};
-        if (guessedPlayer) {
+        if (guessed) {
             hintRow = {
-                country: {
-                    value: guessedPlayer.country,
-                    match: guessedPlayer.country === dailyPlayer.country ? 'correct' : 'wrong',
-                },
-                role: {
-                    value: guessedPlayer.role,
-                    match: guessedPlayer.role === dailyPlayer.role ? 'correct' : 'wrong',
-                },
-                rarity: {
-                    value: guessedPlayer.rarity,
-                    match: guessedPlayer.rarity === dailyPlayer.rarity ? 'correct' : 'wrong',
-                },
-                batting: {
-                    value: guessedPlayer.batting,
-                    match: guessedPlayer.batting === dailyPlayer.batting
-                        ? 'correct'
-                        : Math.abs(guessedPlayer.batting - dailyPlayer.batting) <= 10
-                            ? 'close'
-                            : guessedPlayer.batting > dailyPlayer.batting
-                                ? 'higher'
-                                : 'lower',
-                },
-                bowling: {
-                    value: guessedPlayer.bowling,
-                    match: guessedPlayer.bowling === dailyPlayer.bowling
-                        ? 'correct'
-                        : Math.abs(guessedPlayer.bowling - dailyPlayer.bowling) <= 10
-                            ? 'close'
-                            : guessedPlayer.bowling > dailyPlayer.bowling
-                                ? 'higher'
-                                : 'lower',
-                },
-                overall: {
-                    value: guessedPlayer.overall,
-                    match: guessedPlayer.overall === dailyPlayer.overall
-                        ? 'correct'
-                        : Math.abs(guessedPlayer.overall - dailyPlayer.overall) <= 5
-                            ? 'close'
-                            : guessedPlayer.overall > dailyPlayer.overall
-                                ? 'higher'
-                                : 'lower',
-                },
-                specialty: {
-                    value: guessedPlayer.specialty,
-                    match: guessedPlayer.specialty === dailyPlayer.specialty ? 'correct' : 'wrong',
-                },
+                country: compareField('country', guessed.country, target.country),
+                role: compareField('role', guessed.role, target.role),
+                battingHand: compareField('battingHand', guessed.battingHand, target.battingHand),
+                bowlingStyle: compareField('bowlingStyle', guessed.bowlingStyle, target.bowlingStyle),
+                iplTeam: compareField('iplTeam', guessed.iplTeam, target.iplTeam),
+                debutYear: compareField('debutYear', guessed.debutYear, target.debutYear),
+                specialty: compareField('specialty', guessed.specialty, target.specialty),
             };
         }
         const response = {
             isCorrect,
             guessNumber,
-            hintRow: guessedPlayer ? hintRow : null,
-            playerFound: !!guessedPlayer,
+            hintRow: guessed ? hintRow : null,
+            playerFound: !!guessed,
         };
-        // Reveal answer if correct or last guess
         if (isCorrect || isLastGuess) {
             response.answer = {
-                name: dailyPlayer.name,
-                country: dailyPlayer.country,
-                role: dailyPlayer.role,
-                rarity: dailyPlayer.rarity,
-                overall: dailyPlayer.overall,
-                batting: dailyPlayer.batting,
-                bowling: dailyPlayer.bowling,
-                specialty: dailyPlayer.specialty,
-                image: dailyPlayer.image,
+                playerId: rawTarget._id.toString(),
+                name: target.name,
+                country: target.country,
+                role: target.role,
+                battingHand: target.battingHand,
+                bowlingStyle: target.bowlingStyle,
+                iplTeam: target.iplTeam,
+                debutEra: debutEra(target.debutYear),
+                specialty: target.specialty,
+                overall: target.overall,
+                image: target.image,
+                rarity: target.rarity,
             };
+        }
+        res.json(response);
+    }
+    catch (error) {
+        next(error);
+    }
+}
+// In-memory session store for face reveal answers (TTL: 2 hours)
+const faceRevealSessions = new Map();
+// GET /api/wordle/face-reveal  — random player each session (no daily lock)
+async function getDailyFaceReveal(req, res, next) {
+    try {
+        const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
+        const total = allFull.length;
+        if (total === 0)
+            return res.status(404).json({ error: 'No players found' });
+        // Truly random each request
+        const idx = Math.floor(Math.random() * total);
+        const player = enrichPlayer(allFull[idx]);
+        // Create a session ID so the guess endpoint knows the answer
+        const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        faceRevealSessions.set(sessionId, {
+            playerName: player.name,
+            expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours
+        });
+        // Clean up expired sessions
+        for (const [key, val] of faceRevealSessions.entries()) {
+            if (val.expiresAt < Date.now())
+                faceRevealSessions.delete(key);
+        }
+        const hints = [
+            { id: 1, label: 'Country', value: player.country, emoji: '🌍' },
+            { id: 2, label: 'Role', value: player.role, emoji: '🏏' },
+            { id: 3, label: 'IPL Team', value: player.iplTeam, emoji: '🏟️' },
+            { id: 4, label: 'Debut Era', value: debutEra(player.debutYear), emoji: '📅' },
+            { id: 5, label: 'Specialty', value: player.specialty, emoji: '⚡' },
+        ];
+        res.json({
+            sessionId,
+            image: player.image,
+            playerNames: allFull.map(p => p.name),
+            hints,
+            totalHints: hints.length,
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+// POST /api/wordle/face-reveal/guess
+async function submitFaceRevealGuess(req, res, next) {
+    try {
+        const { guess, guessNumber, difficulty, sessionId } = req.body;
+        if (!guess || typeof guess !== 'string')
+            throw new errors_1.BadRequestError('guess is required');
+        if (!sessionId)
+            throw new errors_1.BadRequestError('sessionId is required');
+        const session = faceRevealSessions.get(sessionId);
+        if (!session || session.expiresAt < Date.now()) {
+            throw new errors_1.BadRequestError('Session expired. Please start a new game.');
+        }
+        const isCorrect = session.playerName.toLowerCase().trim() === guess.toLowerCase().trim();
+        const POINTS = { easy: 5, medium: 10, hard: 20, expert: 40 };
+        const pointsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
+        const response = { isCorrect, pointsEarned };
+        if (isCorrect || (guessNumber >= 5)) {
+            // Fetch full player data for the reveal
+            const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
+            const target = enrichPlayer(allFull.find(p => p.name.toLowerCase() === session.playerName.toLowerCase()) || allFull[0]);
+            response.answer = {
+                name: target.name,
+                country: target.country,
+                role: target.role,
+                iplTeam: target.iplTeam,
+                specialty: target.specialty,
+                image: target.image,
+            };
+            // Clean up session when game ends
+            if (isCorrect || guessNumber >= 5)
+                faceRevealSessions.delete(sessionId);
         }
         res.json(response);
     }

@@ -178,22 +178,23 @@ export const wordleApi = {
   getDaily: () =>
     api<{
       date: string;
-      clues: { id: number; category: string; label: string; value: string; emoji: string; type: string }[];
+      players: { id: string; name: string; clues: { id: number; category: string; label: string; value: string; emoji: string; type: string }[] }[];
       playerNames: string[];
       totalClues: number;
     }>('/wordle/daily', { auth: false }),
-  submitGuess: (guess: string, guessNumber: number) =>
+  submitGuess: (guess: string, guessNumber: number, playerId?: string) =>
     api<{
       isCorrect: boolean;
       guessNumber: number;
       hintRow: Record<string, { value: any; match: string }> | null;
       playerFound: boolean;
       answer?: {
+        playerId: string;
         name: string; country: string; role: string; battingHand: string;
         bowlingStyle: string; iplTeam: string; debutEra: string;
         specialty: string; overall: number; image: string; rarity: string;
       };
-    }>('/wordle/guess', { method: 'POST', body: { guess, guessNumber } }),
+    }>('/wordle/guess', { method: 'POST', body: { guess, guessNumber, playerId } }),
   getFaceReveal: () =>
     api<{
       sessionId: string;

@@ -6,5 +6,7 @@ const wordleController_1 = require("../controllers/wordleController");
 const router = (0, express_1.Router)();
 router.get('/daily', wordleController_1.getDailyWordle);
 router.post('/guess', auth_1.optionalAuth, wordleController_1.submitWordleGuess);
+router.get('/face-reveal', wordleController_1.getDailyFaceReveal);
+router.post('/face-reveal/guess', auth_1.optionalAuth, wordleController_1.submitFaceRevealGuess);
 exports.default = router;
 //# sourceMappingURL=wordleRoutes.js.map

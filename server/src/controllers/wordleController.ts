@@ -187,6 +187,9 @@ function compareField(
   return { value: guessVal, match: 'wrong' };
 }
 
+// Number of players available per day
+const PLAYERS_PER_DAY = 5;
+
 // GET /api/wordle/daily
 export async function getDailyWordle(req: Request, res: Response, next: NextFunction) {
   try {
@@ -194,26 +197,38 @@ export async function getDailyWordle(req: Request, res: Response, next: NextFunc
     const total = allPlayers.length;
     if (total === 0) return res.status(404).json({ error: 'No players found' });
 
-    const idx = getDailyIndex(total);
-    const dailyPlayer = allPlayers[idx % total];
-    const clues = buildClues(dailyPlayer);
+    // Get daily seed index
+    const baseIdx = getDailyIndex(total);
+
+    // Pick multiple players using daily seed + offset
+    const dailyPlayers: any[] = [];
+    for (let i = 0; i < PLAYERS_PER_DAY; i++) {
+      const idx = (baseIdx + i * 37) % total; // 37 is a prime for better distribution
+      const player = allPlayers[idx];
+      dailyPlayers.push({
+        id: player._id.toString(),
+        name: player.name,
+        clues: buildClues(player),
+      });
+    }
+
     const playerNames = allPlayers.map((p) => p.name);
 
     res.json({
       date: getTodayKey(),
-      clues,
+      players: dailyPlayers,
       playerNames,
-      totalClues: clues.length,
+      totalClues: 7,
     });
   } catch (error) {
     next(error);
   }
 }
 
-// POST /api/wordle/guess  — { guess: string, guessNumber: number }
+// POST /api/wordle/guess  — { guess: string, guessNumber: number, playerId?: string }
 export async function submitWordleGuess(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { guess, guessNumber } = req.body;
+    const { guess, guessNumber, playerId } = req.body;
 
     if (!guess || typeof guess !== 'string') throw new BadRequestError('guess is required');
     if (!guessNumber || guessNumber < 1 || guessNumber > 6) throw new BadRequestError('guessNumber must be 1–6');
@@ -222,8 +237,16 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
     const total = allFull.length;
     if (total === 0) return res.status(404).json({ error: 'No players found' });
 
-    const idx = getDailyIndex(total);
-    const rawTarget = allFull[idx % total];
+    // Determine target player - by playerId or daily index
+    let rawTarget;
+    if (playerId) {
+      rawTarget = allFull.find(p => p._id.toString() === playerId);
+    }
+    if (!rawTarget) {
+      // Fall back to first player in daily pool
+      const baseIdx = getDailyIndex(total);
+      rawTarget = allFull[(baseIdx) % total];
+    }
     const target = enrichPlayer(rawTarget);
 
     const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
@@ -256,6 +279,7 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
 
     if (isCorrect || isLastGuess) {
       response.answer = {
+        playerId:    rawTarget._id.toString(),
         name:        target.name,
         country:     target.country,
         role:        target.role,

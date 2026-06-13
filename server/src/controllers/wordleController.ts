@@ -347,7 +347,7 @@ export async function getDailyFaceReveal(req: Request, res: Response, next: Next
     const allFull = await Player.find({}).sort({ _id: 1 }).lean();
     if (allFull.length === 0) return res.status(404).json({ error: 'No players found' });
 
-    // Deduplicate by name
+    // Deduplicate by name, and only keep players that have a photo
     const seen = new Set<string>();
     const uniquePlayers = allFull.filter(p => {
       const key = p.name.toLowerCase().trim();
@@ -355,11 +355,13 @@ export async function getDailyFaceReveal(req: Request, res: Response, next: Next
       seen.add(key);
       return true;
     });
-    const total = uniquePlayers.length;
+
+    const playersWithPhoto = uniquePlayers.filter(p => p.image && p.image.trim() !== '');
+    if (playersWithPhoto.length === 0) return res.status(404).json({ error: 'No players with photos found' });
 
     // Truly random each request
-    const idx = Math.floor(Math.random() * total);
-    const player = enrichPlayer(uniquePlayers[idx]);
+    const idx = Math.floor(Math.random() * playersWithPhoto.length);
+    const player = enrichPlayer(playersWithPhoto[idx]);
 
     // Create a session ID so the guess endpoint knows the answer
     const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;

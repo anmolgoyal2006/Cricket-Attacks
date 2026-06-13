@@ -22,19 +22,30 @@ async function startPvE(req, res, next) {
         if (!user) {
             throw new errors_1.NotFoundError('User');
         }
-        const playerCards = await Player_1.default.find({ _id: { $in: squadCardIds } });
+        // Extract actual player IDs from cardIds (cardId is like "playerId_index")
+        const actualPlayerIds = squadCardIds.map((cardId) => {
+            return cardId.includes('_') ? cardId.split('_')[0] : cardId;
+        });
+        const playerCards = await Player_1.default.find({ _id: { $in: actualPlayerIds } });
         if (playerCards.length !== 5) {
             throw new errors_1.BadRequestError('Some selected cards were not found');
         }
-        for (const cardId of squadCardIds) {
-            if (!user.ownedCards.some((c) => c.toString() === cardId)) {
+        // Verify ownership (using actualPlayerIds)
+        for (const playerId of actualPlayerIds) {
+            if (!user.ownedCards.some((c) => c.toString() === playerId)) {
                 throw new errors_1.BadRequestError('You do not own all selected cards');
             }
         }
-        const { aiCards, playerHand, attributeOrder } = (0, battleService_1.startBattle)(playerCards);
+        // Create playerHand with original cardIds as userCardId
+        const { aiCards, playerHand: rawPlayerHand, attributeOrder } = (0, battleService_1.startBattle)(playerCards);
+        // Add the original cardId to each playerHand entry
+        const playerHand = rawPlayerHand.map((card, index) => ({
+            ...card,
+            userCardId: squadCardIds[index]
+        }));
         const battle = await Battle_1.default.create({
             user: user._id,
-            playerSquad: squadCardIds,
+            playerSquad: actualPlayerIds, // Store actual player IDs in DB
             aiSquad: aiCards,
             attributeOrder,
             playerScore: 0,
@@ -58,7 +69,9 @@ async function startPvE(req, res, next) {
 async function playRoundHandler(req, res, next) {
     try {
         const { battleId } = req.params;
-        const { playerCardId } = req.body;
+        let { playerCardId } = req.body;
+        // Extract actual player ID from userCardId if needed
+        const actualPlayerId = playerCardId.includes('_') ? playerCardId.split('_')[0] : playerCardId;
         const battle = await Battle_1.default.findById(battleId).populate('playerSquad');
         if (!battle) {
             throw new errors_1.NotFoundError('Battle');
@@ -73,7 +86,7 @@ async function playRoundHandler(req, res, next) {
         if (aiCards.length === 0) {
             throw new errors_1.BadRequestError('No AI cards remaining');
         }
-        const result = (0, battleService_1.playRound)(battle, aiCards, playerCardId);
+        const result = (0, battleService_1.playRound)(battle, aiCards, actualPlayerId);
         if (result.computerCard) {
             battle.aiSquad = battle.aiSquad.map((ai) => ({
                 ...ai,
@@ -85,9 +98,17 @@ async function playRoundHandler(req, res, next) {
         if (!result.computerCard || !result.computerCard.name) {
             console.error('Missing computerCard.name in playRound result:', JSON.stringify(result.computerCard));
         }
+        // Update the playerCard in the result to use the original userCardId
+        const resultWithUserCardId = {
+            ...result,
+            playerCard: {
+                ...result.playerCard,
+                // We don't have the original userCardId here, but the frontend will use the one it sent
+            }
+        };
         const roundResult = {
             roundNumber: result.roundNumber,
-            playerCardId: new mongoose_1.default.Types.ObjectId(playerCardId),
+            playerCardId: new mongoose_1.default.Types.ObjectId(actualPlayerId),
             playerCardName: result.playerCard.name,
             playerStat: result.playerCard.stat,
             attribute: result.attribute,
@@ -135,7 +156,13 @@ async function playRoundHandler(req, res, next) {
             }
         }
         await battle.save();
-        res.json(result);
+        res.json({
+            ...result,
+            playerCard: {
+                ...result.playerCard,
+                // We don't need to modify it here, frontend will track userCardId
+            }
+        });
     }
     catch (error) {
         next(error);

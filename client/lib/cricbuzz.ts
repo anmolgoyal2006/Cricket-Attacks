@@ -1,61 +1,6 @@
 // lib/cricbuzz.ts
 
-// Live Matches Types
-export interface CricbuzzTeam {
-  teamId: number;
-  teamName: string;
-  teamImg: string;
-}
-
-export interface CricbuzzMatchInfo {
-  matchId: number;
-  seriesName: string;
-  matchDesc: string;
-  state: string;
-  status: string;
-  venue: {
-    ground: string;
-    city: string;
-    country: string;
-  };
-  startDate: number;
-  endDate: number;
-}
-
-export interface CricbuzzScore {
-  teamId: number;
-  teamName: string;
-  scores: string;
-  wickets: number;
-  overs: number;
-}
-
-export interface CricbuzzLiveMatch {
-  matchInfo: CricbuzzMatchInfo;
-  score: CricbuzzScore[];
-}
-
-export interface CricbuzzUpcomingMatch {
-  matchInfo: CricbuzzMatchInfo;
-}
-
-export interface LiveMatchesResponse {
-  success: boolean;
-  data: CricbuzzLiveMatch[];
-  cached: boolean;
-  timestamp: number;
-  error?: string;
-}
-
-export interface UpcomingMatchesResponse {
-  success: boolean;
-  data: CricbuzzUpcomingMatch[];
-  cached: boolean;
-  timestamp: number;
-  error?: string;
-}
-
-// Player Stats Types (existing)
+// Player Stats Types
 interface FormatStats {
   matches: number;
   runs: number;
@@ -98,7 +43,7 @@ interface Player {
 const RAPIDAPI_KEY = process.env.CRICBUZZ_API_KEY;
 const RAPIDAPI_HOST = 'cricbuzz-cricket.p.rapidapi.com';
 
-// Cricbuzz player IDs (you'll need to find/update these)
+// Cricbuzz player IDs
 export const playerIdMap: Record<string, number> = {
   'Virat Kohli': 253802,
   'Rohit Sharma': 34102,
@@ -132,7 +77,7 @@ export async function fetchPlayerStats(playerId: number): Promise<any> {
           'X-RapidAPI-Key': RAPIDAPI_KEY!,
           'X-RapidAPI-Host': RAPIDAPI_HOST,
         },
-        next: { revalidate: 3600 }, // Cache for 1 hour
+        next: { revalidate: 3600 },
       }
     );
 
@@ -148,10 +93,9 @@ export async function fetchPlayerStats(playerId: number): Promise<any> {
   }
 }
 
-// Live Matches API Helpers
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Player {
-  // Extract stats from Cricbuzz API response
   const bat = cricbuzzData?.bat || {};
   const bowl = cricbuzzData?.bowl || {};
 
@@ -209,7 +153,6 @@ export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Pla
           bowl?.t20Wkts,
           bowl?.t20Econ
         ),
-        // Estimate World Cup stats (15% of ODI)
         worldCup: createFormatStats(
           Math.floor((bat.odiRuns || 0) * 0.15),
           (bat.odiAvg || 0) * 1.05,
@@ -219,7 +162,6 @@ export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Pla
           Math.floor((bowl?.odiWkts || 0) * 0.15),
           (bowl?.odiEcon || 0) * 0.95
         ),
-        // Estimate Knockouts (12% of ODI, slightly better avg/sr)
         knockouts: createFormatStats(
           Math.floor((bat.odiRuns || 0) * 0.12),
           (bat.odiAvg || 0) * 1.08,
@@ -229,7 +171,6 @@ export function convertCricbuzzToPlayer(cricbuzzData: any, playerInfo: any): Pla
           Math.floor((bowl?.odiWkts || 0) * 0.12),
           (bowl?.odiEcon || 0) * 0.92
         ),
-        // Estimate Bilateral (85% of ODI)
         bilateral: createFormatStats(
           Math.floor((bat.odiRuns || 0) * 0.85),
           bat.odiAvg || 0,
@@ -263,72 +204,4 @@ function calculateOverallRating(bat: any, bowl: any): number {
   const battingRating = calculateBattingRating(bat);
   const bowlingRating = calculateBowlingRating(bowl);
   return Math.floor(battingRating * 0.6 + bowlingRating * 0.3 + 75 * 0.1);
-}
-
-export async function getLiveMatches(): Promise<LiveMatchesResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/cricbuzz/live`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      let errorBody = '';
-      try {
-        errorBody = JSON.stringify(await response.json());
-      } catch {
-        errorBody = await response.text().catch(() => '');
-      }
-      throw new Error(`API error: ${response.status} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching live matches:', error);
-    return {
-      success: false,
-      data: [],
-      cached: false,
-      timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-export async function getUpcomingMatches(): Promise<UpcomingMatchesResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/cricbuzz/upcoming`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      let errorBody = '';
-      try {
-        errorBody = JSON.stringify(await response.json());
-      } catch {
-        errorBody = await response.text().catch(() => '');
-      }
-      throw new Error(`API error: ${response.status} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching upcoming matches:', error);
-    return {
-      success: false,
-      data: [],
-      cached: false,
-      timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
 }

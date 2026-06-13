@@ -10,7 +10,6 @@ const morgan_1 = __importDefault(require("morgan"));
 const config_1 = require("./config");
 const database_1 = require("./config/database");
 const routes_1 = __importDefault(require("./routes"));
-const cricbuzzRoutes_1 = __importDefault(require("./routes/cricbuzzRoutes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const socket_1 = require("./socket");
@@ -32,7 +31,6 @@ app.use(rateLimiter_1.generalLimiter);
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
-app.use('/api/cricbuzz', cricbuzzRoutes_1.default);
 app.use('/api', routes_1.default);
 app.use('/api/*', (_req, res) => {
     res.status(404).json({ error: 'API route not found' });

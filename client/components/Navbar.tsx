@@ -42,7 +42,6 @@ const GAME_ITEMS = [
 
 const MAIN_NAV = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/live-matches', label: 'Live', icon: Radio },
   { href: '/battle', label: 'Battle', icon: Swords },
   { href: '/packs', label: 'Packs', icon: Sparkles },
   { href: '/compare', label: 'Compare', icon: Users },

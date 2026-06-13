@@ -15,8 +15,9 @@ export async function getCollection(req: AuthRequest, res: Response, next: NextF
       throw new NotFoundError('User');
     }
 
-    // Fetch all unique players first
-    const uniquePlayers = await Player.find({ _id: { $in: user.ownedCards } }).lean();
+    // Fetch all unique players — use find with lean, preserving all IDs including duplicates
+    const uniquePlayerIds = [...new Set(user.ownedCards.map(id => id.toString()))];
+    const uniquePlayers = await Player.find({ _id: { $in: uniquePlayerIds } }).lean();
     const playerMap = new Map(uniquePlayers.map(p => [p._id.toString(), p]));
 
     // Build full list including duplicates, and add a unique cardId for each instance

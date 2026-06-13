@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Swords, Trophy, ChevronRight, Star, TrendingUp, Zap, Loader2, Hash, HelpCircle } from 'lucide-react';
 import PlayerCard from '@/components/PlayerCard';
 import { useAuth } from '@/lib/auth-context';
-import { cardsApi, userCardsApi, leaderboardApi, battlesApi } from '@/lib/api';
+import { userCardsApi, leaderboardApi, battlesApi } from '@/lib/api';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -19,18 +19,16 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [cardsData, lbData] = await Promise.all([
-          cardsApi.getAll({ limit: '6', sort: 'overall' }),
-          leaderboardApi.get(3),
-        ]);
-        setTopCards(cardsData.cards || []);
+        const lbData = await leaderboardApi.get(3);
         setLeaderboard(lbData.leaderboard || []);
 
         if (user) {
-          const [battlesData, statsData] = await Promise.all([
+          const [cardsData, battlesData, statsData] = await Promise.all([
+            userCardsApi.getMyCards({ limit: '6', sort: 'overall' }),
             battlesApi.getHistory({ limit: '5' }),
             userCardsApi.getStats(),
           ]);
+          setTopCards(cardsData.cards || []);
           setRecentBattles(battlesData.battles || []);
           setCollectionStats(statsData.stats);
         }
@@ -130,9 +128,9 @@ export default function HomePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 {topCards.slice(0, 6).map((card, index) => (
                   <PlayerCard 
-                    key={card._id}
+                    key={card.cardId || card._id}
                     player={{
-                      id: card.cardId || index,
+                      _id: card._id,
                       name: card.name,
                       role: card.role,
                       country: card.country,

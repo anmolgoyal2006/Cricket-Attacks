@@ -27,17 +27,31 @@ export async function openPack(packType: 'basic' | 'premium' | 'legendary'): Pro
     throw new Error('Invalid pack type');
   }
 
+  // Pick a rarity for each card slot
   const rarityPicks: string[] = [];
   for (let i = 0; i < config.cards; i++) {
     rarityPicks.push(pickRarity(config));
   }
 
-  const cards = await Player.aggregate([
-    { $match: { rarity: { $in: rarityPicks } } },
-    { $sample: { size: config.cards } },
-  ]);
+  // Group picks by rarity so we fetch the right number per rarity
+  const rarityCounts: Record<string, number> = {};
+  for (const rarity of rarityPicks) {
+    rarityCounts[rarity] = (rarityCounts[rarity] || 0) + 1;
+  }
 
-  const playerCards = await Player.find({ _id: { $in: cards.map((c: any) => c._id) } });
+  // Fetch one random card per rarity slot independently
+  const cardPromises = Object.entries(rarityCounts).map(([rarity, count]) =>
+    Player.aggregate([
+      { $match: { rarity } },
+      { $sample: { size: count } },
+    ])
+  );
+
+  const cardGroups = await Promise.all(cardPromises);
+  const allCardDocs = cardGroups.flat();
+
+  // Fetch full Mongoose documents to preserve model methods/virtuals
+  const playerCards = await Player.find({ _id: { $in: allCardDocs.map((c: any) => c._id) } });
 
   return { cards: playerCards, cost: config.cost };
 }

@@ -10,8 +10,8 @@ import Link from 'next/link';
 
 type GamePhase = 'selection' | 'battle' | 'result';
 
-// Battle state flow: 'computerRevealing' → 'choosing' → 'revealing' → 'roundResult'
-type BattleState = 'computerRevealing' | 'choosing' | 'revealing' | 'roundResult';
+// Battle state flow: 'choosing' → 'revealing' → 'roundResult'
+type BattleState = 'choosing' | 'revealing' | 'roundResult';
 
 const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
 
@@ -73,7 +73,7 @@ export default function BattlePage() {
   const [totalRounds, setTotalRounds] = useState(5);
   const [playerScore, setPlayerScore] = useState(0);
   const [computerScore, setComputerScore] = useState(0);
-  const [battleState, setBattleState] = useState<BattleState>('computerRevealing');
+  const [battleState, setBattleState] = useState<BattleState>('choosing');
   const [selectedPlayerCard, setSelectedPlayerCard] = useState<BattleCard | null>(null);
   const [selectedComputerCard, setSelectedComputerCard] = useState<{ name: string; stat: number } | null>(null);
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
@@ -236,20 +236,15 @@ export default function BattlePage() {
 
   const nextRound = () => {
     const nextAiHand = aiHand.filter(c => c.name !== selectedComputerCard?.name);
-    // Pick next AI card for next round reveal
-    const nextAiCard = nextAiHand.length > 0
-      ? nextAiHand[Math.floor(Math.random() * nextAiHand.length)]
-      : null;
 
     setAiHand(nextAiHand);
-    setCurrentAiCard(nextAiCard);
     setPlayerHand(prev => prev.filter(c => c.userCardId !== selectedPlayerCard?.userCardId));
     setSelectedPlayerCard(null);
     setSelectedComputerCard(null);
     const nextRoundNum = currentRound + 1;
     setCurrentRound(nextRoundNum);
     setCurrentAttribute(attributeOrder[nextRoundNum - 1] || 'batting');
-    setBattleState('computerRevealing');
+    setBattleState('choosing');
   };
 
   const resetGame = () => {
@@ -258,10 +253,9 @@ export default function BattlePage() {
     setBattleId(null);
     setPlayerHand([]);
     setAiHand([]);
-    setCurrentAiCard(null);
     setAttributeOrder([]);
     setCurrentAttribute('');
-    setBattleState('computerRevealing');
+    setBattleState('choosing');
     setCurrentRound(1);
     setPlayerScore(0);
     setComputerScore(0);

@@ -29,7 +29,14 @@ export interface OpponentInfo {
   userId: string;
 }
 
-export type BattleStatus = 'idle' | 'matchmaking' | 'countdown' | 'playing' | 'roundResult' | 'finished' | 'disconnected';
+export type BattleStatus =
+  | 'idle'
+  | 'matchmaking'
+  | 'countdown'
+  | 'playing'
+  | 'roundResult'
+  | 'finished'
+  | 'disconnected';
 
 export interface BattleRewards {
   coins: number;
@@ -54,13 +61,17 @@ export function useMultiplayerBattle() {
   const [opponentScore, setOpponentScore] = useState(0);
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
   const [currentRoundResult, setCurrentRoundResult] = useState<RoundResult | null>(null);
-  const [opponentSelected, setOpponentSelected] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [rewards, setRewards] = useState<BattleRewards | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [autoSelected, setAutoSelected] = useState(false);
-  // cooldowns: cardId -> expiresAt timestamp (ms)
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+
+  // Turn-based state
+  // true  = it is my turn to pick this round (picker first, then responder)
+  const [isMyTurn, setIsMyTurn] = useState(false);
+  // Name + role of the card the opponent (picker) already chose — shown to responder only
+  const [opponentPickedCard, setOpponentPickedCard] = useState<{ cardName: string; cardRole: string } | null>(null);
 
   const statusRef = useRef(status);
   statusRef.current = status;
@@ -72,7 +83,6 @@ export function useMultiplayerBattle() {
     const socket = getSocket();
     if (!socket) return;
 
-    // Request cooldowns on mount
     socket.emit('cooldowns:get');
 
     const handleWaiting = (data: { position: number; queueSize: number }) => {
@@ -92,6 +102,7 @@ export function useMultiplayerBattle() {
         setCurrentRoundResult(null);
         setWinner(null);
         setRewards(null);
+        setOpponentPickedCard(null);
       }
     };
 
@@ -99,27 +110,46 @@ export function useMultiplayerBattle() {
       setCountdown(data.seconds);
     };
 
-    const handleBattleStart = (data: { battleId: string; round: number; totalRounds: number; attribute?: string; attributeOrder?: string[] }) => {
+    const handleBattleStart = (data: {
+      battleId: string;
+      round: number;
+      totalRounds: number;
+      attribute?: string;
+      attributeOrder?: string[];
+      yourTurn: boolean;
+      opponentPickedCard: { cardName: string; cardRole: string } | null;
+    }) => {
       setBattleId(data.battleId);
       setRound(data.round);
       setTotalRounds(data.totalRounds);
       setCurrentAttribute(data.attribute || 'batting');
       setAttributeOrder(data.attributeOrder || []);
+      setIsMyTurn(data.yourTurn);
+      setOpponentPickedCard(data.opponentPickedCard);
       setStatus('playing');
       setCountdown(0);
     };
 
-    const handleRoundStart = (data: { round: number; totalRounds: number; attribute?: string }) => {
+    const handleRoundStart = (data: {
+      round: number;
+      totalRounds: number;
+      attribute?: string;
+      yourTurn: boolean;
+      opponentPickedCard: { cardName: string; cardRole: string } | null;
+    }) => {
       setRound(data.round);
       setCurrentAttribute(data.attribute || (attributeOrderRef.current[data.round - 1] || 'batting'));
-      setOpponentSelected(false);
+      setIsMyTurn(data.yourTurn);
+      setOpponentPickedCard(data.opponentPickedCard);
       setCurrentRoundResult(null);
       setAutoSelected(false);
       setStatus('playing');
     };
 
-    const handleOpponentSelected = () => {
-      setOpponentSelected(true);
+    // Sent only to the responder once the picker has chosen
+    const handlePickerChose = (data: { cardName: string; cardRole: string }) => {
+      setOpponentPickedCard(data);
+      setIsMyTurn(true); // now the responder's turn to pick
     };
 
     const handleRoundResult = (data: RoundResult) => {
@@ -128,6 +158,7 @@ export function useMultiplayerBattle() {
       setCurrentAttribute(data.attribute || 'batting');
       setCurrentRoundResult(data);
       setRoundHistory((prev) => [...prev, data]);
+      setOpponentPickedCard(null);
       setStatus('roundResult');
     };
 
@@ -150,7 +181,6 @@ export function useMultiplayerBattle() {
       setWinner(data.winner);
       setRewards(data.player1Rewards);
       setStatus('finished');
-      // Refresh cooldowns after battle ends
       socket.emit('cooldowns:get');
     };
 
@@ -181,6 +211,8 @@ export function useMultiplayerBattle() {
       status: string;
       yourCards: PvPCard[];
       usedCardIds: string[];
+      yourTurn: boolean;
+      opponentPickedCard: { cardName: string; cardRole: string } | null;
     }) => {
       setBattleId(data.battleId);
       setRound(data.round);
@@ -192,7 +224,8 @@ export function useMultiplayerBattle() {
       setRoundHistory(data.roundHistory);
       setMyCards(data.yourCards);
       setUsedCardIds(new Set(data.usedCardIds));
-
+      setIsMyTurn(data.yourTurn);
+      setOpponentPickedCard(data.opponentPickedCard);
       if (data.status === 'completed') {
         setStatus('finished');
       } else {
@@ -204,7 +237,11 @@ export function useMultiplayerBattle() {
       setCooldowns(data.cooldowns);
     };
 
-    const handleCooldownError = (data: { message: string; cooldowns: Record<string, number>; cooledCardIds: string[] }) => {
+    const handleCooldownError = (data: {
+      message: string;
+      cooldowns: Record<string, number>;
+      cooledCardIds: string[];
+    }) => {
       setError(data.message);
       setCooldowns(data.cooldowns);
       setStatus('idle');
@@ -222,7 +259,7 @@ export function useMultiplayerBattle() {
     socket.on('battle:countdown', handleCountdown);
     socket.on('battle:start', handleBattleStart);
     socket.on('battle:round-start', handleRoundStart);
-    socket.on('battle:opponent-selected', handleOpponentSelected);
+    socket.on('battle:picker-chose', handlePickerChose);
     socket.on('battle:round-result', handleRoundResult);
     socket.on('battle:auto-selected', handleAutoSelected);
     socket.on('battle:over', handleBattleOver);
@@ -240,7 +277,7 @@ export function useMultiplayerBattle() {
       socket.off('battle:countdown', handleCountdown);
       socket.off('battle:start', handleBattleStart);
       socket.off('battle:round-start', handleRoundStart);
-      socket.off('battle:opponent-selected', handleOpponentSelected);
+      socket.off('battle:picker-chose', handlePickerChose);
       socket.off('battle:round-result', handleRoundResult);
       socket.off('battle:auto-selected', handleAutoSelected);
       socket.off('battle:over', handleBattleOver);
@@ -256,7 +293,6 @@ export function useMultiplayerBattle() {
   const joinMatchmaking = useCallback((squad: PvPCard[]) => {
     const socket = getSocket();
     if (!socket) return;
-
     setMyCards(squad);
     setStatus('matchmaking');
     setQueuePosition(0);
@@ -268,30 +304,31 @@ export function useMultiplayerBattle() {
   const leaveMatchmaking = useCallback(() => {
     const socket = getSocket();
     if (!socket) return;
-
     socket.emit('matchmaking:leave');
     setStatus('idle');
   }, []);
 
-  const selectCard = useCallback((cardId: string) => {
-    const socket = getSocket();
-    if (!socket || !battleId) return;
-
-    socket.emit('battle:select-card', { battleId, cardId });
-    setUsedCardIds((prev) => new Set(prev).add(cardId));
-    setOpponentSelected(false);
-  }, [battleId]);
+  const selectCard = useCallback(
+    (cardId: string) => {
+      const socket = getSocket();
+      if (!socket || !battleId) return;
+      socket.emit('battle:select-card', { battleId, cardId });
+      setUsedCardIds((prev) => new Set(prev).add(cardId));
+    },
+    [battleId]
+  );
 
   const reconnect = useCallback((id: string) => {
     const socket = getSocket();
     if (!socket) return;
-
     setBattleId(id);
     socket.emit('battle:reconnect', { battleId: id });
   }, []);
 
   const getCardMainStat = useCallback((card: PvPCard): number => {
-    return Math.round((card.batting + card.bowling + (card.fielding || 80) + (card.captaincy || 70) + (card.pressure || 80)) / 5);
+    return Math.round(
+      (card.batting + card.bowling + (card.fielding || 80) + (card.captaincy || 70) + (card.pressure || 80)) / 5
+    );
   }, []);
 
   return {
@@ -311,12 +348,13 @@ export function useMultiplayerBattle() {
     opponentScore,
     roundHistory,
     currentRoundResult,
-    opponentSelected,
     winner,
     rewards,
     error,
     autoSelected,
     cooldowns,
+    isMyTurn,
+    opponentPickedCard,
     joinMatchmaking,
     leaveMatchmaking,
     selectCard,

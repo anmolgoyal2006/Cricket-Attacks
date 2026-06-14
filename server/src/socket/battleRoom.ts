@@ -90,6 +90,8 @@ interface PvPBattleState {
   status: 'in_progress' | 'completed';
   timer: ReturnType<typeof setTimeout> | null;
   mongoId?: string;
+  // Turn-based: which player picks first this round ('player1' | 'player2')
+  roundPicker: 'player1' | 'player2';
 }
 
 const activeBattles = new Map<string, PvPBattleState>();
@@ -163,10 +165,30 @@ export function setupBattleRooms(io: Server) {
       endBattle(io, battle);
     } else {
       battle.round++;
-      io.to(battle.battleId).emit('battle:round-start', {
+      // Alternate picker each round
+      battle.roundPicker = battle.roundPicker === 'player1' ? 'player2' : 'player1';
+      const nextAttribute = battle.attributeOrder[battle.round - 1] || 'batting';
+      const pickerSocket = battle.roundPicker === 'player1'
+        ? io.sockets.sockets.get(battle.player1.socketId)
+        : io.sockets.sockets.get(battle.player2.socketId);
+      const responderSocket = battle.roundPicker === 'player1'
+        ? io.sockets.sockets.get(battle.player2.socketId)
+        : io.sockets.sockets.get(battle.player1.socketId);
+
+      // Tell each player whether they're picking first or responding
+      pickerSocket?.emit('battle:round-start', {
         round: battle.round,
         totalRounds: TOTAL_ROUNDS,
-        attribute: battle.attributeOrder[battle.round - 1] || 'batting',
+        attribute: nextAttribute,
+        yourTurn: true,
+        opponentPickedCard: null,
+      });
+      responderSocket?.emit('battle:round-start', {
+        round: battle.round,
+        totalRounds: TOTAL_ROUNDS,
+        attribute: nextAttribute,
+        yourTurn: false,
+        opponentPickedCard: null,
       });
     }
   }
@@ -176,6 +198,7 @@ export function setupBattleRooms(io: Server) {
       const p1Socket = io.sockets.sockets.get(battle.player1.socketId);
       const p2Socket = io.sockets.sockets.get(battle.player2.socketId);
 
+      // Auto-select only for whoever hasn't picked yet (respects turn order)
       if (!battle.player1Choice && p1Socket?.connected) {
         const fallback = battle.player1.cards.find(
           (c) => !battle.player1UsedCardIds.has(c.userCardId)
@@ -184,6 +207,10 @@ export function setupBattleRooms(io: Server) {
           battle.player1Choice = fallback;
           battle.player1UsedCardIds.add(fallback.userCardId);
           p1Socket.emit('battle:auto-selected', { card: fallback });
+          // If player1 was the picker, notify player2 their card was auto-chosen
+          if (battle.roundPicker === 'player1' && !battle.player2Choice) {
+            p2Socket?.emit('battle:picker-chose', { cardName: fallback.name, cardRole: fallback.role });
+          }
         }
       }
 
@@ -195,6 +222,10 @@ export function setupBattleRooms(io: Server) {
           battle.player2Choice = fallback;
           battle.player2UsedCardIds.add(fallback.userCardId);
           p2Socket.emit('battle:auto-selected', { card: fallback });
+          // If player2 was the picker, notify player1 their card was auto-chosen
+          if (battle.roundPicker === 'player2' && !battle.player1Choice) {
+            p1Socket?.emit('battle:picker-chose', { cardName: fallback.name, cardRole: fallback.role });
+          }
         }
       }
 
@@ -486,6 +517,8 @@ export function setupBattleRooms(io: Server) {
       player2Data: { userId: string; username: string; socketId: string; cards: any[] }
     ) {
       const attributeOrder = shuffleArray(ATTRIBUTES);
+      // Randomly decide who picks first in round 1
+      const firstPicker: 'player1' | 'player2' = Math.random() < 0.5 ? 'player1' : 'player2';
       const battle: PvPBattleState = {
         battleId,
         attributeOrder,
@@ -507,16 +540,32 @@ export function setupBattleRooms(io: Server) {
         roundHistory: [],
         status: 'in_progress',
         timer: null,
+        roundPicker: firstPicker,
       };
 
       activeBattles.set(battleId, battle);
 
-      io.to(battleId).emit('battle:start', {
+      // Tell each player individually whether they pick first
+      const p1Socket = io.sockets.sockets.get(player1Data.socketId);
+      const p2Socket = io.sockets.sockets.get(player2Data.socketId);
+
+      p1Socket?.emit('battle:start', {
         battleId,
         round: 1,
         totalRounds: TOTAL_ROUNDS,
         attribute: attributeOrder[0] || 'batting',
         attributeOrder,
+        yourTurn: firstPicker === 'player1',
+        opponentPickedCard: null,
+      });
+      p2Socket?.emit('battle:start', {
+        battleId,
+        round: 1,
+        totalRounds: TOTAL_ROUNDS,
+        attribute: attributeOrder[0] || 'batting',
+        attributeOrder,
+        yourTurn: firstPicker === 'player2',
+        opponentPickedCard: null,
       });
 
       return battle;
@@ -535,15 +584,27 @@ export function setupBattleRooms(io: Server) {
       }
 
       const isPlayer1 = socket.userId === battle.player1.userId;
+      const myRole: 'player1' | 'player2' = isPlayer1 ? 'player1' : 'player2';
       const usedSet = isPlayer1 ? battle.player1UsedCardIds : battle.player2UsedCardIds;
       const cards = isPlayer1 ? battle.player1.cards : battle.player2.cards;
+
+      // Enforce turn order
+      const myChoice = isPlayer1 ? battle.player1Choice : battle.player2Choice;
+      const opponentChoice = isPlayer1 ? battle.player2Choice : battle.player1Choice;
+      const isPicker = battle.roundPicker === myRole;
+
+      // Responder can only pick after the picker has picked
+      if (!isPicker && !opponentChoice) {
+        socket.emit('error', { message: "Wait for your opponent to pick first" });
+        return;
+      }
 
       if (usedSet.has(cardId)) {
         socket.emit('error', { message: 'Card already used this battle' });
         return;
       }
 
-      if ((isPlayer1 && battle.player1Choice) || (!isPlayer1 && battle.player2Choice)) {
+      if (myChoice) {
         socket.emit('error', { message: 'Already selected a card for this round' });
         return;
       }
@@ -561,15 +622,21 @@ export function setupBattleRooms(io: Server) {
       }
       usedSet.add(cardId);
 
-      socket.to(battleId).emit('battle:opponent-selected');
-
-      if (battle.timer) {
-        clearTimeout(battle.timer);
-        battle.timer = null;
+      // If this was the picker's selection, notify the responder (name + role only)
+      if (isPicker) {
+        const responderSocketId = isPlayer1 ? battle.player2.socketId : battle.player1.socketId;
+        const responderSocket = io.sockets.sockets.get(responderSocketId);
+        responderSocket?.emit('battle:picker-chose', {
+          cardName: card.name,
+          cardRole: card.role,
+        });
+        // Start the full-round timer now (responder has ROUND_TIMEOUT to respond)
+        if (battle.timer) clearTimeout(battle.timer);
+        startRoundTimer(battle);
+      } else {
+        // Responder picked — resolve round immediately
+        checkRoundComplete(battle);
       }
-
-      startRoundTimer(battle);
-      checkRoundComplete(battle);
     },
 
     handleDisconnect(socket: AuthenticatedSocket) {
@@ -687,6 +754,13 @@ export function setupBattleRooms(io: Server) {
         usedCardIds: Array.from(
           socket.userId === battle.player1.userId ? battle.player1UsedCardIds : battle.player2UsedCardIds
         ),
+        yourTurn: (socket.userId === battle.player1.userId && battle.roundPicker === 'player1') ||
+                  (socket.userId === battle.player2.userId && battle.roundPicker === 'player2'),
+        opponentPickedCard: (() => {
+          const isP1 = socket.userId === battle.player1.userId;
+          const opponentChoice = isP1 ? battle.player2Choice : battle.player1Choice;
+          return opponentChoice ? { cardName: opponentChoice.name, cardRole: opponentChoice.role } : null;
+        })(),
       });
     },
   };

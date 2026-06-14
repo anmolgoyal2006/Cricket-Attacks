@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Trophy, Zap, Users, ArrowRight, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw, CheckCircle, Crown } from 'lucide-react';
+import { Swords, Trophy, Zap, Users, ArrowRight, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw, Crown } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { userCardsApi } from '@/lib/api';
 import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
@@ -306,18 +306,8 @@ export default function MultiplayerBattlePage() {
                       {ATTRIBUTE_LABELS[multiplayer.currentAttribute] || multiplayer.currentAttribute}
                     </div>
                   )}
-                  {multiplayer.opponentSelected && multiplayer.status === 'playing' && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex items-center gap-2 text-green-400"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span className="text-xs font-body">Opponent ready</span>
-                    </motion.div>
-                  )}
                   {multiplayer.autoSelected && (
-                    <div className="flex items-center gap-2 text-amber-400">
+                    <div className="flex items-center gap-2 text-amber-400 justify-center">
                       <Zap className="w-4 h-4" />
                       <span className="text-xs font-body">Auto-selected</span>
                     </div>
@@ -331,20 +321,70 @@ export default function MultiplayerBattlePage() {
               </div>
             </div>
 
+            {/* Turn indicator — shown above cards during playing phase */}
+            {multiplayer.status === 'playing' && (
+              <motion.div
+                key={`turn-${multiplayer.round}-${multiplayer.isMyTurn}`}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4"
+              >
+                {multiplayer.isMyTurn ? (
+                  <div className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-500/15 border border-blue-500/40 max-w-md mx-auto">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+                    <span className="text-blue-300 font-display font-bold text-sm">
+                      {multiplayer.opponentPickedCard
+                        ? `Opponent played ${multiplayer.opponentPickedCard.cardName} — now pick your card`
+                        : 'Your turn — pick a card first'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-red-500/10 border border-red-500/30 max-w-md mx-auto">
+                    <Loader2 className="w-4 h-4 text-red-400 animate-spin" />
+                    <span className="text-red-300 font-body text-sm">
+                      Waiting for opponent to pick first…
+                    </span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Opponent's chosen card banner (shown to responder) */}
+            {multiplayer.status === 'playing' && multiplayer.opponentPickedCard && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass rounded-xl p-4 mb-4 flex items-center gap-4 border border-red-500/30 bg-red-500/5 max-w-md mx-auto"
+              >
+                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <Swords className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 font-body">Opponent chose</p>
+                  <p className="text-sm font-display font-bold text-white">{multiplayer.opponentPickedCard.cardName}</p>
+                  <p className="text-xs text-gray-400 font-body">{multiplayer.opponentPickedCard.cardRole}</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className="text-[10px] text-gray-500 font-body italic">stats hidden</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* My Cards */}
             <div className="glass rounded-2xl p-6 mb-8">
               <h3 className="text-xl font-display font-bold text-white mb-4 flex items-center">
                 <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
                   <Users className="w-4 h-4 text-white" />
                 </div>
-                Your Cards ({multiplayer.myCards.length} remaining)
+                Your Cards ({multiplayer.myCards.length - multiplayer.usedCardIds.size} remaining)
               </h3>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {multiplayer.myCards.map((card) => {
                   const isUsed = multiplayer.usedCardIds.has(card.userCardId);
-                  const isDisabled = multiplayer.status !== 'playing' || isUsed;
-                  // Show stats only in roundResult for the card that was just played
+                  // Can only click if: playing phase, not used, and it's my turn
+                  const isDisabled = multiplayer.status !== 'playing' || isUsed || !multiplayer.isMyTurn;
+                  // Show stats in roundResult for the card that was just played
                   const showStats = multiplayer.status === 'roundResult' &&
                     multiplayer.currentRoundResult?.player1Card.name === card.name;
                   return (
@@ -353,7 +393,7 @@ export default function MultiplayerBattlePage() {
                       whileHover={!isDisabled ? { scale: 1.05, y: -10 } : {}}
                       onClick={() => !isDisabled && multiplayer.selectCard(card.userCardId)}
                       className={`${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${
-                        isUsed ? 'ring-2 ring-gray-600 rounded-2xl' : 'hover:ring-2 hover:ring-blue-500 rounded-2xl'
+                        isUsed ? 'ring-2 ring-gray-600 rounded-2xl' : !isDisabled ? 'hover:ring-2 hover:ring-blue-500 rounded-2xl' : 'rounded-2xl'
                       }`}
                     >
                       <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5 gap-1">
@@ -372,7 +412,7 @@ export default function MultiplayerBattlePage() {
                                   <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
                                     {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
                                   </span>
-                                  <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                  <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{Math.round(val)}</span>
                                 </div>
                               );
                             })}
@@ -389,17 +429,6 @@ export default function MultiplayerBattlePage() {
                   );
                 })}
               </div>
-
-              {multiplayer.status === 'playing' && !multiplayer.opponentSelected && (
-                <p className="text-center text-amber-400 font-body mt-4 text-sm animate-pulse">
-                  Select a card to play this round
-                </p>
-              )}
-              {multiplayer.status === 'playing' && multiplayer.opponentSelected && (
-                <p className="text-center text-green-400 font-body mt-4 text-sm">
-                  Waiting for both selections...
-                </p>
-              )}
             </div>
 
             {/* Round Result Display */}
@@ -555,12 +584,16 @@ export default function MultiplayerBattlePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/battle/multiplayer">
-                <button className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-display font-bold text-lg shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 transition-all flex items-center space-x-2">
-                  <RefreshCw className="w-5 h-5" />
-                  <span>Play Again</span>
-                </button>
-              </Link>
+              <button
+                onClick={() => {
+                  setSquad([]);
+                  multiplayer.setMyCards([]);
+                }}
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-display font-bold text-lg shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 transition-all flex items-center space-x-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span>Play Again</span>
+              </button>
               <Link href="/battle">
                 <button className="px-8 py-4 rounded-xl bg-white/5 border-2 border-white/20 text-white font-display font-bold text-lg hover:bg-white/10 transition-all flex items-center space-x-2">
                   <Swords className="w-5 h-5" />
@@ -617,7 +650,7 @@ export default function MultiplayerBattlePage() {
                     onClick={() => removeFromSquad(player._id)}
                     className="cursor-pointer"
                   >
-                    <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-2 border-blue-500/30 flex items-center justify-center p-2">
+                    <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-2 border-blue-500/30 flex items-center justify-center p-2 relative group/slot">
                       <div className="text-center">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-2">
                           <span className="text-white font-bold">{player.name.split(' ').map(n => n[0]).join('')}</span>
@@ -625,6 +658,10 @@ export default function MultiplayerBattlePage() {
                         <p className="text-sm font-display font-bold text-white">{player.name}</p>
                         <p className="text-xs text-gray-400 font-body">{player.role}</p>
                         <p className="text-lg font-display font-bold text-amber-400">{getMyCardStat(player)}</p>
+                      </div>
+                      {/* Remove overlay on hover */}
+                      <div className="absolute inset-0 rounded-2xl bg-red-900/60 opacity-0 group-hover/slot:opacity-100 transition-opacity flex items-center justify-center">
+                        <X className="w-8 h-8 text-red-300" />
                       </div>
                     </div>
                   </motion.div>
@@ -681,8 +718,12 @@ export default function MultiplayerBattlePage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      onClick={() => !inSquad && !onCooldown && addToSquad(card)}
-                      className={`relative cursor-pointer ${inSquad || onCooldown ? 'opacity-50' : ''} ${onCooldown ? 'cursor-not-allowed' : ''}`}
+                      onClick={() => {
+                        if (onCooldown) return;
+                        if (inSquad) removeFromSquad(card._id);
+                        else addToSquad(card);
+                      }}
+                      className={`relative cursor-pointer ${onCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <div className={`aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border flex items-center justify-center p-2 transition-all ${
                         onCooldown ? 'border-red-500/40' : inSquad ? 'border-blue-500/40' : 'border-white/10 hover:border-blue-500/50'
@@ -718,11 +759,12 @@ export default function MultiplayerBattlePage() {
                           <span className="text-sm text-red-400 font-display font-bold">{formatCooldown(cooldownExpiry)}</span>
                         </div>
                       )}
-                      {/* Selected overlay */}
+                      {/* Selected overlay — click to deselect */}
                       {inSquad && !onCooldown && (
-                        <div className="absolute inset-0 rounded-2xl bg-blue-900/40 flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                            <span className="text-white text-lg font-bold">✓</span>
+                        <div className="absolute inset-0 rounded-2xl bg-blue-900/40 group-hover:bg-red-900/50 flex items-center justify-center transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-blue-500 group-hover:bg-red-500 flex items-center justify-center transition-colors">
+                            <span className="text-white text-lg font-bold group-hover:hidden">✓</span>
+                            <X className="w-5 h-5 text-white hidden group-hover:block" />
                           </div>
                         </div>
                       )}

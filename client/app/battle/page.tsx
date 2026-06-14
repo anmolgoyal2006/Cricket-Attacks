@@ -480,11 +480,11 @@ export default function BattlePage() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: Math.min(index * 0.03, 0.5) }}
-                        onClick={() => !isInSquad && addToSquad(card)}
-                        className={`relative transition-all ${
+                        onClick={() => isInSquad ? removeFromSquad({ userCardId: card.cardId || card._id, cardId: card._id, name: card.name, role: card.role, batting: card.batting, bowling: card.bowling, fielding: card.fielding, captaincy: card.captaincy ?? 70, pressure: card.pressure ?? 80, overall: card.overall }) : addToSquad(card)}
+                        className={`relative transition-all cursor-pointer ${
                           isInSquad
-                            ? 'opacity-30 cursor-not-allowed'
-                            : 'cursor-pointer hover:scale-[1.03] hover:-translate-y-1'
+                            ? 'opacity-60 hover:opacity-80'
+                            : 'hover:scale-[1.03] hover:-translate-y-1'
                         }`}
                       >
                         <PlayerCard
@@ -505,11 +505,12 @@ export default function BattlePage() {
                             formats: card.formats,
                           }}
                         />
-                        {/* Selected checkmark */}
+                        {/* Selected checkmark — click to remove */}
                         {isInSquad && (
-                          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
-                            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
-                              <span className="text-white text-2xl font-bold">✓</span>
+                          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 group/selected">
+                            <div className="w-12 h-12 rounded-full bg-green-500 group-hover/selected:bg-red-500 flex items-center justify-center transition-colors">
+                              <span className="text-white text-2xl font-bold group-hover/selected:hidden">✓</span>
+                              <span className="text-white text-2xl font-bold hidden group-hover/selected:block">✕</span>
                             </div>
                           </div>
                         )}

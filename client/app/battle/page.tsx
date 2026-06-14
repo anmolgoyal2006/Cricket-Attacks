@@ -817,12 +817,6 @@ export default function BattlePage() {
                 <span className="text-red-400">{computerScore}</span>
               </div>
               
-              {trophiesEarned > 0 && (
-                <div className="mt-6 flex items-center justify-center space-x-2">
-                  <Trophy className="w-6 h-6 text-amber-400" />
-                  <span className="text-2xl font-display font-bold text-amber-400">+{trophiesEarned} Trophies</span>
-                </div>
-              )}
               {coinsEarned > 0 && (
                 <div className="mt-2 flex items-center justify-center space-x-2">
                   <Trophy className="w-6 h-6 text-yellow-300" />

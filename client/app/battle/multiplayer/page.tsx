@@ -677,9 +677,9 @@ export default function MultiplayerBattlePage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleJoinQueue}
-                  disabled={squad.length !== 5 || squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)}
+                  disabled={squad.length !== 5 || !multiplayer.socketReady || squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)}
                   className={`px-10 py-4 rounded-xl font-display font-bold text-lg shadow-2xl transition-all flex items-center space-x-2 mx-auto ${
-                    squad.length === 5 && !squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)
+                    squad.length === 5 && multiplayer.socketReady && !squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)
                       ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-blue-500/50 hover:shadow-blue-500/70'
                       : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   }`}
@@ -690,6 +690,12 @@ export default function MultiplayerBattlePage() {
                 {squad.length !== 5 && (
                   <p className="text-sm text-gray-400 font-body mt-3">
                     Select {5 - squad.length} more card{5 - squad.length !== 1 ? 's' : ''} to start
+                  </p>
+                )}
+                {squad.length === 5 && !multiplayer.socketReady && (
+                  <p className="text-sm text-amber-400 font-body mt-3 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Connecting to server…
                   </p>
                 )}
                 {squad.length === 5 && squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now) && (

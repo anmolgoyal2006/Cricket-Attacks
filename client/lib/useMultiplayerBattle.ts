@@ -313,7 +313,11 @@ export function useMultiplayerBattle() {
 
   const joinMatchmaking = useCallback((squad: PvPCard[]) => {
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket?.connected) {
+      setError('Not connected to game server. Please wait a moment and try again.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     setMyCards(squad);
     setStatus('matchmaking');
     setQueuePosition(0);

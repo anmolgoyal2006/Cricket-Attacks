@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const Player_1 = __importDefault(require("../models/Player"));
+const User_1 = __importDefault(require("../models/User"));
 const config_1 = require("../config");
 dotenv_1.default.config();
 // Stats verified from ESPNcricinfo / Wikipedia as of June 2025
@@ -319,6 +320,9 @@ async function seed() {
         console.log('Connected to MongoDB');
         await Player_1.default.deleteMany({});
         console.log('Cleared existing players');
+        // Clear all users' owned cards since player IDs are changing
+        await User_1.default.updateMany({}, { $set: { ownedCards: [] } });
+        console.log('Cleared ownedCards for all users');
         const players = await Player_1.default.insertMany(playersData);
         console.log(`Seeded ${players.length} players successfully`);
         process.exit(0);

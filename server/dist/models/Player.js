@@ -110,6 +110,7 @@ const playerSchema = new mongoose_1.Schema({
     image: {
         type: String,
         default: 'https://via.placeholder.com/300x400/1e3a8a/ffffff?text=Player',
+        set: (v) => v && v.trim() ? v : undefined,
     },
     battingHand: { type: String, default: '' },
     bowlingStyle: { type: String, default: '' },

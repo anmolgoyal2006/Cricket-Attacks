@@ -48,19 +48,40 @@ async function register(req, res, next) {
                 ? 'Email already registered'
                 : 'Username already taken');
         }
+        // 5 random starter cards
         const starterCards = await Player_1.default.aggregate([{ $sample: { size: 5 } }]);
         const starterCardIds = starterCards.map((c) => c._id);
+        // Welcome bonus: 1 Rare + 1 Legend card
+        const [rareBonus] = await Player_1.default.aggregate([
+            { $match: { rarity: 'Rare' } },
+            { $sample: { size: 1 } },
+        ]);
+        const [legendBonus] = await Player_1.default.aggregate([
+            { $match: { rarity: 'Legend' } },
+            { $sample: { size: 1 } },
+        ]);
+        const bonusCards = [rareBonus, legendBonus].filter(Boolean);
+        const bonusCardIds = bonusCards.map((c) => c._id);
         const user = await User_1.default.create({
             username,
             email,
             password,
-            ownedCards: starterCardIds,
+            ownedCards: [...starterCardIds, ...bonusCardIds],
         });
         await (0, leaderboardService_1.updateLeaderboardForUser)(user._id.toString());
         const token = generateToken(user._id.toString());
         res.status(201).json({
             token,
             user: sanitizeUser(user),
+            welcomeBonus: bonusCards.map((c) => ({
+                _id: c._id,
+                name: c.name,
+                rarity: c.rarity,
+                overall: c.overall,
+                country: c.country,
+                role: c.role,
+                image: c.image,
+            })),
         });
     }
     catch (error) {
@@ -78,10 +99,23 @@ async function login(req, res, next) {
         if (!isMatch) {
             throw new errors_1.UnauthorizedError('Invalid email or password');
         }
+        // First-ever login bonus — awarded once, on first login after registration
+        let firstLoginBonus = null;
+        if (!user.firstLoginBonusClaimed) {
+            const FIRST_LOGIN_COINS = 1500;
+            user.coins += FIRST_LOGIN_COINS;
+            user.firstLoginBonusClaimed = true;
+            await user.save();
+            firstLoginBonus = {
+                coins: FIRST_LOGIN_COINS,
+                message: `🎉 Welcome bonus! You received ${FIRST_LOGIN_COINS} coins to get started!`,
+            };
+        }
         const token = generateToken(user._id.toString());
         res.json({
             token,
             user: sanitizeUser(user),
+            ...(firstLoginBonus && { firstLoginBonus }),
         });
     }
     catch (error) {

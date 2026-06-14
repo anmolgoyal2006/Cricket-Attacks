@@ -6,12 +6,12 @@ exports.getTierIndex = getTierIndex;
 exports.getNextTierProgress = getNextTierProgress;
 exports.calculateElo = calculateElo;
 exports.TIERS = [
-    { name: 'Bronze', min: 0, max: 999 },
-    { name: 'Silver', min: 1000, max: 1199 },
-    { name: 'Gold', min: 1200, max: 1399 },
-    { name: 'Platinum', min: 1400, max: 1599 },
-    { name: 'Diamond', min: 1600, max: 1799 },
-    { name: 'Master', min: 1800, max: 9999 },
+    { name: 'Bronze', min: 0, max: 1099 },
+    { name: 'Silver', min: 1100, max: 1299 },
+    { name: 'Gold', min: 1300, max: 1499 },
+    { name: 'Platinum', min: 1500, max: 1699 },
+    { name: 'Diamond', min: 1700, max: 1899 },
+    { name: 'Master', min: 1900, max: 9999 },
 ];
 function getTier(elo) {
     for (const tier of exports.TIERS) {

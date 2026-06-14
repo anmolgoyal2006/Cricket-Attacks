@@ -7,6 +7,159 @@ exports.getQuizQuestions = getQuizQuestions;
 exports.submitQuizAnswer = submitQuizAnswer;
 const User_1 = __importDefault(require("../models/User"));
 const errors_1 = require("../utils/errors");
+// ─── Cricketer stats / trivia MCQ bank ───────────────────────────────────────
+const STAT_QUESTIONS = [
+    {
+        id: 's1',
+        quote: 'How many international centuries did Sachin Tendulkar score across all formats?',
+        speaker: '100',
+        options: ['100', '89', '96', '108'],
+        explanation: 'Sachin Tendulkar scored exactly 100 international centuries — a record that still stands.',
+        category: 'Stats',
+        difficulty: 'easy',
+        type: 'stat',
+    },
+    {
+        id: 's2',
+        quote: 'Which bowler holds the record for the most wickets in Test cricket?',
+        speaker: 'Muttiah Muralitharan',
+        options: ['Muttiah Muralitharan', 'Shane Warne', 'Anil Kumble', 'James Anderson'],
+        explanation: 'Muralitharan took 800 Test wickets, edging Shane Warne (708) into second place.',
+        category: 'Records',
+        difficulty: 'easy',
+        type: 'stat',
+    },
+    {
+        id: 's3',
+        quote: "What is Brian Lara's highest individual score in Test cricket?",
+        speaker: '400*',
+        options: ['400*', '375', '380', '365*'],
+        explanation: 'Brian Lara scored 400* against England in Antigua in 2004 — the highest individual Test score ever.',
+        category: 'Stats',
+        difficulty: 'medium',
+        type: 'stat',
+    },
+    {
+        id: 's4',
+        quote: 'Who was the first batsman to score a double century in ODI cricket?',
+        speaker: 'Sachin Tendulkar',
+        options: ['Sachin Tendulkar', 'Rohit Sharma', 'Martin Guptill', 'Virender Sehwag'],
+        explanation: 'Sachin Tendulkar scored 200* against South Africa in 2010, becoming the first ODI double centurion.',
+        category: 'Milestones',
+        difficulty: 'medium',
+        type: 'stat',
+    },
+    {
+        id: 's5',
+        quote: 'How many sixes did Chris Gayle hit in his 175* in IPL (the highest T20 individual innings at the time)?',
+        speaker: '17',
+        options: ['17', '14', '20', '12'],
+        explanation: 'Chris Gayle smashed 17 sixes in his 175* for RCB vs PWI in IPL 2013 — the then-highest T20 innings ever.',
+        category: 'Stats',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+    {
+        id: 's6',
+        quote: 'Which cricketer has scored the most runs in T20 International cricket?',
+        speaker: 'Virat Kohli',
+        options: ['Virat Kohli', 'Rohit Sharma', 'Martin Guptill', 'Babar Azam'],
+        explanation: 'Virat Kohli is the all-time leading run-scorer in T20 Internationals with over 4,000 runs.',
+        category: 'Records',
+        difficulty: 'easy',
+        type: 'stat',
+    },
+    {
+        id: 's7',
+        quote: 'How many World Cups did MS Dhoni win as India captain?',
+        speaker: '2',
+        options: ['2', '1', '3', '0'],
+        explanation: 'MS Dhoni won the 2007 ICC T20 World Cup and the 2011 ICC Cricket World Cup as India captain.',
+        category: 'Achievements',
+        difficulty: 'easy',
+        type: 'stat',
+    },
+    {
+        id: 's8',
+        quote: 'What is the fastest century in ODI cricket (in balls)?',
+        speaker: 'AB de Villiers (31 balls)',
+        options: ['AB de Villiers (31 balls)', 'Shahid Afridi (37 balls)', 'Corey Anderson (36 balls)', 'Mark Boucher (44 balls)'],
+        explanation: 'AB de Villiers smashed a century off just 31 balls against West Indies in Johannesburg in 2015.',
+        category: 'Records',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+    {
+        id: 's9',
+        quote: 'Which team has won the most ICC Cricket World Cup titles?',
+        speaker: 'Australia',
+        options: ['Australia', 'West Indies', 'India', 'England'],
+        explanation: 'Australia has won the ODI World Cup 6 times (1987, 1999, 2003, 2007, 2015, 2023).',
+        category: 'Achievements',
+        difficulty: 'medium',
+        type: 'stat',
+    },
+    {
+        id: 's10',
+        quote: "What was Shoaib Akhtar's peak recorded bowling speed?",
+        speaker: '161.3 km/h',
+        options: ['161.3 km/h', '158.8 km/h', '163.1 km/h', '155.6 km/h'],
+        explanation: 'Shoaib Akhtar bowled at 161.3 km/h (100.2 mph) against England at the 2003 Cricket World Cup.',
+        category: 'Stats',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+    {
+        id: 's11',
+        quote: 'Who holds the record for the most runs in a single Test innings?',
+        speaker: 'Brian Lara',
+        options: ['Brian Lara', 'Sachin Tendulkar', 'Matthew Hayden', 'Don Bradman'],
+        explanation: 'Brian Lara scored 400* for West Indies vs England in 2004, the highest Test innings ever.',
+        category: 'Records',
+        difficulty: 'medium',
+        type: 'stat',
+    },
+    {
+        id: 's12',
+        quote: "How many Test centuries did Don Bradman score in his career?",
+        speaker: '29',
+        options: ['29', '33', '25', '31'],
+        explanation: "Bradman scored 29 Test centuries in just 80 innings — an extraordinary strike rate for centuries.",
+        category: 'Stats',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+    {
+        id: 's13',
+        quote: 'Which bowler took a hat-trick in the very first ball of a Test match?',
+        speaker: 'None — it has never happened',
+        options: ['None — it has never happened', 'Peter Siddle', 'Wasim Akram', 'Shoaib Akhtar'],
+        explanation: 'No bowler has ever taken a hat-trick with the very first three balls of a Test match.',
+        category: 'Trivia',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+    {
+        id: 's14',
+        quote: 'Which cricketer scored the most runs in a single IPL season?',
+        speaker: 'Virat Kohli (973 runs, 2016)',
+        options: ['Virat Kohli (973 runs, 2016)', 'David Warner (848 runs, 2016)', 'Jos Buttler (863 runs, 2022)', 'Chris Gayle (733 runs, 2013)'],
+        explanation: 'Virat Kohli scored 973 runs in the 2016 IPL season for RCB — a record that still stands.',
+        category: 'IPL',
+        difficulty: 'medium',
+        type: 'stat',
+    },
+    {
+        id: 's15',
+        quote: 'How many balls does Rohit Sharma need on average per boundary in T20Is?',
+        speaker: '3.6 balls',
+        options: ['3.6 balls', '4.2 balls', '2.9 balls', '5.1 balls'],
+        explanation: 'Rohit Sharma averages roughly one boundary (four or six) every 3-4 balls in T20I cricket, making him one of the most explosive openers.',
+        category: 'Stats',
+        difficulty: 'hard',
+        type: 'stat',
+    },
+];
 // Cricket quotes bank — spicy, controversial, iconic
 const QUOTES = [
     {
@@ -145,20 +298,26 @@ const QUOTES = [
         difficulty: 'medium',
     },
 ];
-// GET /api/quiz/questions — returns all questions (shuffled, options included, no correct answer flagged)
+// GET /api/quiz/questions — returns a mix of quote + stat questions (shuffled)
 async function getQuizQuestions(req, res, next) {
     try {
-        const count = Math.min(parseInt(req.query.count || '10'), QUOTES.length);
-        // Shuffle
-        const shuffled = [...QUOTES].sort(() => Math.random() - 0.5).slice(0, count);
-        const questions = shuffled.map((q) => ({
+        const totalRequested = Math.min(parseInt(req.query.count || '10'), 20);
+        // Split roughly 50/50 between quotes and stat questions
+        const quoteCount = Math.ceil(totalRequested / 2);
+        const statCount = totalRequested - quoteCount;
+        const shuffledQuotes = [...QUOTES].sort(() => Math.random() - 0.5).slice(0, quoteCount);
+        const shuffledStats = [...STAT_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, statCount);
+        // Interleave and shuffle the combined set
+        const combined = [...shuffledQuotes, ...shuffledStats].sort(() => Math.random() - 0.5);
+        const questions = combined.map((q) => ({
             id: q.id,
             quote: q.quote,
             options: [...q.options].sort(() => Math.random() - 0.5),
             category: q.category,
             difficulty: q.difficulty,
+            type: q.type ?? 'quote',
         }));
-        res.json({ questions, total: QUOTES.length });
+        res.json({ questions, total: QUOTES.length + STAT_QUESTIONS.length });
     }
     catch (error) {
         next(error);
@@ -171,7 +330,7 @@ async function submitQuizAnswer(req, res, next) {
         if (!questionId || !answer) {
             throw new errors_1.BadRequestError('questionId and answer are required');
         }
-        const question = QUOTES.find((q) => q.id === questionId);
+        const question = [...QUOTES, ...STAT_QUESTIONS].find((q) => q.id === questionId);
         if (!question) {
             throw new errors_1.BadRequestError('Question not found');
         }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +10,7 @@ import Link from 'next/link';
 
 type GamePhase = 'selection' | 'battle' | 'result';
 
-// Battle state flow (PvE): 'computer-choosing' → 'choosing' → 'revealing' → 'roundResult'
+// Battle state flow (PvE): 'computer-choosing' â†’ 'choosing' â†’ 'revealing' â†’ 'roundResult'
 type BattleState = 'computer-choosing' | 'choosing' | 'revealing' | 'roundResult';
 
 const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
@@ -89,7 +89,7 @@ export default function BattlePage() {
     }
     async function fetchCards() {
       try {
-        // Fetch all cards — get first page to know total, then fetch all at once
+        // Fetch all cards â€” get first page to know total, then fetch all at once
         const first = await userCardsApi.getMyCards({ limit: '100', sort: 'overall', page: '1' });
         const total = first.pagination?.total || first.cards?.length || 0;
 
@@ -168,7 +168,7 @@ export default function BattlePage() {
       setPlayerScore(0);
       setComputerScore(0);
       setRoundHistory([]);
-      // PvE: computer "picks" first — show a brief thinking phase then let player choose
+      // PvE: computer "picks" first â€” show a brief thinking phase then let player choose
       setBattleState('computer-choosing');
       setSelectedPlayerCard(null);
       setSelectedComputerCard(null);
@@ -430,7 +430,7 @@ export default function BattlePage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-2xl font-display font-bold text-white">Your Cards</h3>
-                  <p className="text-sm text-gray-400 font-body mt-0.5">{availableCards.length} cards · click to add to squad</p>
+                  <p className="text-sm text-gray-400 font-body mt-0.5">{availableCards.length} cards Â· click to add to squad</p>
                 </div>
                 {/* Search + filter */}
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -499,7 +499,7 @@ export default function BattlePage() {
                         {isInSquad && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
                             <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
-                              <span className="text-white text-2xl font-bold">✓</span>
+                              <span className="text-white text-2xl font-bold">âœ“</span>
                             </div>
                           </div>
                         )}
@@ -795,7 +795,7 @@ export default function BattlePage() {
               )}
               {coinsEarned > 0 && (
                 <div className="mt-2 flex items-center justify-center space-x-2">
-                  <span className="text-2xl">🪙</span>
+                  <span className="text-2xl">ðŸª™</span>
                   <span className="text-2xl font-display font-bold text-amber-400">+{coinsEarned} Coins</span>
                 </div>
               )}
@@ -864,3 +864,4 @@ export default function BattlePage() {
     </div>
   );
 }
+

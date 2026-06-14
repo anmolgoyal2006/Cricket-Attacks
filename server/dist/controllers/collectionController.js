@@ -18,23 +18,34 @@ async function getCollection(req, res, next) {
         if (!user) {
             throw new errors_1.NotFoundError('User');
         }
-        // Fetch all unique players first
-        const uniquePlayers = await Player_1.default.find({ _id: { $in: user.ownedCards } }).lean();
+        // Build unique card list — one card per player, no duplicates
+        const uniquePlayerIds = [...new Set(user.ownedCards.map(id => id.toString()))];
+        const uniquePlayers = await Player_1.default.find({ _id: { $in: uniquePlayerIds } }).lean();
         const playerMap = new Map(uniquePlayers.map(p => [p._id.toString(), p]));
-        // Build full list including duplicates, and add a unique cardId for each instance
+        // One entry per unique player (first occurrence index for cardId)
+        const seenIds = new Set();
         let allCards = user.ownedCards.map((playerId, index) => {
-            const player = playerMap.get(playerId.toString());
+            const key = playerId.toString();
+            if (seenIds.has(key))
+                return null; // skip duplicates
+            seenIds.add(key);
+            const player = playerMap.get(key);
             if (!player)
                 return null;
             return {
                 ...player,
-                cardId: `${playerId}_${index}`, // unique ID for each copy
-                level: 1, // default values for now
+                cardId: `${playerId}_${index}`,
+                level: 1,
                 xp: 0,
                 battlesPlayed: 0,
                 battlesWon: 0,
             };
         }).filter(Boolean);
+        // Prune stale IDs from the user document so counts stay accurate going forward
+        const validOwnedCards = user.ownedCards.filter(id => playerMap.has(id.toString()));
+        if (validOwnedCards.length !== user.ownedCards.length) {
+            await User_1.default.updateOne({ _id: user._id }, { $set: { ownedCards: validOwnedCards } });
+        }
         // Apply filters
         if (req.query.role) {
             const roleRegex = new RegExp(req.query.role, 'i');
@@ -72,11 +83,18 @@ async function getCollectionStats(req, res, next) {
         if (!user) {
             throw new errors_1.NotFoundError('User');
         }
-        // Get unique player data for each owned card (including duplicates)
-        const uniquePlayers = await Player_1.default.find({ _id: { $in: user.ownedCards } }).lean();
-        const playerMap = new Map(uniquePlayers.map(p => [p._id.toString(), p]));
-        // Build an array of rarities for all owned cards
-        const allRarities = user.ownedCards.map(id => {
+        // Only count cards whose player documents actually exist
+        const uniquePlayerIds = [...new Set(user.ownedCards.map(id => id.toString()))];
+        const existingPlayers = await Player_1.default.find({ _id: { $in: uniquePlayerIds } }).lean();
+        const playerMap = new Map(existingPlayers.map(p => [p._id.toString(), p]));
+        // Filter ownedCards to only valid (non-orphaned) entries
+        const validOwnedCards = user.ownedCards.filter(id => playerMap.has(id.toString()));
+        // Prune stale IDs from the user document so the count stays accurate going forward
+        if (validOwnedCards.length !== user.ownedCards.length) {
+            await User_1.default.updateOne({ _id: user._id }, { $set: { ownedCards: validOwnedCards } });
+        }
+        // Build an array of rarities for all valid owned cards (including duplicates)
+        const allRarities = validOwnedCards.map(id => {
             const player = playerMap.get(id.toString());
             return player?.rarity;
         }).filter(Boolean);
@@ -91,9 +109,9 @@ async function getCollectionStats(req, res, next) {
         }));
         res.json({
             stats: {
-                totalCards: user.ownedCards.length,
+                totalCards: validOwnedCards.length,
                 totalRarity: rarityBreakdown.length,
-                uniquePlayers: new Set(user.ownedCards.map(id => id.toString())).size,
+                uniquePlayers: new Set(validOwnedCards.map(id => id.toString())).size,
             },
             rarityBreakdown,
         });

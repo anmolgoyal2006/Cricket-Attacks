@@ -62,7 +62,7 @@ const userSchema = new mongoose_1.Schema({
     },
     coins: {
         type: Number,
-        default: 1000,
+        default: 2500,
     },
     xp: {
         type: Number,
@@ -129,6 +129,10 @@ const userSchema = new mongoose_1.Schema({
     longestStreak: {
         type: Number,
         default: 0,
+    },
+    firstLoginBonusClaimed: {
+        type: Boolean,
+        default: false,
     },
 }, {
     timestamps: true,

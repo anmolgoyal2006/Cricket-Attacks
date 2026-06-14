@@ -53,7 +53,7 @@ export async function api<T = unknown>(
 // Auth API
 export const authApi = {
   register: (data: { username: string; email: string; password: string }) =>
-    api<{ token: string; user: any; welcomeBonus?: any[] }>('/auth/register', {
+    api<{ token: string; user: any; firstLoginBonus?: any[] }>('/auth/register', {
       method: 'POST',
       body: data,
       auth: false,
@@ -186,8 +186,9 @@ export const wordleApi = {
   submitGuess: (guess: string, guessNumber: number, playerId?: string) =>
     api<{
       isCorrect: boolean;
+      coinsEarned: number;
       guessNumber: number;
-      hintRow: Record<string, { value: any; match: string }> | null;
+      hintRow: Record<string, { value: any; match: string; }> | null;
       playerFound: boolean;
       answer?: {
         playerId: string;

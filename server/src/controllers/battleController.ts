@@ -110,6 +110,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
     }
 
     const result = playRound(battle, aiCards, actualPlayerId);
+    let rewards: any = null;
 
     if (result.computerCard) {
       battle.aiSquad = battle.aiSquad.map((ai: any) => ({
@@ -123,15 +124,6 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
     if (!result.computerCard || !result.computerCard.name) {
       console.error('Missing computerCard.name in playRound result:', JSON.stringify(result.computerCard));
     }
-
-    // Update the playerCard in the result to use the original userCardId
-    const resultWithUserCardId = {
-      ...result,
-      playerCard: {
-        ...result.playerCard,
-        // We don't have the original userCardId here, but the frontend will use the one it sent
-      }
-    };
 
     const roundResult: any = {
       roundNumber: result.roundNumber,
@@ -169,7 +161,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
           battle.rewards.trophies = result.trophiesEarned;
         }
 
-        const rewards = await calculateRewards(result.battleResult);
+        rewards = await calculateRewards(result.battleResult);
 
         await User.findByIdAndUpdate(req.userId, {
           $inc: {
@@ -186,7 +178,6 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
 
         result.trophiesEarned = rewards.trophies;
         result.xpEarned = rewards.xp;
-        (result as any).coinsEarned = rewards.coins;
       }
     }
 
@@ -194,7 +185,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
 
     res.json({
       ...result,
-      coinsEarned: isOver ? rewards?.coins : 0,
+      coinsEarned: rewards?.coins ?? 0,
     });
   } catch (error) {
     next(error);

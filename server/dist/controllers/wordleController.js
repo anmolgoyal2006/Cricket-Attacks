@@ -8,6 +8,7 @@ exports.submitWordleGuess = submitWordleGuess;
 exports.getDailyFaceReveal = getDailyFaceReveal;
 exports.submitFaceRevealGuess = submitFaceRevealGuess;
 const Player_1 = __importDefault(require("../models/Player"));
+const User_1 = __importDefault(require("../models/User"));
 const errors_1 = require("../utils/errors");
 // ---------------------------------------------------------------------------
 // Static enrichment: cricket-knowledge fields keyed by player name (lowercase)
@@ -281,6 +282,14 @@ async function submitWordleGuess(req, res, next) {
         const target = enrichPlayer(rawTarget);
         const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
         const isLastGuess = guessNumber >= 6;
+        // Coins based on how quickly the player guesses (fewer guesses = more coins)
+        const COINS_BY_GUESS = { 1: 100, 2: 80, 3: 60, 4: 40, 5: 20, 6: 10 };
+        const coinsEarned = isCorrect ? (COINS_BY_GUESS[guessNumber] || 10) : 0;
+        if (isCorrect && req.userId) {
+            await User_1.default.findByIdAndUpdate(req.userId, {
+                $inc: { coins: coinsEarned, xp: coinsEarned },
+            });
+        }
         const rawGuessed = uniquePlayers.find((p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim());
         const guessed = rawGuessed ? enrichPlayer(rawGuessed) : null;
         let hintRow = {};
@@ -297,6 +306,7 @@ async function submitWordleGuess(req, res, next) {
         }
         const response = {
             isCorrect,
+            coinsEarned,
             guessNumber,
             hintRow: guessed ? hintRow : null,
             playerFound: !!guessed,
@@ -331,7 +341,7 @@ async function getDailyFaceReveal(req, res, next) {
         const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();
         if (allFull.length === 0)
             return res.status(404).json({ error: 'No players found' });
-        // Deduplicate by name
+        // Deduplicate by name, and only keep players that have a photo
         const seen = new Set();
         const uniquePlayers = allFull.filter(p => {
             const key = p.name.toLowerCase().trim();
@@ -340,10 +350,12 @@ async function getDailyFaceReveal(req, res, next) {
             seen.add(key);
             return true;
         });
-        const total = uniquePlayers.length;
+        const playersWithPhoto = uniquePlayers.filter(p => p.image && p.image.trim() !== '');
+        if (playersWithPhoto.length === 0)
+            return res.status(404).json({ error: 'No players with photos found' });
         // Truly random each request
-        const idx = Math.floor(Math.random() * total);
-        const player = enrichPlayer(uniquePlayers[idx]);
+        const idx = Math.floor(Math.random() * playersWithPhoto.length);
+        const player = enrichPlayer(playersWithPhoto[idx]);
         // Create a session ID so the guess endpoint knows the answer
         const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         faceRevealSessions.set(sessionId, {
@@ -388,8 +400,14 @@ async function submitFaceRevealGuess(req, res, next) {
         }
         const isCorrect = session.playerName.toLowerCase().trim() === guess.toLowerCase().trim();
         const POINTS = { easy: 5, medium: 10, hard: 20, expert: 40 };
-        const pointsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
-        const response = { isCorrect, pointsEarned };
+        const coinsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
+        // Award coins to the user on correct guess
+        if (isCorrect && req.userId) {
+            await User_1.default.findByIdAndUpdate(req.userId, {
+                $inc: { coins: coinsEarned, xp: coinsEarned },
+            });
+        }
+        const response = { isCorrect, coinsEarned };
         if (isCorrect || (guessNumber >= 5)) {
             // Fetch full player data for the reveal
             const allFull = await Player_1.default.find({}).sort({ _id: 1 }).lean();

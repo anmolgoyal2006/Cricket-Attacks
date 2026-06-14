@@ -22,17 +22,30 @@ async function startPvE(req, res, next) {
         if (!user) {
             throw new errors_1.NotFoundError('User');
         }
-        // Extract actual player IDs from cardIds (cardId is like "playerId_index")
+        // Extract actual player IDs from cardIds (cardId may be "playerId_index" or just "playerId")
         const actualPlayerIds = squadCardIds.map((cardId) => {
-            return cardId.includes('_') ? cardId.split('_')[0] : cardId;
+            if (!cardId)
+                throw new errors_1.BadRequestError('Invalid card ID in squad');
+            const raw = cardId.includes('_') ? cardId.split('_')[0] : cardId;
+            if (!mongoose_1.default.isValidObjectId(raw)) {
+                throw new errors_1.BadRequestError(`Invalid card ID format: ${cardId}`);
+            }
+            return raw;
         });
-        const playerCards = await Player_1.default.find({ _id: { $in: actualPlayerIds } });
+        // Fetch unique player documents (duplicates allowed in squad — fetch by unique IDs)
+        const uniquePlayerIds = [...new Set(actualPlayerIds)];
+        const foundPlayers = await Player_1.default.find({ _id: { $in: uniquePlayerIds } });
+        const playerMap = new Map(foundPlayers.map((p) => [p._id.toString(), p]));
+        // Build the ordered playerCards array preserving duplicates
+        const playerCards = actualPlayerIds.map((id) => playerMap.get(id)).filter(Boolean);
         if (playerCards.length !== 5) {
-            throw new errors_1.BadRequestError('Some selected cards were not found');
+            const missing = actualPlayerIds.filter((id) => !playerMap.has(id));
+            throw new errors_1.BadRequestError(`Some selected cards were not found (IDs: ${missing.join(', ')})`);
         }
-        // Verify ownership (using actualPlayerIds)
+        // Verify ownership — each selected playerId must appear in ownedCards
+        const ownedSet = new Set(user.ownedCards.map((c) => c.toString()));
         for (const playerId of actualPlayerIds) {
-            if (!user.ownedCards.some((c) => c.toString() === playerId)) {
+            if (!ownedSet.has(playerId)) {
                 throw new errors_1.BadRequestError('You do not own all selected cards');
             }
         }
@@ -87,6 +100,7 @@ async function playRoundHandler(req, res, next) {
             throw new errors_1.BadRequestError('No AI cards remaining');
         }
         const result = (0, battleService_1.playRound)(battle, aiCards, actualPlayerId);
+        let rewards = null;
         if (result.computerCard) {
             battle.aiSquad = battle.aiSquad.map((ai) => ({
                 ...ai,
@@ -98,14 +112,6 @@ async function playRoundHandler(req, res, next) {
         if (!result.computerCard || !result.computerCard.name) {
             console.error('Missing computerCard.name in playRound result:', JSON.stringify(result.computerCard));
         }
-        // Update the playerCard in the result to use the original userCardId
-        const resultWithUserCardId = {
-            ...result,
-            playerCard: {
-                ...result.playerCard,
-                // We don't have the original userCardId here, but the frontend will use the one it sent
-            }
-        };
         const roundResult = {
             roundNumber: result.roundNumber,
             playerCardId: new mongoose_1.default.Types.ObjectId(actualPlayerId),
@@ -139,7 +145,7 @@ async function playRoundHandler(req, res, next) {
                     battle.rewards.xp = result.xpEarned;
                     battle.rewards.trophies = result.trophiesEarned;
                 }
-                const rewards = await (0, battleService_1.calculateRewards)(result.battleResult);
+                rewards = await (0, battleService_1.calculateRewards)(result.battleResult);
                 await User_1.default.findByIdAndUpdate(req.userId, {
                     $inc: {
                         coins: rewards.coins,
@@ -158,10 +164,7 @@ async function playRoundHandler(req, res, next) {
         await battle.save();
         res.json({
             ...result,
-            playerCard: {
-                ...result.playerCard,
-                // We don't need to modify it here, frontend will track userCardId
-            }
+            coinsEarned: rewards?.coins ?? 0,
         });
     }
     catch (error) {

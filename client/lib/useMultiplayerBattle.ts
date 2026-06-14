@@ -290,6 +290,31 @@ export function useMultiplayerBattle() {
     };
   }, []);
 
+  const reset = useCallback(() => {
+    setStatus('idle');
+    setBattleId(null);
+    setOpponent(null);
+    setQueuePosition(0);
+    setQueueSize(0);
+    setCountdown(0);
+    setRound(1);
+    setTotalRounds(5);
+    setCurrentAttribute('');
+    setAttributeOrder([]);
+    setMyCards([]);
+    setUsedCardIds(new Set());
+    setMyScore(0);
+    setOpponentScore(0);
+    setRoundHistory([]);
+    setCurrentRoundResult(null);
+    setWinner(null);
+    setRewards(null);
+    setError(null);
+    setAutoSelected(false);
+    setIsMyTurn(false);
+    setOpponentPickedCard(null);
+  }, []);
+
   const joinMatchmaking = useCallback((squad: PvPCard[]) => {
     const socket = getSocket();
     if (!socket) return;
@@ -359,6 +384,7 @@ export function useMultiplayerBattle() {
     leaveMatchmaking,
     selectCard,
     reconnect,
+    reset,
     getCardMainStat,
     setMyCards,
   };

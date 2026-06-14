@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Trophy, Zap, Users, ArrowRight, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw, Crown } from 'lucide-react';
+import { Swords, Trophy, Zap, Users, Loader2, AlertCircle, Wifi, Clock, Search, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { userCardsApi } from '@/lib/api';
-import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
+import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { useMultiplayerBattle } from '@/lib/useMultiplayerBattle';
 import Link from 'next/link';
 
@@ -587,7 +587,7 @@ export default function MultiplayerBattlePage() {
               <button
                 onClick={() => {
                   setSquad([]);
-                  multiplayer.setMyCards([]);
+                  multiplayer.reset();
                 }}
                 className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-display font-bold text-lg shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 transition-all flex items-center space-x-2"
               >

@@ -47,7 +47,6 @@ export default function MultiplayerBattlePage() {
   const [availableCards, setAvailableCards] = useState<CardDisplay[]>([]);
   const [squad, setSquad] = useState<CardDisplay[]>([]);
   const [loadingCards, setLoadingCards] = useState(true);
-  const [socketConnected, setSocketConnected] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   // Tick every second so cooldown countdowns update live
@@ -84,10 +83,7 @@ export default function MultiplayerBattlePage() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      const socket = connectSocket(token);
-      setSocketConnected(socket.connected);
-      socket.on('connect', () => setSocketConnected(true));
-      socket.on('disconnect', () => setSocketConnected(false));
+      connectSocket(token);
     }
     return () => {
       disconnectSocket();
@@ -211,10 +207,10 @@ export default function MultiplayerBattlePage() {
         {/* Connection Status */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full ${
-            socketConnected ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'
+            multiplayer.socketReady ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'
           }`}>
-            <div className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-            <span className="text-sm font-body">{socketConnected ? 'Connected to game server' : 'Disconnected from game server'}</span>
+            <div className={`w-2 h-2 rounded-full ${multiplayer.socketReady ? 'bg-green-400' : 'bg-red-400'}`} />
+            <span className="text-sm font-body">{multiplayer.socketReady ? 'Connected to game server' : 'Connecting to game server...'}</span>
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSocket } from './socket';
+import { connectSocket, getSocket } from './socket';
 
 export interface PvPCard {
   userCardId: string;
@@ -66,20 +66,44 @@ export function useMultiplayerBattle() {
   const [error, setError] = useState<string | null>(null);
   const [autoSelected, setAutoSelected] = useState(false);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-
-  // Turn-based state
-  // true  = it is my turn to pick this round (picker first, then responder)
   const [isMyTurn, setIsMyTurn] = useState(false);
-  // Name + role of the card the opponent (picker) already chose — shown to responder only
   const [opponentPickedCard, setOpponentPickedCard] = useState<{ cardName: string; cardRole: string } | null>(null);
+
+  // socketReady tracks whether the socket is connected so the effect re-runs after connect
+  const [socketReady, setSocketReady] = useState(false);
 
   const statusRef = useRef(status);
   statusRef.current = status;
 
+  const battleIdRef = useRef(battleId);
+  battleIdRef.current = battleId;
+
   const attributeOrderRef = useRef(attributeOrder);
   attributeOrderRef.current = attributeOrder;
 
+  // Phase 1: ensure socket is connected and flip socketReady when it is
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    const socket = connectSocket(token);
+
+    if (socket.connected) {
+      setSocketReady(true);
+      return;
+    }
+
+    const onConnect = () => setSocketReady(true);
+    socket.on('connect', onConnect);
+    return () => {
+      socket.off('connect', onConnect);
+    };
+  }, []);
+
+  // Phase 2: register all game event listeners once socket is ready
+  useEffect(() => {
+    if (!socketReady) return;
+
     const socket = getSocket();
     if (!socket) return;
 
@@ -90,9 +114,16 @@ export function useMultiplayerBattle() {
       setQueueSize(data.queueSize);
     };
 
-    const handleFound = (data: { battleId: string; opponent1: OpponentInfo; opponent2: OpponentInfo }) => {
+    const handleFound = (data: {
+      battleId: string;
+      opponent1: OpponentInfo;
+      opponent2: OpponentInfo;
+    }) => {
       if (statusRef.current === 'matchmaking') {
         setBattleId(data.battleId);
+        // opponent1 is the other player's info from the perspective of player1
+        // server sends opponent1=player2info, opponent2=player1info
+        setOpponent(data.opponent1);
         setStatus('countdown');
         setCountdown(3);
         setRoundHistory([]);
@@ -146,10 +177,9 @@ export function useMultiplayerBattle() {
       setStatus('playing');
     };
 
-    // Sent only to the responder once the picker has chosen
     const handlePickerChose = (data: { cardName: string; cardRole: string }) => {
       setOpponentPickedCard(data);
-      setIsMyTurn(true); // now the responder's turn to pick
+      setIsMyTurn(true);
     };
 
     const handleRoundResult = (data: RoundResult) => {
@@ -184,13 +214,8 @@ export function useMultiplayerBattle() {
       socket.emit('cooldowns:get');
     };
 
-    const handleOpponentDisconnected = () => {
-      setStatus('disconnected');
-    };
-
-    const handleOpponentReconnected = () => {
-      setStatus('playing');
-    };
+    const handleOpponentDisconnected = () => setStatus('disconnected');
+    const handleOpponentReconnected = () => setStatus('playing');
 
     const handleOpponentForfeit = (data: { winner: string; reason: string }) => {
       setWinner(data.winner);
@@ -226,11 +251,7 @@ export function useMultiplayerBattle() {
       setUsedCardIds(new Set(data.usedCardIds));
       setIsMyTurn(data.yourTurn);
       setOpponentPickedCard(data.opponentPickedCard);
-      if (data.status === 'completed') {
-        setStatus('finished');
-      } else {
-        setStatus('playing');
-      }
+      setStatus(data.status === 'completed' ? 'finished' : 'playing');
     };
 
     const handleCooldownsUpdate = (data: { cooldowns: Record<string, number> }) => {
@@ -288,6 +309,41 @@ export function useMultiplayerBattle() {
       socket.off('cooldowns:update', handleCooldownsUpdate);
       socket.off('error', handleError);
     };
+  }, [socketReady]);
+
+  const joinMatchmaking = useCallback((squad: PvPCard[]) => {
+    const socket = getSocket();
+    if (!socket) return;
+    setMyCards(squad);
+    setStatus('matchmaking');
+    setQueuePosition(0);
+    setQueueSize(0);
+    setError(null);
+    socket.emit('matchmaking:join', { squad });
+  }, []);
+
+  const leaveMatchmaking = useCallback(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    socket.emit('matchmaking:leave');
+    setStatus('idle');
+  }, []);
+
+  const selectCard = useCallback(
+    (cardId: string) => {
+      const socket = getSocket();
+      if (!socket || !battleIdRef.current) return;
+      socket.emit('battle:select-card', { battleId: battleIdRef.current, cardId });
+      setUsedCardIds((prev) => new Set(prev).add(cardId));
+    },
+    []
+  );
+
+  const reconnect = useCallback((id: string) => {
+    const socket = getSocket();
+    if (!socket) return;
+    setBattleId(id);
+    socket.emit('battle:reconnect', { battleId: id });
   }, []);
 
   const reset = useCallback(() => {
@@ -313,41 +369,6 @@ export function useMultiplayerBattle() {
     setAutoSelected(false);
     setIsMyTurn(false);
     setOpponentPickedCard(null);
-  }, []);
-
-  const joinMatchmaking = useCallback((squad: PvPCard[]) => {
-    const socket = getSocket();
-    if (!socket) return;
-    setMyCards(squad);
-    setStatus('matchmaking');
-    setQueuePosition(0);
-    setQueueSize(0);
-    setError(null);
-    socket.emit('matchmaking:join', { squad });
-  }, []);
-
-  const leaveMatchmaking = useCallback(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit('matchmaking:leave');
-    setStatus('idle');
-  }, []);
-
-  const selectCard = useCallback(
-    (cardId: string) => {
-      const socket = getSocket();
-      if (!socket || !battleId) return;
-      socket.emit('battle:select-card', { battleId, cardId });
-      setUsedCardIds((prev) => new Set(prev).add(cardId));
-    },
-    [battleId]
-  );
-
-  const reconnect = useCallback((id: string) => {
-    const socket = getSocket();
-    if (!socket) return;
-    setBattleId(id);
-    socket.emit('battle:reconnect', { battleId: id });
   }, []);
 
   const getCardMainStat = useCallback((card: PvPCard): number => {
@@ -380,6 +401,7 @@ export function useMultiplayerBattle() {
     cooldowns,
     isMyTurn,
     opponentPickedCard,
+    socketReady,
     joinMatchmaking,
     leaveMatchmaking,
     selectCard,

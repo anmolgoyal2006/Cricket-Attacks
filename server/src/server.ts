@@ -29,7 +29,11 @@ app.use(morgan('dev'));
 app.use(generalLimiter);
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+  });
 });
 
 app.use('/api', routes);

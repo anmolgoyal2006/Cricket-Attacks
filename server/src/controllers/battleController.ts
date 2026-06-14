@@ -6,7 +6,6 @@ import Battle from '../models/Battle';
 import { AuthRequest } from '../middleware/auth';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { startBattle, playRound, calculateRewards } from '../services/battleService';
-import { updateLeaderboardForUser } from '../services/leaderboardService';
 import { parsePagination, paginationResponse } from '../utils/helpers';
 export async function startPvE(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -214,14 +213,15 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
           $inc: {
             coins: rewards.coins,
             xp: rewards.xp,
-            trophies: result.battleResult === 'player' ? rewards.trophies : 0,
             battlesPlayed: 1,
             wins: result.battleResult === 'player' ? 1 : 0,
             losses: result.battleResult === 'computer' ? 1 : 0,
           },
         });
 
-        await updateLeaderboardForUser(req.userId!);
+        // Leaderboard and ELO/trophies are PvP-only — no update here
+        result.trophiesEarned = 0; // trophies not awarded in PvE
+        result.xpEarned = rewards.xp;
 
         result.trophiesEarned = rewards.trophies;
         result.xpEarned = rewards.xp;

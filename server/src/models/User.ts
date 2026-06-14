@@ -15,6 +15,11 @@ export interface IUser extends Document {
   wins: number;
   losses: number;
   draws: number;
+  // PvP-only stats (used for leaderboard ranking)
+  pvpWins: number;
+  pvpLosses: number;
+  pvpDraws: number;
+  pvpPlayed: number;
   eloRating: number;
   highestElo: number;
   rankTier: string;
@@ -90,6 +95,22 @@ const userSchema = new Schema<IUser>(
       default: 0,
     },
     draws: {
+      type: Number,
+      default: 0,
+    },
+    pvpWins: {
+      type: Number,
+      default: 0,
+    },
+    pvpLosses: {
+      type: Number,
+      default: 0,
+    },
+    pvpDraws: {
+      type: Number,
+      default: 0,
+    },
+    pvpPlayed: {
       type: Number,
       default: 0,
     },

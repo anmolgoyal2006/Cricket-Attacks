@@ -295,6 +295,10 @@ export function setupBattleRooms(io: Server) {
               wins: player1Won ? 1 : 0,
               losses: player2Won ? 1 : 0,
               draws: isDraw ? 1 : 0,
+              pvpPlayed: 1,
+              pvpWins: player1Won ? 1 : 0,
+              pvpLosses: player2Won ? 1 : 0,
+              pvpDraws: isDraw ? 1 : 0,
             },
           }),
           UserModel.findByIdAndUpdate(battle.player2.userId, {
@@ -311,6 +315,10 @@ export function setupBattleRooms(io: Server) {
               wins: player2Won ? 1 : 0,
               losses: player1Won ? 1 : 0,
               draws: isDraw ? 1 : 0,
+              pvpPlayed: 1,
+              pvpWins: player2Won ? 1 : 0,
+              pvpLosses: player1Won ? 1 : 0,
+              pvpDraws: isDraw ? 1 : 0,
             },
           }),
         ]);
@@ -491,6 +499,10 @@ export function setupBattleRooms(io: Server) {
         battlesPlayed: 1,
         wins: player1Won ? 1 : 0,
         losses: player2Won ? 1 : 0,
+        pvpPlayed: 1,
+        pvpWins: player1Won ? 1 : 0,
+        pvpLosses: player2Won ? 1 : 0,
+        pvpDraws: isDraw ? 1 : 0,
       },
     });
 
@@ -501,6 +513,10 @@ export function setupBattleRooms(io: Server) {
         battlesPlayed: 1,
         wins: player2Won ? 1 : 0,
         losses: player1Won ? 1 : 0,
+        pvpPlayed: 1,
+        pvpWins: player2Won ? 1 : 0,
+        pvpLosses: player1Won ? 1 : 0,
+        pvpDraws: isDraw ? 1 : 0,
       },
     });
 
@@ -686,15 +702,15 @@ export function setupBattleRooms(io: Server) {
 
                   await UserModel.findByIdAndUpdate(winnerUserId, {
                     $set: { eloRating: eloResult.newRatingA, rankTier: newTier, battleStreak: (winnerDoc.battleStreak || 0) + 1 },
-                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
                   });
                   await UserModel.findByIdAndUpdate(loserUserId, {
                     $set: { eloRating: eloResult.newRatingB, rankTier: getTier(eloResult.newRatingB), battleStreak: 0 },
-                    $inc: { battlesPlayed: 1, losses: 1 },
+                    $inc: { battlesPlayed: 1, losses: 1, pvpPlayed: 1, pvpLosses: 1 },
                   });
                 } else {
                   await UserModel.findByIdAndUpdate(winnerUserId, {
-                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
                   });
                 }
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -440,7 +440,7 @@ export default function BattlePage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-2xl font-display font-bold text-white">Your Cards</h3>
-                  <p className="text-sm text-gray-400 font-body mt-0.5">{availableCards.length} cards Â· click to add to squad</p>
+                  <p className="text-sm text-gray-400 font-body mt-0.5">{availableCards.length} cards · click to add to squad</p>
                 </div>
                 {/* Search + filter */}
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -509,7 +509,7 @@ export default function BattlePage() {
                         {isInSquad && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
                             <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
-                              <span className="text-white text-2xl font-bold">âœ“</span>
+                              <span className="text-white text-2xl font-bold">✓</span>
                             </div>
                           </div>
                         )}
@@ -820,7 +820,7 @@ export default function BattlePage() {
               )}
               {coinsEarned > 0 && (
                 <div className="mt-2 flex items-center justify-center space-x-2">
-                  <span className="text-2xl">ðŸª™</span>
+                  <Trophy className="w-6 h-6 text-yellow-300" />
                   <span className="text-2xl font-display font-bold text-amber-400">+{coinsEarned} Coins</span>
                 </div>
               )}
@@ -889,4 +889,6 @@ export default function BattlePage() {
     </div>
   );
 }
+
+
 

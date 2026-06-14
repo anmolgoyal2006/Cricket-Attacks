@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Share2, Trophy, Loader2, Search } from 'lucide-react';
+import { Users, Trophy, Loader2, Search, CheckCircle2, X } from 'lucide-react';
 import { cardsApi } from '@/lib/api';
 
 type Format = 'odi' | 'test' | 't20' | 'worldCup' | 'knockouts' | 'bilateral';
@@ -39,8 +39,6 @@ interface SearchResult {
   image: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
 function PlayerAvatar({ image, name, className = 'w-8 h-8' }: { image?: string; name: string; className?: string }) {
   const [imgError, setImgError] = useState(false);
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -71,8 +69,8 @@ export default function ComparePage() {
   const [searchB, setSearchB] = useState('');
   const [resultsA, setResultsA] = useState<SearchResult[]>([]);
   const [resultsB, setResultsB] = useState<SearchResult[]>([]);
-  const [loadingA, setLoadingA] = useState(false);
-  const [loadingB, setLoadingB] = useState(false);  const [showDropdownA, setShowDropdownA] = useState(false);
+  const [loadingA] = useState(false);
+  const [loadingB] = useState(false);  const [showDropdownA, setShowDropdownA] = useState(false);
   const [showDropdownB, setShowDropdownB] = useState(false);
 
   const dropdownRefA = useRef<HTMLDivElement>(null);
@@ -242,18 +240,6 @@ export default function ComparePage() {
       return sA >= sB ? playerA.name : playerB.name;
     };
 
-    // Determine winning reason
-    const battingEdge = (p: PlayerData, opp: PlayerData, fmt: string) => {
-      const s = p.formats[fmt]; const o = opp.formats[fmt];
-      if (!s || !o) return false;
-      return s.avg > o.avg && s.sr >= o.sr;
-    };
-    const bowlingEdge = (p: PlayerData, opp: PlayerData, fmt: string) => {
-      const s = p.formats[fmt]; const o = opp.formats[fmt];
-      if (!s || !o) return false;
-      return s.wickets > o.wickets;
-    };
-
     const winner = scoreA >= scoreB ? playerA : playerB;
     const loser  = scoreA >= scoreB ? playerB : playerA;
     const wScore = scoreA >= scoreB ? scoreA : scoreB;
@@ -316,13 +302,19 @@ export default function ComparePage() {
     );
   };
 
+  const clearPlayer = (slot: 'A' | 'B') => {
+    if (slot === 'A') { setPlayerA(null); setSearchA(''); setResultsA([]); setShowDropdownA(false); }
+    else              { setPlayerB(null); setSearchB(''); setResultsB([]); setShowDropdownB(false); }
+  };
+
   const renderSearchSlot = (slot: 'A' | 'B') => {
     const isA = slot === 'A';
-    const search = isA ? searchA : searchB;
-    const results = isA ? resultsA : resultsB;
-    const loading = isA ? loadingA : loadingB;
+    const search      = isA ? searchA      : searchB;
+    const results     = isA ? resultsA     : resultsB;
+    const loading     = isA ? loadingA     : loadingB;
     const showDropdown = isA ? showDropdownA : showDropdownB;
-    const ref = isA ? dropdownRefA : dropdownRefB;
+    const ref         = isA ? dropdownRefA  : dropdownRefB;
+    const selected    = isA ? playerA       : playerB;
 
     return (
       <div className="glass rounded-2xl p-6">
@@ -337,27 +329,59 @@ export default function ComparePage() {
                 if (isA) setSearchA(e.target.value);
                 else setSearchB(e.target.value);
               }}
-              onFocus={() => { if (results.length > 0) { if (isA) setShowDropdownA(true); else setShowDropdownB(true); } }}
+              onFocus={() => {
+                if (results.length > 0) {
+                  if (isA) setShowDropdownA(true);
+                  else setShowDropdownB(true);
+                }
+              }}
               placeholder="Search player..."
-              className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-body text-lg"
+              className="w-full pl-10 pr-10 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-body text-lg"
             />
             {loading && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400 animate-spin" />
+            )}
+            {/* Clear input button */}
+            {!loading && search.length > 0 && (
+              <button
+                onClick={() => clearPlayer(slot)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 hover:text-white transition-colors"
+                aria-label="Clear"
+              >
+                <X className="w-5 h-5" />
+              </button>
             )}
           </div>
 
           {showDropdown && results.length > 0 && (
             <div className="absolute z-50 mt-2 w-full rounded-xl bg-gray-900 border border-white/10 shadow-2xl overflow-hidden">
-              {results.map((r, i) => (
-                <button
-                  key={r.id + i}
-                  onClick={() => selectPlayer(slot, r)}
-                  className="w-full text-left px-4 py-3 flex items-center space-x-3 text-white hover:bg-white/10 transition-colors font-body border-b border-white/5 last:border-0"
-                >
-                  <PlayerAvatar image={r.image} name={r.name} className="w-8 h-8" />
-                  <span className="font-semibold">{r.name}</span>
-                </button>
-              ))}
+              {results.map((r, i) => {
+                const isSelected = selected?.name === r.name;
+                return (
+                  <button
+                    key={r.id + i}
+                    onClick={() => {
+                      if (isSelected) {
+                        // clicking the already-selected player deselects it
+                        clearPlayer(slot);
+                      } else {
+                        selectPlayer(slot, r);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors font-body border-b border-white/5 last:border-0 ${
+                      isSelected
+                        ? 'bg-purple-500/20 text-white'
+                        : 'text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <PlayerAvatar image={r.image} name={r.name} className="w-8 h-8 flex-shrink-0" />
+                    <span className="font-semibold flex-1">{r.name}</span>
+                    {isSelected && (
+                      <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -368,24 +392,33 @@ export default function ComparePage() {
           )}
         </div>
 
-        {(isA ? playerA : playerB) && (
+        {selected && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-6"
           >
-            <div className={`flex items-center space-x-4 p-4 rounded-xl bg-gradient-to-br ${isA ? 'from-blue-500/20 to-blue-700/20 border-blue-500/30' : 'from-orange-500/20 to-orange-700/20 border-orange-500/30'} border`}>
-              <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${isA ? 'from-blue-500 to-blue-700' : 'from-orange-500 to-orange-700'} flex items-center justify-center overflow-hidden`}>
-                <PlayerAvatar image={(isA ? playerA : playerB)!.image} name={(isA ? playerA : playerB)!.name} className="w-16 h-16" />
+            <div className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br ${isA ? 'from-blue-500/20 to-blue-700/20 border-blue-500/30' : 'from-orange-500/20 to-orange-700/20 border-orange-500/30'} border`}>
+              <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${isA ? 'from-blue-500 to-blue-700' : 'from-orange-500 to-orange-700'} flex items-center justify-center overflow-hidden flex-shrink-0`}>
+                <PlayerAvatar image={selected.image} name={selected.name} className="w-16 h-16" />
               </div>
-              <div>
-                <h3 className="text-xl font-display font-bold text-white">{(isA ? playerA : playerB)!.name}</h3>
-                <div className="flex items-center space-x-2 mt-1">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xl font-display font-bold text-white truncate">{selected.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${isA ? 'bg-blue-500/30 text-blue-400' : 'bg-orange-500/30 text-orange-400'} font-body`}>
-                    Overall: {(isA ? playerA : playerB)!.overall}
+                    Overall: {selected.overall}
                   </span>
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
                 </div>
               </div>
+              {/* Deselect button */}
+              <button
+                onClick={() => clearPlayer(slot)}
+                className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-red-500/30 border border-white/10 hover:border-red-500/40 flex items-center justify-center transition-colors"
+                aria-label="Remove player"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-red-400" />
+              </button>
             </div>
           </motion.div>
         )}

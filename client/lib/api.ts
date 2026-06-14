@@ -53,13 +53,13 @@ export async function api<T = unknown>(
 // Auth API
 export const authApi = {
   register: (data: { username: string; email: string; password: string }) =>
-    api<{ token: string; user: any; firstLoginBonus?: any[]; welcomeBonus?: any }>('/auth/register', {
+    api<{ token: string; user: any; firstLoginBonus?: any[]; welcomeBonus?: any[] }>('/auth/register', {
       method: 'POST',
       body: data,
       auth: false,
     }),
   login: (data: { email: string; password: string }) =>
-    api<{ token: string; user: any; firstLoginBonus?: any[] | null; welcomeBonus?: any }>('/auth/login', {
+    api<{ token: string; user: any; firstLoginBonus?: { coins: number; message: string } | null }>('/auth/login', {
       method: 'POST',
       body: data,
       auth: false,

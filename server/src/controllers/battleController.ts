@@ -79,6 +79,14 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
+function pickSmartAICard(available: any[], attribute: string): any {
+  const useSmartPick = Math.random() < 0.7;
+  if (useSmartPick) {
+    return [...available].sort((a, b) => (b[attribute] ?? 0) - (a[attribute] ?? 0))[0];
+  }
+  return available[Math.floor(Math.random() * available.length)];
+}
+
 export async function computerPickHandler(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { battleId } = req.params;
@@ -98,9 +106,9 @@ export async function computerPickHandler(req: AuthRequest, res: Response, next:
 
     if (available.length === 0) throw new BadRequestError('No AI cards remaining');
 
-    // Pick randomly
-    const pickedIndex = Math.floor(Math.random() * available.length);
-    const picked = available[pickedIndex];
+    // Pick smartly: 70% best card for this round's attribute, 30% random
+    const currentAttribute = battle.attributeOrder[battle.rounds.length] || 'batting';
+    const picked = pickSmartAICard(available, currentAttribute);
 
     // Mark as pending in aiSquad
     battle.aiSquad = battle.aiSquad.map((ai: any) =>
@@ -196,21 +204,11 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
       if (result.battleResult) {
         battle.winner = result.battleResult as 'player' | 'computer' | 'tie';
 
-        if (result.battleResult === 'player') {
-          battle.rewards.coins = result.trophiesEarned * 5;
-          battle.rewards.xp = result.xpEarned;
-          battle.rewards.trophies = result.trophiesEarned;
-        } else if (result.battleResult === 'computer') {
-          battle.rewards.coins = result.trophiesEarned * 5;
-          battle.rewards.xp = result.xpEarned;
-          battle.rewards.trophies = result.trophiesEarned;
-        } else {
-          battle.rewards.coins = result.trophiesEarned * 5;
-          battle.rewards.xp = result.xpEarned;
-          battle.rewards.trophies = result.trophiesEarned;
-        }
-
         rewards = await calculateRewards(result.battleResult);
+
+        battle.rewards.coins = rewards.coins;
+        battle.rewards.xp = rewards.xp;
+        battle.rewards.trophies = rewards.trophies;
 
         await User.findByIdAndUpdate(req.userId, {
           $inc: {

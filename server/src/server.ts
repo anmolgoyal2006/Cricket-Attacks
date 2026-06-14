@@ -8,6 +8,7 @@ import routes from './routes';
 import { errorHandler } from './middleware/errorHandler';
 import { generalLimiter } from './middleware/rateLimiter';
 import { setupSocketServer } from './socket';
+import { rolloverExpiredSeason } from './controllers/seasonController';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -43,6 +44,10 @@ async function start() {
   await connectDatabase();
 
   setupSocketServer(httpServer);
+
+  // Check for season expiry once on boot, then every hour.
+  rolloverExpiredSeason().catch(console.error);
+  setInterval(() => rolloverExpiredSeason().catch(console.error), 60 * 60 * 1000);
 
   httpServer.listen(config.port, () => {
     console.log(`Server running on http://localhost:${config.port}`);

@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { wordleApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 
 const MAX_GUESSES = 5;
@@ -127,6 +126,7 @@ export default function FaceRevealPage() {
   const [copied, setCopied]         = useState(false);
   const [showHow, setShowHow]       = useState(false);
   const [error, setError]           = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startGame = async () => {
@@ -155,11 +155,13 @@ export default function FaceRevealPage() {
   };
 
   const playAgain = () => {
+    setScore(0);
     setPhase('select');
   };
 
   const handleInput = (v: string) => {
     setInput(v);
+    setHighlightedIndex(-1);
     if (v.length < 2) { setSuggestions([]); return; }
     setSuggestions(
       playerNames.filter(n => n.toLowerCase().includes(v.toLowerCase())).slice(0, 8)
@@ -170,7 +172,9 @@ export default function FaceRevealPage() {
     const gname = (name || input).trim();
     if (!gname || submitting || gameOver) return;
     const guessNum = guesses.length + 1;
-    setSubmitting(true); setSuggestions([]); setInput(''); setError('');
+    setSubmitting(true); setSuggestions([]); setHighlightedIndex(-1); setInput(''); setError('');
+    // Reveal hint before this guess (guess #2 gets hint #1, etc.)
+    if (guessNum > 1) setRevealedHints(Math.min(guessNum - 1, hints.length));
 
     try {
       const result = await wordleApi.submitFaceRevealGuess(gname, guessNum, difficulty, sessionId);
@@ -192,7 +196,7 @@ export default function FaceRevealPage() {
         if (result.answer) setAnswer(result.answer);
         setPhase('done');
       } else {
-        setRevealedHints(p => Math.min(p + 1, hints.length));
+        // hint already revealed above before this guess was submitted
       }
     } catch (e: any) {
       setError(e.message || 'Failed to submit guess');
@@ -203,7 +207,7 @@ export default function FaceRevealPage() {
   }, [guesses, input, submitting, gameOver, difficulty, hints.length, sessionId]);
 
   const handleShare = async () => {
-    const cfg = DIFFICULTIES[difficulty];
+    const cfg = DIFFICULTIES[difficulty] ?? DIFFICULTIES.medium;
     const lines = guesses.map((_, i) => i === guesses.length - 1 && won ? '🟩' : '🟥').join('');
     const text = `👁️ Cricket Face Reveal — ${cfg.label}\n${won ? `✅ Got it in ${guesses.length}/${MAX_GUESSES}` : `❌ X/${MAX_GUESSES}`}\n${lines}\n\nCoins: ${score} 🪙\ncricketclash.app/face-reveal`;
     try {
@@ -212,7 +216,7 @@ export default function FaceRevealPage() {
     } catch { /* ignore */ }
   };
 
-  const cfg = DIFFICULTIES[difficulty];
+  const cfg = DIFFICULTIES[difficulty] ?? DIFFICULTIES.medium;
 
   // ── SELECT DIFFICULTY ──────────────────────────────────────────────────────
   if (phase === 'select') {
@@ -299,7 +303,7 @@ export default function FaceRevealPage() {
                     <li>🤔 <strong className="text-white">Medium</strong> — eyes region</li>
                     <li>😰 <strong className="text-white">Hard</strong> — forehead only</li>
                     <li>💀 <strong className="text-white">Expert</strong> — lips only</li>
-                    <li>💡 A text hint unlocks after each wrong guess</li>
+                    <li>💡 A text hint unlocks before each guess from guess #2 onwards (up to 4 hints total)</li>
                     <li>🏆 Fewer guesses = more points</li>
                     <li>🔄 Play as many times as you want — new player each time</li>
                   </ul>
@@ -516,8 +520,22 @@ export default function FaceRevealPage() {
                   type="text" value={input}
                   onChange={e => handleInput(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') submitGuess();
-                    if (e.key === 'Escape') setSuggestions([]);
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setHighlightedIndex(i => suggestions.length ? Math.min(i + 1, suggestions.length - 1) : -1);
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setHighlightedIndex(i => Math.max(i - 1, -1));
+                    } else if (e.key === 'Enter') {
+                      if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+                        setSuggestions([]); setHighlightedIndex(-1);
+                        submitGuess(suggestions[highlightedIndex]);
+                      } else {
+                        submitGuess();
+                      }
+                    } else if (e.key === 'Escape') {
+                      setSuggestions([]); setHighlightedIndex(-1);
+                    }
                   }}
                   placeholder="Name the player…"
                   className="w-full px-5 py-3.5 rounded-2xl bg-white/5 border-2 border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/60 font-body text-sm transition-all"
@@ -528,9 +546,14 @@ export default function FaceRevealPage() {
                     <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       className="absolute top-full left-0 right-0 mt-1 z-30 glass-dark rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                      {suggestions.map(name => (
-                        <button key={name} onClick={() => { setSuggestions([]); submitGuess(name); }}
-                          className="w-full text-left px-4 py-2.5 text-white font-body text-sm hover:bg-amber-500/10 hover:text-amber-300 transition-colors border-b border-white/5 last:border-0">
+                      {suggestions.map((name, idx) => (
+                        <button key={name} onClick={() => { setSuggestions([]); setHighlightedIndex(-1); submitGuess(name); }}
+                          className={cn(
+                            'w-full text-left px-4 py-2.5 font-body text-sm transition-colors border-b border-white/5 last:border-0',
+                            idx === highlightedIndex
+                              ? 'bg-amber-500/10 text-amber-300'
+                              : 'text-white hover:bg-amber-500/10 hover:text-amber-300'
+                          )}>
                           {name}
                         </button>
                       ))}

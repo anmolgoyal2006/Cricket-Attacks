@@ -20,7 +20,7 @@ export interface IBattle extends Document {
   attributeOrder: string[];
   playerScore: number;
   computerScore: number;
-  winner: 'player' | 'computer' | 'tie';
+  winner: 'player' | 'computer' | 'opponent' | 'tie';
   rewards: {
     coins: number;
     xp: number;
@@ -87,7 +87,7 @@ const battleSchema = new Schema<IBattle>(
     computerScore: { type: Number, default: 0 },
     winner: {
       type: String,
-      enum: ['player', 'computer', 'tie'],
+      enum: ['player', 'computer', 'opponent', 'tie'],
       default: 'tie',
     },
     rewards: {

@@ -182,10 +182,10 @@ function compareField(
   if (gStr === tStr) return { value: guessVal, match: 'correct' };
   // Partial match for bowling style (e.g. both spinners)
   if (field === 'bowlingStyle') {
-    const spinTypes = ['off spin', 'leg spin', 'left-arm spin'];
-    const fastTypes = ['fast', 'fast-medium', 'left-arm fast', 'medium-fast', 'medium'];
-    const gSpin = spinTypes.some(s => gStr.includes(s.split(' ')[0]));
-    const tSpin = spinTypes.some(s => tStr.includes(s.split(' ')[0]));
+    const spinStyles = ['off spin', 'leg spin', 'left-arm spin'];
+    const isSpin = (s: string) => spinStyles.includes(s);
+    const gSpin = isSpin(gStr);
+    const tSpin = isSpin(tStr);
     if (gSpin && tSpin) return { value: guessVal, match: 'close' };
     if (!gSpin && !tSpin) return { value: guessVal, match: 'close' };
   }
@@ -194,6 +194,37 @@ function compareField(
 
 // Number of players available per day
 const PLAYERS_PER_DAY = 5;
+
+/**
+ * Shared helper — returns `count` unique player indices for today's date.
+ * Both getDailyWordle and submitWordleGuess must call this so they always
+ * refer to the same players.
+ */
+function getDailyPlayerIndices(total: number, count: number): number[] {
+  const baseIdx = getDailyIndex(total);
+  const indices: number[] = [];
+  const usedIndices = new Set<number>();
+  let step = 1;
+
+  for (let i = 0; i < Math.min(count, total); i++) {
+    let idx = (baseIdx + i * 37 + step) % total;
+
+    // Find next unused index
+    let attempts = 0;
+    while (usedIndices.has(idx) && attempts < total) {
+      idx = (idx + 1) % total;
+      attempts++;
+    }
+
+    if (!usedIndices.has(idx)) {
+      usedIndices.add(idx);
+      indices.push(idx);
+    }
+    step += 13; // Another prime to avoid patterns
+  }
+
+  return indices;
+}
 
 // GET /api/wordle/daily
 export async function getDailyWordle(req: Request, res: Response, next: NextFunction) {
@@ -212,35 +243,16 @@ export async function getDailyWordle(req: Request, res: Response, next: NextFunc
 
     const total = uniquePlayers.length;
 
-    // Get daily seed index
-    const baseIdx = getDailyIndex(total);
-
-    // Pick multiple players using daily seed + prime step, ensuring no duplicates
-    const dailyPlayers: any[] = [];
-    const usedIndices = new Set<number>();
-    let step = 1;
-    
-    for (let i = 0; i < Math.min(PLAYERS_PER_DAY, total); i++) {
-      let idx = (baseIdx + i * 37 + step) % total;
-      
-      // Find next unused index
-      let attempts = 0;
-      while (usedIndices.has(idx) && attempts < total) {
-        idx = (idx + 1) % total;
-        attempts++;
-      }
-      
-      if (!usedIndices.has(idx)) {
-        usedIndices.add(idx);
-        const player = uniquePlayers[idx];
-        dailyPlayers.push({
-          id: player._id.toString(),
-          name: player.name,
-          clues: buildClues(player),
-        });
-      }
-      step += 13; // Another prime to avoid patterns
-    }
+    // Pick multiple players using shared daily-index helper
+    const dailyIndices = getDailyPlayerIndices(total, PLAYERS_PER_DAY);
+    const dailyPlayers: any[] = dailyIndices.map(idx => {
+      const player = uniquePlayers[idx];
+      return {
+        id: player._id.toString(),
+        name: player.name,
+        clues: buildClues(player),
+      };
+    });
 
     const playerNames = [...new Set(uniquePlayers.map((p) => p.name))];
 
@@ -282,9 +294,8 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
       rawTarget = uniquePlayers.find(p => p._id.toString() === playerId);
     }
     if (!rawTarget) {
-      // Fall back to first player in daily pool
-      const baseIdx = getDailyIndex(total);
-      rawTarget = uniquePlayers[baseIdx % total];
+      // Fall back to first player in today's daily pool — must match getDailyWordle
+      rawTarget = uniquePlayers[getDailyPlayerIndices(total, PLAYERS_PER_DAY)[0]];
     }
     const target = enrichPlayer(rawTarget);
 

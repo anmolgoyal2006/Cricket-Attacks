@@ -209,7 +209,7 @@ export default function HomePage() {
                           <div className="text-2xl font-display font-bold text-white mb-1">
                             {battle.playerScore}-{battle.computerScore}
                           </div>
-                          {battle.trophiesEarned > 0 && (
+                          {battle.trophiesEarned > 0 && battle.type === 'pvp' && (
                             <div className="flex items-center space-x-2 text-amber-400">
                               <Trophy className="w-4 h-4" />
                               <span className="text-sm font-body">+{battle.trophiesEarned}</span>

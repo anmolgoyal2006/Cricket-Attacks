@@ -9,6 +9,7 @@ import {
 import { wordleApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 const MAX_GUESSES = 5;
 
@@ -103,6 +104,7 @@ function MaskedImage({
 }
 
 export default function FaceRevealPage() {
+  const { refreshUser } = useAuth();
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [phase, setPhase]           = useState<'select' | 'play' | 'done'>('select');
   const [imageUrl, setImageUrl]     = useState('');
@@ -177,11 +179,12 @@ export default function FaceRevealPage() {
 
       if (result.isCorrect) {
         setWon(true); setGameOver(true);
-        setScore(result.pointsEarned);
-        setTotalScore(t => t + result.pointsEarned);
+        setScore(result.coinsEarned);
+        setTotalScore(t => t + result.coinsEarned);
         setGamesPlayed(g => g + 1);
         setRevealImage(true);
         if (result.answer) setAnswer(result.answer);
+        refreshUser();
         setPhase('done');
       } else if (guessNum >= MAX_GUESSES || result.answer) {
         setGameOver(true); setRevealImage(true);
@@ -202,7 +205,7 @@ export default function FaceRevealPage() {
   const handleShare = async () => {
     const cfg = DIFFICULTIES[difficulty];
     const lines = guesses.map((_, i) => i === guesses.length - 1 && won ? '🟩' : '🟥').join('');
-    const text = `👁️ Cricket Face Reveal — ${cfg.label}\n${won ? `✅ Got it in ${guesses.length}/${MAX_GUESSES}` : `❌ X/${MAX_GUESSES}`}\n${lines}\n\nScore: ${score} pts\ncricketclash.app/face-reveal`;
+    const text = `👁️ Cricket Face Reveal — ${cfg.label}\n${won ? `✅ Got it in ${guesses.length}/${MAX_GUESSES}` : `❌ X/${MAX_GUESSES}`}\n${lines}\n\nCoins: ${score} 🪙\ncricketclash.app/face-reveal`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true); setTimeout(() => setCopied(false), 2500);
@@ -226,7 +229,7 @@ export default function FaceRevealPage() {
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mt-2">
                 <Star className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs text-amber-400 font-body font-semibold">
-                  {gamesPlayed} game{gamesPlayed > 1 ? 's' : ''} played · {totalScore} pts total
+                  {gamesPlayed} game{gamesPlayed > 1 ? 's' : ''} played · {totalScore} coins total
                 </span>
               </div>
             )}
@@ -273,7 +276,7 @@ export default function FaceRevealPage() {
                   ))}
                 </div>
 
-                <p className="text-white font-display font-bold text-sm mb-0.5">{d.points} pts</p>
+                <p className="text-white font-display font-bold text-sm mb-0.5">{d.points} coins</p>
                 <p className="text-xs text-gray-400 font-body">{d.description}</p>
               </motion.button>
             ))}
@@ -334,7 +337,7 @@ export default function FaceRevealPage() {
             {won && score > 0 && (
               <div className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 mt-3 mb-1">
                 <Star className="w-4 h-4 text-amber-400" />
-                <span className="text-amber-400 font-display font-bold">+{score} points</span>
+                <span className="text-amber-400 font-display font-bold">+{score} 🪙 coins</span>
               </div>
             )}
 
@@ -392,7 +395,7 @@ export default function FaceRevealPage() {
 
             {gamesPlayed > 1 && (
               <p className="mt-4 text-xs text-gray-500 font-body">
-                Session: {gamesPlayed} games · {totalScore} pts total
+                Session: {gamesPlayed} games · {totalScore} 🪙 coins total
               </p>
             )}
           </motion.div>
@@ -419,7 +422,7 @@ export default function FaceRevealPage() {
             )}>
               {cfg.emoji} {cfg.label}
             </span>
-            <span className="text-xs text-gray-500 font-body">{cfg.description} · {cfg.points} pts</span>
+            <span className="text-xs text-gray-500 font-body">{cfg.description} · {cfg.points} coins</span>
           </div>
         </div>
 
@@ -546,7 +549,7 @@ export default function FaceRevealPage() {
               </button>
             </div>
             <p className="mt-2 text-xs text-gray-500 font-body text-center">
-              Correct now = <span className="text-amber-400 font-semibold">{cfg.points} pts</span>
+              Correct now = <span className="text-amber-400 font-semibold">{cfg.points} 🪙 coins</span>
             </p>
           </div>
         )}

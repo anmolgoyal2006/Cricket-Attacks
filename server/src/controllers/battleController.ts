@@ -186,6 +186,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
 
         result.trophiesEarned = rewards.trophies;
         result.xpEarned = rewards.xp;
+        (result as any).coinsEarned = rewards.coins;
       }
     }
 
@@ -193,10 +194,7 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
 
     res.json({
       ...result,
-      playerCard: {
-        ...result.playerCard,
-        // We don't need to modify it here, frontend will track userCardId
-      }
+      coinsEarned: isOver ? rewards?.coins : 0,
     });
   } catch (error) {
     next(error);

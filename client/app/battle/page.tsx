@@ -79,6 +79,7 @@ export default function BattlePage() {
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
   const [gameWinner, setGameWinner] = useState<string | null>(null);
   const [trophiesEarned, setTrophiesEarned] = useState(0);
+  const [coinsEarned, setCoinsEarned] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
@@ -93,13 +94,7 @@ export default function BattlePage() {
         const total = first.pagination?.total || first.cards?.length || 0;
 
         if (total <= 100) {
-          const seen = new Set<string>();
-          setAvailableCards((first.cards || []).filter((c: any) => {
-            const key = c._id;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }));
+          setAvailableCards(first.cards || []);
         } else {
           // Fetch remaining pages in parallel
           const totalPages = Math.ceil(total / 100);
@@ -111,14 +106,7 @@ export default function BattlePage() {
             ...(first.cards || []),
             ...rest.flatMap(r => r.cards || []),
           ];
-          // Deduplicate by player _id
-          const seen = new Set<string>();
-          setAvailableCards(allCards.filter((c: any) => {
-            const key = c._id;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }));
+          setAvailableCards(allCards);
         }
       } catch {
         setAvailableCards([]);
@@ -220,6 +208,7 @@ export default function BattlePage() {
           setTimeout(() => {
             setGameWinner(data.battleResult || 'tie');
             setTrophiesEarned(data.trophiesEarned);
+            setCoinsEarned(data.coinsEarned ?? 0);
             setXpEarned(data.xpEarned);
             setGamePhase('result');
           }, 1500);
@@ -264,6 +253,7 @@ export default function BattlePage() {
     setRoundHistory([]);
     setGameWinner(null);
     setTrophiesEarned(0);
+    setCoinsEarned(0);
     setXpEarned(0);
   };
 
@@ -797,6 +787,12 @@ export default function BattlePage() {
                 <div className="mt-6 flex items-center justify-center space-x-2">
                   <Trophy className="w-6 h-6 text-amber-400" />
                   <span className="text-2xl font-display font-bold text-amber-400">+{trophiesEarned} Trophies</span>
+                </div>
+              )}
+              {coinsEarned > 0 && (
+                <div className="mt-2 flex items-center justify-center space-x-2">
+                  <span className="text-2xl">🪙</span>
+                  <span className="text-2xl font-display font-bold text-amber-400">+{coinsEarned} Coins</span>
                 </div>
               )}
               {xpEarned > 0 && (

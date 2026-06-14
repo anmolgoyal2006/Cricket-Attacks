@@ -598,7 +598,7 @@ const playersData = [
     iplTeam: "N/A",
     debutYear: 2015,
     age: 29,
-    image: "",
+
     formats: {
       odi:      { matches: 138, runs: 6700,  avg: 56.78, sr: 88.14, hundreds: 22, fifties: 37, wickets: 0, economy: 0, bestScore: "158" },
       test:     { matches: 57,  runs: 4108,  avg: 47.21, sr: 53.12, hundreds: 10, fifties: 27, wickets: 0, economy: 0, bestScore: "196" },
@@ -617,7 +617,7 @@ const playersData = [
     iplTeam: "N/A",
     debutYear: 2018,
     age: 24,
-    image: "",
+
     formats: {
       odi:      { matches: 73,  runs: 248,  avg: 13.78, sr: 71.26, hundreds: 0,  fifties: 0, wickets: 134, economy: 5.28, bestScore: "23" },
       test:     { matches: 37,  runs: 356,  avg: 13.69, sr: 52.12, hundreds: 0,  fifties: 0, wickets: 142, economy: 3.08, bestScore: "51" },
@@ -636,7 +636,7 @@ const playersData = [
     iplTeam: "N/A",
     debutYear: 2015,
     age: 31,
-    image: "",
+
     formats: {
       odi:      { matches: 78,  runs: 2864, avg: 47.77, sr: 82.44, hundreds: 7,  fifties: 15, wickets: 0, economy: 0, bestScore: "131*" },
       test:     { matches: 45,  runs: 2850, avg: 46.72, sr: 50.76, hundreds: 7,  fifties: 14, wickets: 0, economy: 0, bestScore: "115*" },
@@ -655,7 +655,7 @@ const playersData = [
     iplTeam: "RR",
     debutYear: 2010,
     age: 35,
-    image: "",
+
     formats: {
       odi:      { matches: 157, runs: 5133, avg: 43.38, sr: 87.04, hundreds: 12, fifties: 29, wickets: 29, economy: 5.24, bestScore: "164" },
       test:     { matches: 112, runs: 9864, avg: 57.91, sr: 55.22, hundreds: 34, fifties: 40, wickets: 17, economy: 3.07, bestScore: "239" },
@@ -669,7 +669,7 @@ const playersData = [
     name: "Pat Cummins", role: "Bowler", country: "Australia",
     batting: 44, bowling: 95, fielding: 86, captaincy: 89, pressure: 91, overall: 90,
     specialty: "Captain Pace Ace", rarity: "Epic",
-    image: "",
+
     formats: {
       odi:      { matches: 97,  runs: 598,  avg: 17.59, sr: 85.10, hundreds: 0,  fifties: 1, wickets: 187, economy: 5.08, bestScore: "63" },
       test:     { matches: 71,  runs: 1136, avg: 19.59, sr: 55.16, hundreds: 0,  fifties: 3, wickets: 325, economy: 2.84, bestScore: "72" },
@@ -683,7 +683,7 @@ const playersData = [
     name: "Mitchell Starc", role: "Bowler", country: "Australia",
     batting: 38, bowling: 92, fielding: 80, captaincy: 60, pressure: 84, overall: 83,
     specialty: "Left-arm Thunder", rarity: "Rare",
-    image: "",
+
     formats: {
       odi:      { matches: 120, runs: 713,  avg: 14.85, sr: 87.68, hundreds: 0,  fifties: 1, wickets: 256, economy: 5.22, bestScore: "52" },
       test:     { matches: 91,  runs: 1901, avg: 18.46, sr: 65.02, hundreds: 0,  fifties: 6, wickets: 375, economy: 3.18, bestScore: "99" },
@@ -697,7 +697,7 @@ const playersData = [
     name: "David Warner", role: "Batsman", country: "Australia",
     batting: 90, bowling: 14, fielding: 83, captaincy: 70, pressure: 82, overall: 82,
     specialty: "Explosive Opener", rarity: "Rare",
-    image: "",
+
     formats: {
       odi:      { matches: 161, runs: 6932, avg: 45.30, sr: 97.26, hundreds: 22, fifties: 33, wickets: 0, economy: 0, bestScore: "179" },
       test:     { matches: 112, runs: 8786, avg: 44.59, sr: 70.19, hundreds: 26, fifties: 37, wickets: 1, economy: 4.50, bestScore: "335*" },
@@ -711,7 +711,7 @@ const playersData = [
     name: "Joe Root", role: "Batsman", country: "England",
     batting: 93, bowling: 36, fielding: 85, captaincy: 82, pressure: 86, overall: 89,
     specialty: "Modern Great", rarity: "Epic",
-    image: "",
+
     formats: {
       odi:      { matches: 171, runs: 6738, avg: 47.48, sr: 86.73, hundreds: 17, fifties: 39, wickets: 28, economy: 5.38, bestScore: "133*" },
       test:     { matches: 147, runs: 13610,avg: 51.36, sr: 53.28, hundreds: 37, fifties: 65, wickets: 5,  economy: 3.20, bestScore: "254*" },
@@ -725,7 +725,7 @@ const playersData = [
     name: "Ben Stokes", role: "All-rounder", country: "England",
     batting: 86, bowling: 82, fielding: 90, captaincy: 88, pressure: 94, overall: 89,
     specialty: "Match Winner", rarity: "Legend",
-    image: "",
+
     formats: {
       odi:      { matches: 113, runs: 3017, avg: 38.94, sr: 93.20, hundreds: 3,  fifties: 21, wickets: 74, economy: 5.91, bestScore: "102*" },
       test:     { matches: 107, runs: 6549, avg: 35.82, sr: 58.12, hundreds: 14, fifties: 30, wickets: 203, economy: 3.14, bestScore: "258" },
@@ -739,7 +739,7 @@ const playersData = [
     name: "Kane Williamson", role: "Batsman", country: "New Zealand",
     batting: 91, bowling: 30, fielding: 88, captaincy: 93, pressure: 90, overall: 88,
     specialty: "Captain Composed", rarity: "Legend",
-    image: "",
+
     formats: {
       odi:      { matches: 163, runs: 6554, avg: 47.49, sr: 82.10, hundreds: 14, fifties: 43, wickets: 37, economy: 5.03, bestScore: "148" },
       test:     { matches: 101, runs: 9013, avg: 54.28, sr: 51.31, hundreds: 33, fifties: 36, wickets: 2,  economy: 3.91, bestScore: "251" },
@@ -753,7 +753,7 @@ const playersData = [
     name: "Trent Boult", role: "Bowler", country: "New Zealand",
     batting: 30, bowling: 90, fielding: 78, captaincy: 56, pressure: 82, overall: 80,
     specialty: "Left-arm Swing King", rarity: "Rare",
-    image: "",
+
     formats: {
       odi:      { matches: 117, runs: 412,  avg: 11.77, sr: 73.62, hundreds: 0,  fifties: 0, wickets: 199, economy: 5.13, bestScore: "32" },
       test:     { matches: 78,  runs: 1114, avg: 15.97, sr: 53.41, hundreds: 0,  fifties: 3, wickets: 317, economy: 2.85, bestScore: "52*" },
@@ -767,7 +767,7 @@ const playersData = [
     name: "Kagiso Rabada", role: "Bowler", country: "South Africa",
     batting: 36, bowling: 94, fielding: 83, captaincy: 65, pressure: 87, overall: 87,
     specialty: "Express Pace", rarity: "Epic",
-    image: "",
+
     formats: {
       odi:      { matches: 107, runs: 492,  avg: 14.47, sr: 73.43, hundreds: 0,  fifties: 0, wickets: 168, economy: 4.93, bestScore: "31" },
       test:     { matches: 73,  runs: 1241, avg: 17.48, sr: 55.81, hundreds: 0,  fifties: 3, wickets: 340, economy: 3.22, bestScore: "56" },
@@ -781,7 +781,7 @@ const playersData = [
     name: "AB de Villiers", role: "Batsman", country: "South Africa",
     batting: 96, bowling: 24, fielding: 96, captaincy: 78, pressure: 90, overall: 92,
     specialty: "Mr. 360", rarity: "Legend",
-    image: "",
+
     formats: {
       odi:      { matches: 228, runs: 9577, avg: 53.50, sr: 101.09,hundreds: 25, fifties: 53, wickets: 0, economy: 0, bestScore: "176" },
       test:     { matches: 114, runs: 8765, avg: 50.66, sr: 60.29, hundreds: 22, fifties: 46, wickets: 0, economy: 0, bestScore: "278*" },
@@ -795,7 +795,7 @@ const playersData = [
     name: "Quinton de Kock", role: "Wicketkeeper-Batsman", country: "South Africa",
     batting: 88, bowling: 10, fielding: 93, captaincy: 66, pressure: 80, overall: 82,
     specialty: "Explosive Wicketkeeper", rarity: "Rare",
-    image: "",
+
     formats: {
       odi:      { matches: 158, runs: 6770, avg: 44.55, sr: 96.28, hundreds: 19, fifties: 38, wickets: 0, economy: 0, bestScore: "178" },
       test:     { matches: 54,  runs: 3300, avg: 38.82, sr: 62.09, hundreds: 6,  fifties: 22, wickets: 0, economy: 0, bestScore: "141*" },
@@ -809,7 +809,7 @@ const playersData = [
     name: "Rashid Khan", role: "Bowler", country: "Afghanistan",
     batting: 55, bowling: 93, fielding: 85, captaincy: 70, pressure: 88, overall: 86,
     specialty: "Spin Wizard", rarity: "Rare",
-    image: "",
+
     formats: {
       odi:      { matches: 107, runs: 1168, avg: 17.39, sr: 96.78, hundreds: 0,  fifties: 2, wickets: 191, economy: 4.25, bestScore: "60*" },
       test:     { matches: 10,  runs: 214,  avg: 26.75, sr: 79.26, hundreds: 0,  fifties: 1, wickets: 50,  economy: 3.28, bestScore: "51" },
@@ -823,7 +823,7 @@ const playersData = [
     name: "MS Dhoni", role: "Wicketkeeper-Batsman", country: "India",
     batting: 90, bowling: 10, fielding: 96, captaincy: 98, pressure: 96, overall: 92,
     specialty: "Captain Cool", rarity: "Legend",
-    image: "",
+
     formats: {
       odi:      { matches: 350, runs: 10773, avg: 50.58, sr: 87.56, hundreds: 10, fifties: 73, wickets: 1, economy: 5.23, bestScore: "183*" },
       test:     { matches: 90,  runs: 4876,  avg: 38.09, sr: 58.23, hundreds: 6,  fifties: 33, wickets: 0, economy: 0,    bestScore: "224" },
@@ -837,7 +837,7 @@ const playersData = [
     name: "Sachin Tendulkar", role: "Batsman", country: "India",
     batting: 99, bowling: 30, fielding: 88, captaincy: 78, pressure: 96, overall: 96,
     specialty: "God of Cricket", rarity: "Legend",
-    image: "",
+
     formats: {
       odi:      { matches: 463, runs: 18426, avg: 44.83, sr: 86.23, hundreds: 49, fifties: 96, wickets: 154, economy: 5.09, bestScore: "200*" },
       test:     { matches: 200, runs: 15921, avg: 53.79, sr: 54.04, hundreds: 51, fifties: 68, wickets: 46,  economy: 3.29, bestScore: "248*" },
@@ -852,7 +852,7 @@ const playersData = [
     batting: 93, bowling: 42, fielding: 72, captaincy: 68, pressure: 85, overall: 86,
     specialty: "Universe Boss", rarity: "Legend",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "RCB", debutYear: 1999, age: 44,
-    image: "",
+
     formats: {
       odi:      { matches: 301, runs: 10480, avg: 37.13, sr: 86.80, hundreds: 25, fifties: 54, wickets: 167, economy: 4.68, bestScore: "215" },
       test:     { matches: 103, runs: 7214,  avg: 42.18, sr: 60.21, hundreds: 15, fifties: 37, wickets: 73,  economy: 3.44, bestScore: "333" },
@@ -867,7 +867,7 @@ const playersData = [
     batting: 98, bowling: 10, fielding: 86, captaincy: 72, pressure: 92, overall: 95,
     specialty: "Prince of Port of Spain", rarity: "Legend",
     battingHand: "Left-handed", bowlingStyle: "Leg Spin", iplTeam: "N/A", debutYear: 1990, age: 55,
-    image: "",
+
     formats: {
       odi:      { matches: 299, runs: 10405, avg: 40.48, sr: 79.47, hundreds: 19, fifties: 63, wickets: 4,  economy: 5.84, bestScore: "169" },
       test:     { matches: 131, runs: 11953, avg: 52.89, sr: 52.28, hundreds: 34, fifties: 48, wickets: 0,  economy: 0,    bestScore: "400*" },
@@ -882,7 +882,7 @@ const playersData = [
     batting: 97, bowling: 44, fielding: 90, captaincy: 88, pressure: 96, overall: 96,
     specialty: "Master Blaster", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 1974, age: 72,
-    image: "",
+
     formats: {
       odi:      { matches: 187, runs: 6721, avg: 47.00, sr: 90.20, hundreds: 11, fifties: 45, wickets: 118, economy: 4.98, bestScore: "189*" },
       test:     { matches: 121, runs: 8540, avg: 50.24, sr: 70.30, hundreds: 24, fifties: 45, wickets: 32,  economy: 3.67, bestScore: "291" },
@@ -897,7 +897,7 @@ const playersData = [
     batting: 83, bowling: 76, fielding: 87, captaincy: 72, pressure: 82, overall: 78,
     specialty: "T20 Destroyer", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "MI", debutYear: 2007, age: 36,
-    image: "",
+
     formats: {
       odi:      { matches: 101, runs: 2706, avg: 34.69, sr: 89.60, hundreds: 2,  fifties: 17, wickets: 58,  economy: 5.55, bestScore: "119*" },
       test:     { matches: 2,   runs: 45,   avg: 11.25, sr: 46.39, hundreds: 0,  fifties: 0,  wickets: 0,  economy: 0,    bestScore: "26" },
@@ -912,7 +912,7 @@ const playersData = [
     batting: 84, bowling: 10, fielding: 86, captaincy: 70, pressure: 76, overall: 74,
     specialty: "Six Machine", rarity: "Epic",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "LSG", debutYear: 2018, age: 28,
-    image: "",
+
     formats: {
       odi:      { matches: 78,  runs: 1819, avg: 30.32, sr: 101.62,hundreds: 2,  fifties: 11, wickets: 0,  economy: 0,    bestScore: "118" },
       test:     { matches: 10,  runs: 452,  avg: 29.47, sr: 53.09, hundreds: 1,  fifties: 1,  wickets: 0,  economy: 0,    bestScore: "103" },
@@ -927,7 +927,7 @@ const playersData = [
     batting: 96, bowling: 10, fielding: 94, captaincy: 85, pressure: 92, overall: 93,
     specialty: "Elegant Run Machine", rarity: "Legend",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 2000, age: 46,
-    image: "",
+
     formats: {
       odi:      { matches: 404, runs: 14234, avg: 41.99, sr: 78.86, hundreds: 25, fifties: 93, wickets: 0,  economy: 0,    bestScore: "169" },
       test:     { matches: 134, runs: 12400, avg: 57.41, sr: 54.02, hundreds: 38, fifties: 52, wickets: 0,  economy: 0,    bestScore: "319" },
@@ -942,7 +942,7 @@ const playersData = [
     batting: 94, bowling: 18, fielding: 90, captaincy: 90, pressure: 88, overall: 91,
     specialty: "Elegant Captain", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 1997, age: 46,
-    image: "",
+
     formats: {
       odi:      { matches: 448, runs: 12650, avg: 33.38, sr: 78.96, hundreds: 19, fifties: 77, wickets: 4,  economy: 5.38, bestScore: "120*" },
       test:     { matches: 149, runs: 11814, avg: 49.84, sr: 52.41, hundreds: 34, fifties: 50, wickets: 1,  economy: 5.27, bestScore: "374" },
@@ -957,7 +957,7 @@ const playersData = [
     batting: 22, bowling: 99, fielding: 72, captaincy: 50, pressure: 88, overall: 92,
     specialty: "800 Club", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 1992, age: 52,
-    image: "",
+
     formats: {
       odi:      { matches: 350, runs: 674,  avg: 7.64,  sr: 53.43, hundreds: 0,  fifties: 0,  wickets: 534, economy: 3.93, bestScore: "33*" },
       test:     { matches: 133, runs: 1261, avg: 11.68, sr: 44.06, hundreds: 0,  fifties: 0,  wickets: 800, economy: 2.47, bestScore: "67" },
@@ -972,7 +972,7 @@ const playersData = [
     batting: 20, bowling: 92, fielding: 68, captaincy: 48, pressure: 86, overall: 83,
     specialty: "Slingy Yorker Master", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Fast", iplTeam: "MI", debutYear: 2004, age: 40,
-    image: "",
+
     formats: {
       odi:      { matches: 226, runs: 401,  avg: 7.34,  sr: 60.94, hundreds: 0,  fifties: 0,  wickets: 338, economy: 5.12, bestScore: "27" },
       test:     { matches: 30,  runs: 272,  avg: 9.40,  sr: 55.51, hundreds: 0,  fifties: 0,  wickets: 101, economy: 3.24, bestScore: "64*" },
@@ -987,7 +987,7 @@ const playersData = [
     batting: 62, bowling: 87, fielding: 76, captaincy: 54, pressure: 78, overall: 76,
     specialty: "Leg-spin All-rounder", rarity: "Rare",
     battingHand: "Right-handed", bowlingStyle: "Leg Spin", iplTeam: "RCB", debutYear: 2019, age: 26,
-    image: "",
+
     formats: {
       odi:      { matches: 62,  runs: 640,  avg: 18.82, sr: 87.32, hundreds: 0,  fifties: 4,  wickets: 83,  economy: 5.22, bestScore: "49*" },
       test:     { matches: 16,  runs: 492,  avg: 22.36, sr: 58.50, hundreds: 0,  fifties: 4,  wickets: 45,  economy: 3.38, bestScore: "91" },
@@ -1002,7 +1002,7 @@ const playersData = [
     batting: 82, bowling: 86, fielding: 80, captaincy: 78, pressure: 82, overall: 82,
     specialty: "World's Best All-rounder", rarity: "Epic",
     battingHand: "Left-handed", bowlingStyle: "Left-arm Spin", iplTeam: "KKR", debutYear: 2006, age: 37,
-    image: "",
+
     formats: {
       odi:      { matches: 246, runs: 7610, avg: 37.68, sr: 82.13, hundreds: 9,  fifties: 54, wickets: 317, economy: 4.70, bestScore: "134*" },
       test:     { matches: 70,  runs: 4608, avg: 38.72, sr: 53.28, hundreds: 8,  fifties: 33, wickets: 246, economy: 2.86, bestScore: "217" },
@@ -1017,7 +1017,7 @@ const playersData = [
     batting: 82, bowling: 10, fielding: 86, captaincy: 72, pressure: 74, overall: 72,
     specialty: "Bangladesh Wall", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 2005, age: 36,
-    image: "",
+
     formats: {
       odi:      { matches: 280, runs: 7823, avg: 36.00, sr: 77.83, hundreds: 10, fifties: 48, wickets: 0,  economy: 0,    bestScore: "144*" },
       test:     { matches: 92,  runs: 5765, avg: 38.44, sr: 48.52, hundreds: 11, fifties: 32, wickets: 0,  economy: 0,    bestScore: "223*" },
@@ -1032,7 +1032,7 @@ const playersData = [
     batting: 44, bowling: 98, fielding: 82, captaincy: 80, pressure: 92, overall: 94,
     specialty: "Sultan of Swing", rarity: "Legend",
     battingHand: "Left-handed", bowlingStyle: "Left-arm Fast", iplTeam: "N/A", debutYear: 1984, age: 57,
-    image: "",
+
     formats: {
       odi:      { matches: 356, runs: 3717, avg: 16.52, sr: 85.34, hundreds: 3,  fifties: 6,  wickets: 502, economy: 3.89, bestScore: "86" },
       test:     { matches: 104, runs: 2898, avg: 22.65, sr: 54.62, hundreds: 3,  fifties: 7,  wickets: 414, economy: 2.77, bestScore: "257*" },
@@ -1047,7 +1047,7 @@ const playersData = [
     batting: 82, bowling: 94, fielding: 78, captaincy: 96, pressure: 92, overall: 91,
     specialty: "Lion of Lahore", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Fast", iplTeam: "N/A", debutYear: 1971, age: 71,
-    image: "",
+
     formats: {
       odi:      { matches: 175, runs: 3709, avg: 33.41, sr: 72.62, hundreds: 1,  fifties: 19, wickets: 182, economy: 3.89, bestScore: "102*" },
       test:     { matches: 88,  runs: 3807, avg: 37.69, sr: 49.19, hundreds: 6,  fifties: 18, wickets: 362, economy: 2.54, bestScore: "136" },
@@ -1062,7 +1062,7 @@ const playersData = [
     batting: 84, bowling: 10, fielding: 78, captaincy: 48, pressure: 70, overall: 70,
     specialty: "Left-hand Explosive Opener", rarity: "Rare",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 2017, age: 34,
-    image: "",
+
     formats: {
       odi:      { matches: 101, runs: 4038, avg: 43.89, sr: 91.84, hundreds: 10, fifties: 24, wickets: 0,  economy: 0,    bestScore: "210*" },
       test:     { matches: 5,   runs: 248,  avg: 31.00, sr: 52.54, hundreds: 0,  fifties: 2,  wickets: 0,  economy: 0,    bestScore: "94" },
@@ -1077,7 +1077,7 @@ const playersData = [
     batting: 88, bowling: 72, fielding: 86, captaincy: 60, pressure: 80, overall: 80,
     specialty: "Big Show", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "RCB", debutYear: 2012, age: 35,
-    image: "",
+
     formats: {
       odi:      { matches: 148, runs: 4232, avg: 34.13, sr: 122.49,hundreds: 5,  fifties: 24, wickets: 77,  economy: 5.38, bestScore: "201*" },
       test:     { matches: 7,   runs: 339,  avg: 28.25, sr: 70.77, hundreds: 1,  fifties: 0,  wickets: 3,   economy: 3.38, bestScore: "104" },
@@ -1092,7 +1092,7 @@ const playersData = [
     batting: 92, bowling: 10, fielding: 96, captaincy: 72, pressure: 90, overall: 91,
     specialty: "Explosive Keeper", rarity: "Legend",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 1996, age: 52,
-    image: "",
+
     formats: {
       odi:      { matches: 287, runs: 9619, avg: 35.89, sr: 96.94, hundreds: 16, fifties: 55, wickets: 0,  economy: 0,    bestScore: "172" },
       test:     { matches: 96,  runs: 5570, avg: 47.61, sr: 81.95, hundreds: 17, fifties: 26, wickets: 0,  economy: 0,    bestScore: "204*" },
@@ -1107,7 +1107,7 @@ const playersData = [
     batting: 96, bowling: 20, fielding: 95, captaincy: 94, pressure: 93, overall: 94,
     specialty: "Punter", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "N/A", debutYear: 1995, age: 49,
-    image: "",
+
     formats: {
       odi:      { matches: 375, runs: 13704, avg: 42.04, sr: 80.39, hundreds: 30, fifties: 82, wickets: 3,  economy: 5.64, bestScore: "164" },
       test:     { matches: 168, runs: 13378, avg: 51.86, sr: 57.64, hundreds: 41, fifties: 62, wickets: 5,  economy: 4.35, bestScore: "257" },
@@ -1122,7 +1122,7 @@ const playersData = [
     batting: 20, bowling: 90, fielding: 80, captaincy: 52, pressure: 82, overall: 82,
     specialty: "Precision Pacer", rarity: "Rare",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "RCB", debutYear: 2014, age: 33,
-    image: "",
+
     formats: {
       odi:      { matches: 107, runs: 280,  avg: 7.00,  sr: 58.33, hundreds: 0,  fifties: 0,  wickets: 162, economy: 5.08, bestScore: "34" },
       test:     { matches: 76,  runs: 601,  avg: 10.19, sr: 44.17, hundreds: 0,  fifties: 0,  wickets: 309, economy: 2.68, bestScore: "36*" },
@@ -1137,7 +1137,7 @@ const playersData = [
     batting: 86, bowling: 22, fielding: 82, captaincy: 56, pressure: 78, overall: 76,
     specialty: "Aggressive Opener", rarity: "Rare",
     battingHand: "Left-handed", bowlingStyle: "Off Spin", iplTeam: "SRH", debutYear: 2016, age: 30,
-    image: "",
+
     formats: {
       odi:      { matches: 70,  runs: 2503, avg: 40.37, sr: 107.08,hundreds: 6,  fifties: 16, wickets: 12, economy: 5.68, bestScore: "140" },
       test:     { matches: 54,  runs: 3742, avg: 41.57, sr: 70.46, hundreds: 10, fifties: 16, wickets: 3,  economy: 3.74, bestScore: "163" },
@@ -1152,7 +1152,7 @@ const playersData = [
     batting: 90, bowling: 10, fielding: 92, captaincy: 76, pressure: 84, overall: 86,
     specialty: "T20 Maverick", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "RR", debutYear: 2011, age: 34,
-    image: "",
+
     formats: {
       odi:      { matches: 183, runs: 5463, avg: 41.85, sr: 107.77,hundreds: 12, fifties: 26, wickets: 0,  economy: 0,    bestScore: "162*" },
       test:     { matches: 57,  runs: 2590, avg: 32.38, sr: 62.06, hundreds: 4,  fifties: 14, wickets: 0,  economy: 0,    bestScore: "152*" },
@@ -1167,7 +1167,7 @@ const playersData = [
     batting: 24, bowling: 94, fielding: 74, captaincy: 42, pressure: 86, overall: 86,
     specialty: "Swing King", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "N/A", debutYear: 2003, age: 41,
-    image: "",
+
     formats: {
       odi:      { matches: 194, runs: 273,  avg: 5.57,  sr: 46.43, hundreds: 0,  fifties: 0,  wickets: 269, economy: 4.87, bestScore: "28" },
       test:     { matches: 188, runs: 1276, avg: 8.80,  sr: 33.74, hundreds: 0,  fifties: 0,  wickets: 700, economy: 2.85, bestScore: "81" },
@@ -1182,7 +1182,7 @@ const playersData = [
     batting: 34, bowling: 90, fielding: 72, captaincy: 46, pressure: 82, overall: 82,
     specialty: "Reverse Swing Ace", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "N/A", debutYear: 2006, age: 37,
-    image: "",
+
     formats: {
       odi:      { matches: 121, runs: 693,  avg: 11.55, sr: 80.77, hundreds: 0,  fifties: 1,  wickets: 178, economy: 5.05, bestScore: "45" },
       test:     { matches: 167, runs: 3662, avg: 18.47, sr: 47.42, hundreds: 0,  fifties: 13, wickets: 604, economy: 3.04, bestScore: "169" },
@@ -1197,7 +1197,7 @@ const playersData = [
     batting: 87, bowling: 10, fielding: 88, captaincy: 90, pressure: 88, overall: 86,
     specialty: "Fearless Captain", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "KKR", debutYear: 2002, age: 42,
-    image: "",
+
     formats: {
       odi:      { matches: 260, runs: 6083, avg: 26.44, sr: 96.65, hundreds: 5,  fifties: 35, wickets: 0,  economy: 0,    bestScore: "166" },
       test:     { matches: 101, runs: 6453, avg: 38.64, sr: 65.31, hundreds: 12, fifties: 31, wickets: 0,  economy: 0,    bestScore: "302" },
@@ -1212,7 +1212,7 @@ const playersData = [
     batting: 34, bowling: 87, fielding: 76, captaincy: 62, pressure: 80, overall: 78,
     specialty: "Seam and Swing", rarity: "Rare",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "N/A", debutYear: 2007, age: 35,
-    image: "",
+
     formats: {
       odi:      { matches: 161, runs: 708,  avg: 9.83,  sr: 87.47, hundreds: 0,  fifties: 0,  wickets: 237, economy: 5.22, bestScore: "77*" },
       test:     { matches: 107, runs: 1534, avg: 13.88, sr: 58.16, hundreds: 0,  fifties: 3,  wickets: 390, economy: 3.24, bestScore: "77*" },
@@ -1227,7 +1227,7 @@ const playersData = [
     batting: 28, bowling: 97, fielding: 80, captaincy: 52, pressure: 90, overall: 90,
     specialty: "Greatest Fast Bowler of Era", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Fast", iplTeam: "N/A", debutYear: 2004, age: 41,
-    image: "",
+
     formats: {
       odi:      { matches: 125, runs: 396,  avg: 7.06,  sr: 64.18, hundreds: 0,  fifties: 0,  wickets: 196, economy: 4.83, bestScore: "27" },
       test:     { matches: 93,  runs: 1251, avg: 13.10, sr: 50.65, hundreds: 0,  fifties: 1,  wickets: 439, economy: 3.06, bestScore: "76" },
@@ -1242,7 +1242,7 @@ const playersData = [
     batting: 92, bowling: 10, fielding: 84, captaincy: 72, pressure: 86, overall: 86,
     specialty: "Picture-perfect Technique", rarity: "Epic",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 2004, age: 41,
-    image: "",
+
     formats: {
       odi:      { matches: 181, runs: 8113, avg: 49.16, sr: 88.39, hundreds: 27, fifties: 39, wickets: 0,  economy: 0,    bestScore: "159*" },
       test:     { matches: 124, runs: 9282, avg: 46.64, sr: 50.96, hundreds: 28, fifties: 41, wickets: 0,  economy: 0,    bestScore: "311*" },
@@ -1257,7 +1257,7 @@ const playersData = [
     batting: 86, bowling: 10, fielding: 84, captaincy: 58, pressure: 76, overall: 74,
     specialty: "T20 Finisher", rarity: "Rare",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "SRH", debutYear: 2017, age: 32,
-    image: "",
+
     formats: {
       odi:      { matches: 68,  runs: 1692, avg: 35.25, sr: 108.28,hundreds: 2,  fifties: 10, wickets: 0,  economy: 0,    bestScore: "123*" },
       test:     { matches: 6,   runs: 284,  avg: 28.40, sr: 58.32, hundreds: 0,  fifties: 3,  wickets: 0,  economy: 0,    bestScore: "79" },
@@ -1272,7 +1272,7 @@ const playersData = [
     batting: 40, bowling: 98, fielding: 76, captaincy: 62, pressure: 90, overall: 92,
     specialty: "King of Spin", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Leg Spin", iplTeam: "N/A", debutYear: 1992, age: 52,
-    image: "",
+
     formats: {
       odi:      { matches: 194, runs: 1018, avg: 13.05, sr: 82.01, hundreds: 0,  fifties: 1,  wickets: 293, economy: 4.25, bestScore: "55" },
       test:     { matches: 145, runs: 3154, avg: 17.33, sr: 57.49, hundreds: 0,  fifties: 12, wickets: 708, economy: 2.65, bestScore: "99" },
@@ -1287,7 +1287,7 @@ const playersData = [
     batting: 95, bowling: 18, fielding: 90, captaincy: 84, pressure: 90, overall: 92,
     specialty: "The Wall", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "N/A", debutYear: 1996, age: 51,
-    image: "",
+
     formats: {
       odi:      { matches: 344, runs: 10889, avg: 39.17, sr: 71.22, hundreds: 12, fifties: 83, wickets: 4,  economy: 5.44, bestScore: "153" },
       test:     { matches: 164, runs: 13288, avg: 52.31, sr: 42.52, hundreds: 36, fifties: 63, wickets: 1,  economy: 4.38, bestScore: "270" },
@@ -1302,7 +1302,7 @@ const playersData = [
     batting: 95, bowling: 88, fielding: 94, captaincy: 76, pressure: 92, overall: 94,
     specialty: "Greatest All-rounder Ever", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Fast-medium", iplTeam: "N/A", debutYear: 1995, age: 49,
-    image: "",
+
     formats: {
       odi:      { matches: 328, runs: 11579, avg: 44.37, sr: 72.89, hundreds: 17, fifties: 86, wickets: 273, economy: 4.47, bestScore: "139" },
       test:     { matches: 166, runs: 13289, avg: 55.38, sr: 46.48, hundreds: 45, fifties: 58, wickets: 292, economy: 2.94, bestScore: "224" },
@@ -1317,7 +1317,7 @@ const playersData = [
     batting: 93, bowling: 40, fielding: 80, captaincy: 66, pressure: 84, overall: 86,
     specialty: "Nawab of Najafgarh", rarity: "Legend",
     battingHand: "Right-handed", bowlingStyle: "Off Spin", iplTeam: "DD", debutYear: 1999, age: 45,
-    image: "",
+
     formats: {
       odi:      { matches: 251, runs: 8273, avg: 35.06, sr: 104.33,hundreds: 15, fifties: 38, wickets: 96,  economy: 5.24, bestScore: "219" },
       test:     { matches: 104, runs: 8586, avg: 49.34, sr: 82.23, hundreds: 23, fifties: 32, wickets: 40,  economy: 3.98, bestScore: "319" },

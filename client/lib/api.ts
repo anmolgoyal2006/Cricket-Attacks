@@ -122,6 +122,7 @@ export const battlesApi = {
       isOver: boolean;
       battleResult?: string;
       trophiesEarned: number;
+      coinsEarned: number;
       xpEarned: number;
     }>(`/battles/${battleId}/round`, {
       method: 'POST',
@@ -206,7 +207,7 @@ export const wordleApi = {
   submitFaceRevealGuess: (guess: string, guessNumber: number, difficulty: string, sessionId: string) =>
     api<{
       isCorrect: boolean;
-      pointsEarned: number;
+      coinsEarned: number;
       answer?: { name: string; country: string; role: string; iplTeam: string; specialty: string; image: string };
     }>('/wordle/face-reveal/guess', { method: 'POST', body: { guess, guessNumber, difficulty, sessionId } }),
 };

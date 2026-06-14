@@ -9,6 +9,7 @@ import {
 import { wordleApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 const MAX_GUESSES = 6;
 
@@ -59,6 +60,7 @@ function emojiForMatch(m: string) {
 }
 
 export default function WordlePage() {
+  const { refreshUser } = useAuth();
   const [players, setPlayers]         = useState<{ id: string; name: string; clues: Clue[] }[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -77,6 +79,7 @@ export default function WordlePage() {
   const [showHow, setShowHow]         = useState(false);
   const [date, setDate]               = useState('');
   const [copied, setCopied]           = useState(false);
+  const [coinToast, setCoinToast]     = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentState = selectedPlayerId ? gameStates[selectedPlayerId] : null;
@@ -137,6 +140,13 @@ export default function WordlePage() {
         hints: result.hintRow as Record<string, HintCell> | null,
         valid: result.playerFound,
       };
+
+      // Show coin toast and refresh balance if coins were earned
+      if (result.coinsEarned > 0) {
+        setCoinToast(result.coinsEarned);
+        setTimeout(() => setCoinToast(null), 3000);
+        refreshUser();
+      }
 
       setGameStates(prev => {
         const state = prev[selectedPlayerId] ?? { revealedClues: 1, guesses: [], gameOver: false, won: false, answer: null };
@@ -202,7 +212,19 @@ export default function WordlePage() {
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
 
-        {/* ── Header ── */}
+        {/* Coin earned toast */}
+        <AnimatePresence>
+          {coinToast !== null && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 text-white font-display font-bold text-lg shadow-2xl shadow-amber-500/40"
+            >
+              🪙 +{coinToast} coins!
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="text-center mb-8">
           <h1 className="text-5xl sm:text-6xl font-display font-black gradient-text mb-2">Cricket Wordle</h1>
           <p className="text-gray-400 font-body mb-3">Deduce the mystery cricketer — {MAX_GUESSES} guesses, real cricket knowledge</p>

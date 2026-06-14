@@ -76,6 +76,7 @@ export default function BattlePage() {
   const [battleState, setBattleState] = useState<BattleState>('choosing');
   const [selectedPlayerCard, setSelectedPlayerCard] = useState<BattleCard | null>(null);
   const [selectedComputerCard, setSelectedComputerCard] = useState<{ name: string; stat: number } | null>(null);
+  const [pendingComputerCard, setPendingComputerCard] = useState<{ name: string; role: string; aiId: string } | null>(null);
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
   const [gameWinner, setGameWinner] = useState<string | null>(null);
   const [trophiesEarned, setTrophiesEarned] = useState(0);
@@ -168,13 +169,17 @@ export default function BattlePage() {
       setPlayerScore(0);
       setComputerScore(0);
       setRoundHistory([]);
-      // PvE: computer "picks" first â€” show a brief thinking phase then let player choose
       setBattleState('computer-choosing');
       setSelectedPlayerCard(null);
       setSelectedComputerCard(null);
+      setPendingComputerCard(null);
       setGameWinner(null);
       setGamePhase('battle');
-      setTimeout(() => setBattleState('choosing'), 1800);
+      try {
+        const pick = await battlesApi.computerPick(data.battleId);
+        setPendingComputerCard(pick.computerCard);
+      } catch { /* fallback */ }
+      setBattleState('choosing');
     } catch (err: any) {
       setError(err.message);
     }
@@ -225,7 +230,7 @@ export default function BattlePage() {
     }
   };
 
-  const nextRound = () => {
+  const nextRound = async () => {
     const nextAiHand = aiHand.filter(c => c.name !== selectedComputerCard?.name);
 
     setAiHand(nextAiHand);
@@ -235,9 +240,13 @@ export default function BattlePage() {
     const nextRoundNum = currentRound + 1;
     setCurrentRound(nextRoundNum);
     setCurrentAttribute(attributeOrder[nextRoundNum - 1] || 'batting');
-    // PvE: computer picks first each round
+    // Computer picks first each round
     setBattleState('computer-choosing');
-    setTimeout(() => setBattleState('choosing'), 1800);
+    try {
+      const pick = await battlesApi.computerPick(battleId!);
+      setPendingComputerCard(pick.computerCard);
+    } catch { /* fallback */ }
+    setBattleState('choosing');
   };
 
   const resetGame = () => {
@@ -254,6 +263,7 @@ export default function BattlePage() {
     setComputerScore(0);
     setSelectedPlayerCard(null);
     setSelectedComputerCard(null);
+    setPendingComputerCard(null);
     setRoundHistory([]);
     setGameWinner(null);
     setTrophiesEarned(0);
@@ -634,48 +644,49 @@ export default function BattlePage() {
                   </div>
                   Computer Hand ({aiHand.length} cards)
                 </h3>
-                
+
+                {/* Computer chosen card — shown face-up (name + role only, no stats) during choosing and after */}
+                {(battleState === 'choosing' || battleState === 'revealing' || battleState === 'roundResult') && pendingComputerCard && (
+                  <div className={`mb-4 p-3 rounded-xl border-2 flex items-center gap-3 ${
+                    battleState === 'roundResult' ? 'border-red-500/60 bg-red-500/10' : 'border-amber-500/50 bg-amber-500/10'
+                  }`}>
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                      <Swords className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-400 font-body">Computer chose</p>
+                      <p className="text-sm font-display font-bold text-white truncate">{pendingComputerCard.name}</p>
+                      <p className="text-xs text-gray-400 font-body">{pendingComputerCard.role}</p>
+                    </div>
+                    {battleState === 'roundResult' && selectedComputerCard && (
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 font-body">{ATTRIBUTE_LABELS[currentAttribute]}</p>
+                        <p className="text-xl font-display font-black text-red-400">{selectedComputerCard.stat}</p>
+                      </div>
+                    )}
+                    {battleState !== 'roundResult' && (
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 font-body italic">stats hidden</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Remaining AI cards — all shown as hidden backs */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {aiHand.map((card, index) => {
-                    const isRevealed = selectedComputerCard?.name === card.name;
+                    const isChosen = pendingComputerCard?.name === card.name;
+                    // Hide the chosen card from the grid — it's shown above
+                    if (isChosen && (battleState === 'choosing' || battleState === 'revealing' || battleState === 'roundResult')) return null;
                     return (
-                      <motion.div
-                        key={index}
-                        initial={{ rotateY: 0 }}
-                        animate={{ rotateY: isRevealed ? 360 : 0 }}
-                        transition={{ duration: 0.6 }}
-                        className={isRevealed ? 'ring-4 ring-red-500 rounded-2xl' : ''}
-                      >
-                        {isRevealed ? (
-                          <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-red-500/30 flex flex-col items-center justify-center p-1.5">
-                            <p className="text-[10px] font-display font-bold text-white text-center">{selectedComputerCard?.name}</p>
-                            <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
-                            <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
-                              {ATTRIBUTES.map((attr) => {
-                                const val = card[attr] ?? 80;
-                                const isActive = attr === currentAttribute;
-                                return (
-                                  <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-red-500/20 ring-1 ring-red-500/50' : 'bg-white/5'}`}>
-                                    <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
-                                      {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
-                                    </span>
-                                    <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                      <div key={index} className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-red-500/20 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-1">
+                            <Swords className="w-5 h-5 text-red-400/50" />
                           </div>
-                        ) : (
-                          <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-red-500/30 flex items-center justify-center">
-                            <div className="text-center">
-                              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-2">
-                                <Swords className="w-6 h-6 text-red-400" />
-                              </div>
-                              <p className="text-xs text-gray-500 font-body">Hidden</p>
-                            </div>
-                          </div>
-                        )}
-                      </motion.div>
+                          <p className="text-[9px] text-gray-600 font-body">Hidden</p>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

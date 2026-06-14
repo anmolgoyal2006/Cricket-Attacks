@@ -113,18 +113,30 @@ function WelcomeModal({ cards, onContinue }: { cards: BonusCard[]; onContinue: (
                       transition={{ duration: 0.25 }}
                       className="absolute inset-0 flex flex-col"
                     >
-                      {/* Card image */}
-                      <div className="flex-1 relative overflow-hidden">
-                        <img
-                          src={card.image}
-                          alt={card.name}
-                          className="w-full h-full object-cover object-top"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://via.placeholder.com/300x400/1e3a8a/ffffff?text=' +
-                              encodeURIComponent(card.name);
-                          }}
-                        />
+                      {/* Card image / avatar */}
+                      <div className={cn(
+                        'flex-1 relative overflow-hidden flex items-center justify-center',
+                        card.rarity === 'Legend' ? 'bg-gradient-to-br from-amber-600 to-orange-800' :
+                        card.rarity === 'Epic'   ? 'bg-gradient-to-br from-purple-600 to-purple-900' :
+                        card.rarity === 'Rare'   ? 'bg-gradient-to-br from-blue-600 to-blue-900' :
+                                                   'bg-gradient-to-br from-gray-600 to-gray-900'
+                      )}>
+                        {card.image ? (
+                          <img
+                            src={card.image}
+                            alt={card.name}
+                            className="w-full h-full object-cover object-top"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        {/* Initials fallback always rendered behind the image */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-5xl font-display font-black text-white/30 select-none">
+                            {card.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </span>
+                        </div>
                         {/* Sparkles overlay on reveal */}
                         <motion.div
                           initial={{ opacity: 1 }}

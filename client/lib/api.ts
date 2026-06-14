@@ -111,6 +111,11 @@ export const battlesApi = {
       currentRound: number;
       totalRounds: number;
     }>('/battles/pve', { method: 'POST', body: { squadCardIds } }),
+  computerPick: (battleId: string) =>
+    api<{ computerCard: { name: string; role: string; aiId: string } }>(
+      `/battles/${battleId}/computer-pick`,
+      { method: 'POST' }
+    ),
   playRound: (battleId: string, playerCardId: string) =>
     api<{
       roundNumber: number;

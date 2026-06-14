@@ -8,7 +8,6 @@ import { NotFoundError, BadRequestError } from '../utils/errors';
 import { startBattle, playRound, calculateRewards } from '../services/battleService';
 import { updateLeaderboardForUser } from '../services/leaderboardService';
 import { parsePagination, paginationResponse } from '../utils/helpers';
-
 export async function startPvE(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { squadCardIds } = req.body;
@@ -80,6 +79,49 @@ export async function startPvE(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
+export async function computerPickHandler(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { battleId } = req.params;
+
+    const battle = await Battle.findById(battleId);
+    if (!battle) throw new NotFoundError('Battle');
+    if (battle.user.toString() !== req.userId) throw new BadRequestError('This is not your battle');
+    if (battle.status === 'completed') throw new BadRequestError('Battle is already completed');
+
+    // Clear any previous pending pick (safety)
+    battle.aiSquad = battle.aiSquad.map((ai: any) => ({ ...ai, pendingPick: false }));
+
+    // Available = not used and no previous round recorded for this aiId
+    const available = battle.aiSquad.filter(
+      (ai: any) => !ai.used && !battle.rounds.some((r: any) => r.aiId === ai.aiId || r.computerCardName === ai.name)
+    );
+
+    if (available.length === 0) throw new BadRequestError('No AI cards remaining');
+
+    // Pick randomly
+    const pickedIndex = Math.floor(Math.random() * available.length);
+    const picked = available[pickedIndex];
+
+    // Mark as pending in aiSquad
+    battle.aiSquad = battle.aiSquad.map((ai: any) =>
+      ai.aiId === picked.aiId ? { ...ai, pendingPick: true } : ai
+    );
+    battle.markModified('aiSquad');
+    await battle.save();
+
+    // Return name + role only — no stats revealed to frontend yet
+    res.json({
+      computerCard: {
+        name: picked.name,
+        role: picked.role,
+        aiId: picked.aiId,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function playRoundHandler(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { battleId } = req.params;
@@ -109,12 +151,19 @@ export async function playRoundHandler(req: AuthRequest, res: Response, next: Ne
       throw new BadRequestError('No AI cards remaining');
     }
 
-    const result = playRound(battle, aiCards, actualPlayerId);
+    // Use the pre-picked card if available, otherwise fall back to random (handles legacy/direct calls)
+    const pendingPick = battle.aiSquad.find((ai: any) => ai.pendingPick);
+    const aiCardsForRound = pendingPick
+      ? battle.aiSquad.filter((ai: any) => ai.aiId === pendingPick.aiId)
+      : aiCards;
+
+    const result = playRound(battle, aiCardsForRound, actualPlayerId);
     let rewards: any = null;
 
     if (result.computerCard) {
       battle.aiSquad = battle.aiSquad.map((ai: any) => ({
         ...ai,
+        pendingPick: false, // clear pending pick
         used: result.computerCard.aiId
           ? ai.aiId === result.computerCard.aiId || ai.used
           : ai.name === result.computerCard.name || ai.used,

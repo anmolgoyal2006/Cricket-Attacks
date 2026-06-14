@@ -15,7 +15,7 @@ export interface IRoundResult {
 export interface IBattle extends Document {
   user: mongoose.Types.ObjectId;
   playerSquad: mongoose.Types.ObjectId[];
-  aiSquad: { aiId: string; name: string; role: string; batting: number; bowling: number; fielding: number; captaincy: number; pressure: number; overall: number }[];
+  aiSquad: { aiId: string; name: string; role: string; batting: number; bowling: number; fielding: number; captaincy: number; pressure: number; overall: number; used?: boolean; pendingPick?: boolean }[];
   rounds: IRoundResult[];
   attributeOrder: string[];
   playerScore: number;
@@ -77,6 +77,8 @@ const battleSchema = new Schema<IBattle>(
         captaincy: Number,
         pressure: Number,
         overall: Number,
+        used: { type: Boolean, default: false },
+        pendingPick: { type: Boolean, default: false },
       },
     ],
     rounds: [roundResultSchema],

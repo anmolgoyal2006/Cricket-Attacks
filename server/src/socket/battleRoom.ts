@@ -9,8 +9,50 @@ import { getWinRewards } from '../services/rewardsService';
 
 const ROUND_TIMEOUT = 30000;
 const TOTAL_ROUNDS = 5;
+const CARD_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 
 const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+
+// userId -> Map<cardId, cooldownExpiresAt>
+export const cardCooldowns = new Map<string, Map<string, number>>();
+
+export function setCardCooldowns(userId: string, cardIds: string[]) {
+  if (!cardCooldowns.has(userId)) {
+    cardCooldowns.set(userId, new Map());
+  }
+  const userCooldowns = cardCooldowns.get(userId)!;
+  const expiresAt = Date.now() + CARD_COOLDOWN_MS;
+  for (const cardId of cardIds) {
+    userCooldowns.set(cardId, expiresAt);
+  }
+}
+
+export function getActiveCooldowns(userId: string): Record<string, number> {
+  const userCooldowns = cardCooldowns.get(userId);
+  if (!userCooldowns) return {};
+  const now = Date.now();
+  const result: Record<string, number> = {};
+  for (const [cardId, expiresAt] of userCooldowns) {
+    if (expiresAt > now) {
+      result[cardId] = expiresAt;
+    } else {
+      userCooldowns.delete(cardId); // clean up expired
+    }
+  }
+  return result;
+}
+
+export function isCardOnCooldown(userId: string, cardId: string): boolean {
+  const userCooldowns = cardCooldowns.get(userId);
+  if (!userCooldowns) return false;
+  const expiresAt = userCooldowns.get(cardId);
+  if (!expiresAt) return false;
+  if (Date.now() >= expiresAt) {
+    userCooldowns.delete(cardId);
+    return false;
+  }
+  return true;
+}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -164,6 +206,12 @@ export function setupBattleRooms(io: Server) {
 
   async function endBattle(io: Server, battle: PvPBattleState) {
     battle.status = 'completed';
+
+    // Apply 10-minute cooldown on used cards for both players
+    const p1CardIds = battle.player1.cards.map((c) => c.userCardId);
+    const p2CardIds = battle.player2.cards.map((c) => c.userCardId);
+    setCardCooldowns(battle.player1.userId, p1CardIds);
+    setCardCooldowns(battle.player2.userId, p2CardIds);
 
     let overallWinner: 'player1' | 'player2' | 'tie' | string = 'tie';
     if (battle.player1Score > battle.player2Score) {

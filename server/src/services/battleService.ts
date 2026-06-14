@@ -13,7 +13,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 function getAttributeValue(card: any, attr: string): number {
-  return card[attr] ?? 80;
+  return Math.round(card[attr] ?? 80);
 }
 
 function clamp(val: number, min = 60, max = 99): number {

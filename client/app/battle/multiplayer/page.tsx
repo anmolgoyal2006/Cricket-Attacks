@@ -48,6 +48,20 @@ export default function MultiplayerBattlePage() {
   const [squad, setSquad] = useState<CardDisplay[]>([]);
   const [loadingCards, setLoadingCards] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every second so cooldown countdowns update live
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatCooldown = (expiresAt: number) => {
+    const secs = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!user) {
@@ -630,9 +644,9 @@ export default function MultiplayerBattlePage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleJoinQueue}
-                  disabled={squad.length !== 5}
+                  disabled={squad.length !== 5 || squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)}
                   className={`px-10 py-4 rounded-xl font-display font-bold text-lg shadow-2xl transition-all flex items-center space-x-2 mx-auto ${
-                    squad.length === 5
+                    squad.length === 5 && !squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now)
                       ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-blue-500/50 hover:shadow-blue-500/70'
                       : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   }`}
@@ -645,6 +659,12 @@ export default function MultiplayerBattlePage() {
                     Select {5 - squad.length} more card{5 - squad.length !== 1 ? 's' : ''} to start
                   </p>
                 )}
+                {squad.length === 5 && squad.some(c => multiplayer.cooldowns[c._id] && multiplayer.cooldowns[c._id] > now) && (
+                  <p className="text-sm text-red-400 font-body mt-3 flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Some selected cards are on cooldown — swap them out
+                  </p>
+                )}
               </div>
             </div>
 
@@ -653,16 +673,20 @@ export default function MultiplayerBattlePage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {availableCards.map((card, index) => {
                   const inSquad = squad.some((c) => c._id === card._id);
+                  const cooldownExpiry = multiplayer.cooldowns[card._id];
+                  const onCooldown = cooldownExpiry && cooldownExpiry > now;
                   return (
                     <motion.div
                       key={card._id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      onClick={() => !inSquad && addToSquad(card)}
-                      className={`cursor-pointer ${inSquad ? 'opacity-40' : ''}`}
+                      onClick={() => !inSquad && !onCooldown && addToSquad(card)}
+                      className={`relative cursor-pointer ${inSquad || onCooldown ? 'opacity-50' : ''} ${onCooldown ? 'cursor-not-allowed' : ''}`}
                     >
-                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center p-2 hover:border-blue-500/50 transition-all">
+                      <div className={`aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border flex items-center justify-center p-2 transition-all ${
+                        onCooldown ? 'border-red-500/40' : inSquad ? 'border-blue-500/40' : 'border-white/10 hover:border-blue-500/50'
+                      }`}>
                         <div className="text-center">
                           <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${
                             card.rarity === 'Legend' ? 'from-amber-400 to-orange-600' :
@@ -676,9 +700,32 @@ export default function MultiplayerBattlePage() {
                           </div>
                           <p className="text-xs font-display font-bold text-white truncate">{card.name}</p>
                           <p className="text-xs text-gray-400 font-body">{card.role}</p>
-                          <p className="text-sm font-display font-bold text-amber-400">{card.overall}</p>
+                          {onCooldown ? (
+                            <div className="flex items-center justify-center gap-1 mt-1">
+                              <Clock className="w-3 h-3 text-red-400" />
+                              <p className="text-xs font-display font-bold text-red-400">{formatCooldown(cooldownExpiry)}</p>
+                            </div>
+                          ) : (
+                            <p className="text-sm font-display font-bold text-amber-400">{card.overall}</p>
+                          )}
                         </div>
                       </div>
+                      {/* Cooldown overlay */}
+                      {onCooldown && (
+                        <div className="absolute inset-0 rounded-2xl bg-red-900/30 flex flex-col items-center justify-center">
+                          <Clock className="w-6 h-6 text-red-400 mb-1" />
+                          <span className="text-xs text-red-300 font-body font-semibold">Cooldown</span>
+                          <span className="text-sm text-red-400 font-display font-bold">{formatCooldown(cooldownExpiry)}</span>
+                        </div>
+                      )}
+                      {/* Selected overlay */}
+                      {inSquad && !onCooldown && (
+                        <div className="absolute inset-0 rounded-2xl bg-blue-900/40 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span className="text-white text-lg font-bold">✓</span>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}

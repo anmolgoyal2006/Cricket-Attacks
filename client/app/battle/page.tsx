@@ -274,9 +274,11 @@ export default function BattlePage() {
   const getRoundWinnerText = () => {
     const lastRound = roundHistory[roundHistory.length - 1];
     if (!lastRound) return '';
-    if (lastRound.winner === 'player') return `You Win! ${lastRound.playerStat} > ${lastRound.computerStat}`;
-    if (lastRound.winner === 'computer') return `Computer Wins! ${lastRound.computerStat} > ${lastRound.playerStat}`;
-    return `It's a Tie! ${lastRound.playerStat} = ${lastRound.computerStat}`;
+    const ps = Math.round(lastRound.playerStat);
+    const cs = Math.round(lastRound.computerStat);
+    if (lastRound.winner === 'player') return `You Win! ${ps} > ${cs}`;
+    if (lastRound.winner === 'computer') return `Computer Wins! ${cs} > ${ps}`;
+    return `It's a Tie! ${ps} = ${cs}`;
   };
 
   if (!user) {
@@ -607,7 +609,7 @@ export default function BattlePage() {
                               return showStats ? (
                                 <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/20 ring-1 ring-white/40' : 'bg-white/5'}`}>
                                   <span className={`text-[7px] font-body ${attrIcons[attr] || 'text-gray-400'}`}>{attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}</span>
-                                  <span className={`text-[10px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                  <span className={`text-[10px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{Math.round(val)}</span>
                                 </div>
                               ) : (
                                 <div key={attr} className="flex flex-col items-center rounded bg-white/5">
@@ -664,7 +666,7 @@ export default function BattlePage() {
                     {battleState === 'roundResult' && selectedComputerCard && (
                       <div className="text-right">
                         <p className="text-[10px] text-gray-500 font-body">{ATTRIBUTE_LABELS[currentAttribute]}</p>
-                        <p className="text-xl font-display font-black text-red-400">{selectedComputerCard.stat}</p>
+                        <p className="text-xl font-display font-black text-red-400">{Math.round(selectedComputerCard.stat)}</p>
                       </div>
                     )}
                     {battleState !== 'roundResult' && (
@@ -717,7 +719,7 @@ export default function BattlePage() {
                         <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
                           <p className="text-lg font-display font-bold text-white">{selectedPlayerCard.name}</p>
                           <p className="text-sm text-gray-400 font-body">{selectedPlayerCard.role}</p>
-                          <p className="text-2xl font-display font-black text-blue-400 mt-2">{getCardMainStat(selectedPlayerCard)}</p>
+                          <p className="text-2xl font-display font-black text-blue-400 mt-2">{Math.round(getCardMainStat(selectedPlayerCard))}</p>
                           {currentAttribute && <p className="text-[10px] text-gray-500 font-body">({ATTRIBUTE_LABELS[currentAttribute]})</p>}
                         </div>
                       </div>
@@ -725,7 +727,7 @@ export default function BattlePage() {
                         <p className="text-sm text-gray-400 font-body mb-2">Computer Card</p>
                         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
                           <p className="text-lg font-display font-bold text-white">{selectedComputerCard.name}</p>
-                          <p className="text-2xl font-display font-black text-red-400 mt-2">{selectedComputerCard.stat}</p>
+                          <p className="text-2xl font-display font-black text-red-400 mt-2">{Math.round(selectedComputerCard.stat)}</p>
                         </div>
                       </div>
                     </div>
@@ -852,11 +854,11 @@ export default function BattlePage() {
                       <div className="grid md:grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center justify-between">
                           <span className="text-blue-400 font-body">{round.playerCard.name}</span>
-                          <span className="text-white font-display font-bold">{round.playerStat}</span>
+                          <span className="text-white font-display font-bold">{Math.round(round.playerStat)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-red-400 font-body">{round.computerCard.name}</span>
-                          <span className="text-white font-display font-bold">{round.computerStat}</span>
+                          <span className="text-white font-display font-bold">{Math.round(round.computerStat)}</span>
                         </div>
                       </div>
                     </div>

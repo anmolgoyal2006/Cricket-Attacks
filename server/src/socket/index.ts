@@ -3,7 +3,7 @@ import { Server } from 'socket.io';
 import { config } from '../config';
 import { AuthenticatedSocket, socketAuth } from './auth';
 import { setupMatchmaking } from './matchmaking';
-import { setupBattleRooms } from './battleRoom';
+import { setupBattleRooms, getActiveCooldowns } from './battleRoom';
 
 export function setupSocketServer(httpServer: HTTPServer) {
   const io = new Server(httpServer, {
@@ -23,6 +23,19 @@ export function setupSocketServer(httpServer: HTTPServer) {
   io.on('connection', (rawSocket) => {
     const socket = rawSocket as AuthenticatedSocket;
     console.log(`Socket connected: ${socket.username} (${socket.id})`);
+
+    // Send active cooldowns immediately on connect
+    if (socket.userId) {
+      const cooldowns = getActiveCooldowns(socket.userId);
+      if (Object.keys(cooldowns).length > 0) {
+        socket.emit('cooldowns:update', { cooldowns });
+      }
+    }
+
+    socket.on('cooldowns:get', () => {
+      const cooldowns = socket.userId ? getActiveCooldowns(socket.userId) : {};
+      socket.emit('cooldowns:update', { cooldowns });
+    });
 
     socket.on('matchmaking:join', ({ squad }) => {
       if (!squad || squad.length !== 5) {

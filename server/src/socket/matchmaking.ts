@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { AuthenticatedSocket } from './auth';
 import { BattleRoomHandlers } from './types';
 import User from '../models/User';
+import { getActiveCooldowns, isCardOnCooldown } from './battleRoom';
 
 const BASE_ELO_RANGE = 100;
 const MAX_ELO_RANGE = 500;
@@ -100,6 +101,18 @@ export function setupMatchmaking(
       const existing = queue.find((e) => e.userId === socket.userId);
       const user = await User.findById(socket.userId).lean();
       const eloRating = user?.eloRating || 1000;
+
+      // Check for cards on cooldown
+      const cooledCards = squad.filter((c) => isCardOnCooldown(socket.userId!, c._id || c.userCardId));
+      if (cooledCards.length > 0) {
+        const cooldowns = getActiveCooldowns(socket.userId!);
+        socket.emit('matchmaking:cooldown-error', {
+          message: `${cooledCards.length} card(s) are on cooldown. Please select different cards.`,
+          cooldowns, // { cardId: expiresAtTimestamp }
+          cooledCardIds: cooledCards.map((c) => c._id || c.userCardId),
+        });
+        return;
+      }
 
       if (existing) {
         existing.squad = squad;

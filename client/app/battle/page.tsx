@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Trophy, Zap, Users, ChevronRight, Star, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
+import { Swords, Trophy, Zap, Users, ChevronRight, ArrowRight, Loader2, AlertCircle, Wifi } from 'lucide-react';
 import PlayerCard from '@/components/PlayerCard';
 import { useAuth } from '@/lib/auth-context';
-import { cardsApi, battlesApi, userCardsApi } from '@/lib/api';import Link from 'next/link';
+import { battlesApi, userCardsApi } from '@/lib/api';
+import Link from 'next/link';
 
 type GamePhase = 'selection' | 'battle' | 'result';
+
+// Battle state flow: 'computerRevealing' → 'choosing' → 'revealing' → 'roundResult'
+type BattleState = 'computerRevealing' | 'choosing' | 'revealing' | 'roundResult';
 
 const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
 
@@ -69,7 +73,7 @@ export default function BattlePage() {
   const [totalRounds, setTotalRounds] = useState(5);
   const [playerScore, setPlayerScore] = useState(0);
   const [computerScore, setComputerScore] = useState(0);
-  const [battleState, setBattleState] = useState<string>('choosing');
+  const [battleState, setBattleState] = useState<BattleState>('computerRevealing');
   const [selectedPlayerCard, setSelectedPlayerCard] = useState<BattleCard | null>(null);
   const [selectedComputerCard, setSelectedComputerCard] = useState<{ name: string; stat: number } | null>(null);
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([]);
@@ -77,7 +81,6 @@ export default function BattlePage() {
   const [trophiesEarned, setTrophiesEarned] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-
   useEffect(() => {
     if (!user) {
       setLoadingCards(false);
@@ -166,9 +169,10 @@ export default function BattlePage() {
 
     try {
       const data = await battlesApi.startPvE(mySquad.map(c => c.userCardId));
+
       setBattleId(data.battleId);
       setPlayerHand(data.playerCards);
-      setAiHand(data.aiCards);
+      setAiHand(data.aiCards || []);
       setAttributeOrder(data.attributeOrder);
       setCurrentAttribute(data.attributeOrder?.[0] || 'batting');
       setCurrentRound(data.currentRound + 1);
@@ -194,13 +198,13 @@ export default function BattlePage() {
 
     try {
       const data = await battlesApi.playRound(battleId, card.userCardId);
-      
+
       setSelectedComputerCard({ name: data.computerCard.name, stat: data.computerCard.stat });
-      
+
       setTimeout(() => {
         setPlayerScore(data.playerScore);
         setComputerScore(data.computerScore);
-        
+
         const roundResult: RoundResult = {
           playerCard: card,
           computerCard: { name: data.computerCard.name, stat: data.computerCard.stat },
@@ -208,10 +212,10 @@ export default function BattlePage() {
           playerStat: data.playerCard.stat,
           computerStat: data.computerCard.stat,
         };
-        
+
         setRoundHistory(prev => [...prev, roundResult]);
         setBattleState('roundResult');
-        
+
         if (data.isOver) {
           setTimeout(() => {
             setGameWinner(data.battleResult || 'tie');
@@ -231,13 +235,21 @@ export default function BattlePage() {
   };
 
   const nextRound = () => {
+    const nextAiHand = aiHand.filter(c => c.name !== selectedComputerCard?.name);
+    // Pick next AI card for next round reveal
+    const nextAiCard = nextAiHand.length > 0
+      ? nextAiHand[Math.floor(Math.random() * nextAiHand.length)]
+      : null;
+
+    setAiHand(nextAiHand);
+    setCurrentAiCard(nextAiCard);
     setPlayerHand(prev => prev.filter(c => c.userCardId !== selectedPlayerCard?.userCardId));
     setSelectedPlayerCard(null);
     setSelectedComputerCard(null);
     const nextRoundNum = currentRound + 1;
     setCurrentRound(nextRoundNum);
     setCurrentAttribute(attributeOrder[nextRoundNum - 1] || 'batting');
-    setBattleState('choosing');
+    setBattleState('computerRevealing');
   };
 
   const resetGame = () => {
@@ -246,9 +258,10 @@ export default function BattlePage() {
     setBattleId(null);
     setPlayerHand([]);
     setAiHand([]);
+    setCurrentAiCard(null);
     setAttributeOrder([]);
     setCurrentAttribute('');
-    setBattleState('choosing');
+    setBattleState('computerRevealing');
     setCurrentRound(1);
     setPlayerScore(0);
     setComputerScore(0);
@@ -564,6 +577,8 @@ export default function BattlePage() {
                     const isSelected = selectedPlayerCard?.userCardId === card.userCardId;
                     const isDisabled = battleState !== 'choosing';
                     const attrIcons: Record<string, string> = { batting: 'text-amber-400', bowling: 'text-blue-400', fielding: 'text-green-400', captaincy: 'text-purple-400', pressure: 'text-red-400' };
+                    // Only show stat grid after the round result is back from the server
+                    const showStats = battleState === 'roundResult' && isSelected;
                     return (
                       <motion.div
                         key={card.userCardId}
@@ -573,24 +588,32 @@ export default function BattlePage() {
                           isSelected ? 'ring-4 ring-blue-500 rounded-2xl' : ''
                         }`}
                       >
-                        <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-1">
+                        <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5 gap-1">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto">
                             <span className="text-white font-bold text-xs">{card.name.split(' ').map(n => n[0]).join('')}</span>
                           </div>
                           <p className="text-[10px] font-display font-bold text-white leading-tight text-center">{card.name}</p>
-                          <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
-                          <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
-                            {ATTRIBUTES.map((attr) => {
-                              const val = (card as any)[attr] ?? 80;
-                              const isActive = attr === currentAttribute;
-                              return (
-                                <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'}`}>
-                                  <span className={`text-[8px] font-body ${attrIcons[attr] || 'text-gray-400'}`}>{attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}</span>
-                                  <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
-                                </div>
-                              );
-                            })}
+                          <p className="text-[9px] text-gray-400 font-body">{card.role}</p>
+                          <div className={`px-1.5 py-0.5 rounded text-[9px] font-display font-bold ${ATTRIBUTE_COLORS[currentAttribute]?.split(' ')[0] || 'text-amber-400'}`}>
+                            OVR {card.overall}
                           </div>
+                          {showStats && (
+                            <div className="grid grid-cols-5 gap-0.5 w-full px-0.5 mt-0.5">
+                              {ATTRIBUTES.map((attr) => {
+                                const val = (card as any)[attr] ?? 80;
+                                const isActive = attr === currentAttribute;
+                                return (
+                                  <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/20 ring-1 ring-white/40' : 'bg-white/5'}`}>
+                                    <span className={`text-[7px] font-body ${attrIcons[attr] || 'text-gray-400'}`}>{attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}</span>
+                                    <span className={`text-[10px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {!showStats && battleState === 'choosing' && (
+                            <p className="text-[8px] text-gray-500 font-body italic">stats hidden</p>
+                          )}
                         </div>
                       </motion.div>
                     );

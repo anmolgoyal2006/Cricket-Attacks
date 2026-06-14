@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Player from '../models/Player';
+import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { BadRequestError } from '../utils/errors';
 
@@ -290,6 +291,16 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
     const isCorrect = target.name.toLowerCase().trim() === guess.toLowerCase().trim();
     const isLastGuess = guessNumber >= 6;
 
+    // Coins based on how quickly the player guesses (fewer guesses = more coins)
+    const COINS_BY_GUESS: Record<number, number> = { 1: 100, 2: 80, 3: 60, 4: 40, 5: 20, 6: 10 };
+    const coinsEarned = isCorrect ? (COINS_BY_GUESS[guessNumber] || 10) : 0;
+
+    if (isCorrect && req.userId) {
+      await User.findByIdAndUpdate(req.userId, {
+        $inc: { coins: coinsEarned, xp: coinsEarned },
+      });
+    }
+
     const rawGuessed = uniquePlayers.find(
       (p) => p.name.toLowerCase().trim() === guess.toLowerCase().trim()
     );
@@ -310,6 +321,7 @@ export async function submitWordleGuess(req: AuthRequest, res: Response, next: N
 
     const response: any = {
       isCorrect,
+      coinsEarned,
       guessNumber,
       hintRow: guessed ? hintRow : null,
       playerFound: !!guessed,
@@ -410,9 +422,16 @@ export async function submitFaceRevealGuess(req: AuthRequest, res: Response, nex
     const isCorrect = session.playerName.toLowerCase().trim() === guess.toLowerCase().trim();
 
     const POINTS: Record<string, number> = { easy: 5, medium: 10, hard: 20, expert: 40 };
-    const pointsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
+    const coinsEarned = isCorrect ? (POINTS[difficulty] || 10) : 0;
 
-    const response: any = { isCorrect, pointsEarned };
+    // Award coins to the user on correct guess
+    if (isCorrect && req.userId) {
+      await User.findByIdAndUpdate(req.userId, {
+        $inc: { coins: coinsEarned, xp: coinsEarned },
+      });
+    }
+
+    const response: any = { isCorrect, coinsEarned };
 
     if (isCorrect || (guessNumber >= 5)) {
       // Fetch full player data for the reveal

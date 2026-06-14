@@ -108,11 +108,25 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    // First-ever login bonus — awarded once, on first login after registration
+    let firstLoginBonus: { coins: number; message: string } | null = null;
+    if (!user.firstLoginBonusClaimed) {
+      const FIRST_LOGIN_COINS = 1500;
+      user.coins += FIRST_LOGIN_COINS;
+      user.firstLoginBonusClaimed = true;
+      await user.save();
+      firstLoginBonus = {
+        coins: FIRST_LOGIN_COINS,
+        message: `🎉 Welcome bonus! You received ${FIRST_LOGIN_COINS} coins to get started!`,
+      };
+    }
+
     const token = generateToken(user._id.toString());
 
     res.json({
       token,
       user: sanitizeUser(user),
+      ...(firstLoginBonus && { firstLoginBonus }),
     });
   } catch (error) {
     next(error);

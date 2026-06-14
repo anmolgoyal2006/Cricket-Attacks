@@ -330,6 +330,9 @@ export default function MultiplayerBattlePage() {
                 {multiplayer.myCards.map((card) => {
                   const isUsed = multiplayer.usedCardIds.has(card.userCardId);
                   const isDisabled = multiplayer.status !== 'playing' || isUsed;
+                  // Show stats only in roundResult for the card that was just played
+                  const showStats = multiplayer.status === 'roundResult' &&
+                    multiplayer.currentRoundResult?.player1Card.name === card.name;
                   return (
                     <motion.div
                       key={card.userCardId}
@@ -339,30 +342,33 @@ export default function MultiplayerBattlePage() {
                         isUsed ? 'ring-2 ring-gray-600 rounded-2xl' : 'hover:ring-2 hover:ring-blue-500 rounded-2xl'
                       }`}
                     >
-                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-1">
+                      <div className="aspect-[2/3] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex flex-col items-center justify-center p-1.5 gap-1">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto">
                           <span className="text-white font-bold text-xs">{card.name.split(' ').map(n => n[0]).join('')}</span>
                         </div>
                         <p className="text-[10px] font-display font-bold text-white leading-tight text-center">{card.name}</p>
-                        <p className="text-[9px] text-gray-400 font-body mb-1">{card.role}</p>
-                        <div className="grid grid-cols-5 gap-0.5 w-full px-0.5">
-                          {ATTRIBUTES.map((attr) => {
-                            const val = (card as any)[attr] ?? 80;
-                            const isActive = attr === multiplayer.currentAttribute;
-                            return (
-                              <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'}`}>
-                                <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
-                                  {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
-                                </span>
-                                <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {isUsed && (
-                          <div className="mt-0.5">
-                            <span className="text-[8px] text-gray-500 font-body">Used</span>
+                        <p className="text-[9px] text-gray-400 font-body">{card.role}</p>
+                        {showStats && (
+                          <div className="grid grid-cols-5 gap-0.5 w-full px-0.5 mt-0.5">
+                            {ATTRIBUTES.map((attr) => {
+                              const val = (card as any)[attr] ?? 80;
+                              const isActive = attr === multiplayer.currentAttribute;
+                              return (
+                                <div key={attr} className={`flex flex-col items-center rounded ${isActive ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'}`}>
+                                  <span className={`text-[8px] font-body ${attr === 'batting' ? 'text-amber-400' : attr === 'bowling' ? 'text-blue-400' : attr === 'fielding' ? 'text-green-400' : attr === 'captaincy' ? 'text-purple-400' : 'text-red-400'}`}>
+                                    {attr === 'captaincy' ? 'CAP' : attr === 'pressure' ? 'PRE' : attr.slice(0, 3).toUpperCase()}
+                                  </span>
+                                  <span className={`text-[11px] font-display font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{val}</span>
+                                </div>
+                              );
+                            })}
                           </div>
+                        )}
+                        {!showStats && !isUsed && (
+                          <p className="text-[8px] text-gray-500 font-body italic">stats hidden</p>
+                        )}
+                        {isUsed && (
+                          <span className="text-[8px] text-gray-500 font-body">Used</span>
                         )}
                       </div>
                     </motion.div>

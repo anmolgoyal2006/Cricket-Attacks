@@ -22,6 +22,7 @@ export interface IUser extends Document {
   dailyRewardClaimedAt: Date | null;
   battleStreak: number;
   longestStreak: number;
+  firstLoginBonusClaimed: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -52,7 +53,7 @@ const userSchema = new Schema<IUser>(
     },
     coins: {
       type: Number,
-      default: 1000,
+      default: 2500,
     },
     xp: {
       type: Number,
@@ -119,6 +120,10 @@ const userSchema = new Schema<IUser>(
     longestStreak: {
       type: Number,
       default: 0,
+    },
+    firstLoginBonusClaimed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

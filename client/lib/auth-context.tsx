@@ -25,7 +25,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ firstLoginBonus?: { coins: number; message: string } | null }>;
   register: (username: string, email: string, password: string) => Promise<{ welcomeBonus?: any[] }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
     connectSocket(data.token);
+    return { firstLoginBonus: data.firstLoginBonus ?? null };
   };
 
   const register = async (username: string, email: string, password: string) => {

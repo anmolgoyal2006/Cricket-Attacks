@@ -593,9 +593,11 @@ export default function BattlePage() {
                           </div>
                           <p className="text-[10px] font-display font-bold text-white leading-tight text-center">{card.name}</p>
                           <p className="text-[9px] text-gray-400 font-body">{card.role}</p>
-                          <div className={`px-1.5 py-0.5 rounded text-[9px] font-display font-bold ${ATTRIBUTE_COLORS[currentAttribute]?.split(' ')[0] || 'text-amber-400'}`}>
-                            OVR {card.overall}
-                          </div>
+                          {showStats && (
+                            <div className={`px-1.5 py-0.5 rounded text-[9px] font-display font-bold ${ATTRIBUTE_COLORS[currentAttribute]?.split(' ')[0] || 'text-amber-400'}`}>
+                              {ATTRIBUTE_LABELS[currentAttribute]}: {(card as any)[currentAttribute] ?? card.overall}
+                            </div>
+                          )}
                           {/* Stats grid hidden until post-round reveal */}
                           <div className="grid grid-cols-5 gap-0.5 w-full px-0.5 mt-0.5">
                             {ATTRIBUTES.map((attr) => {

@@ -5,6 +5,7 @@
  */
 
 export type ExtraType = 'wide' | 'noball' | 'bye' | 'legbye' | null;
+export type NoballExtraKind = 'bye' | 'legbye' | 'overthrow';
 
 /**
  * A delivery is illegal (does not count as a legal ball) if it is a wide or no-ball.
@@ -81,16 +82,26 @@ export function calculateOverBall(
  */
 export function calculateExtrasBreakdown(
   extraType: ExtraType,
-  extraRuns: number
+  extraRuns: number,
+  noballExtraKind?: NoballExtraKind | null
 ): { wides: number; noBalls: number; byes: number; legByes: number } {
   const result = { wides: 0, noBalls: 0, byes: 0, legByes: 0 };
   if (!extraType) return result;
   switch (extraType) {
     case 'wide':
-      result.wides = 1 + (extraRuns || 0); // 1 penalty + any additional
+      result.wides = 1 + (extraRuns || 0);
       break;
     case 'noball':
-      result.noBalls = 1; // just the penalty run in the no-balls bucket
+      result.noBalls = 1;
+      if (extraRuns && extraRuns > 0) {
+        if (noballExtraKind === 'bye') {
+          result.byes = extraRuns;
+        } else if (noballExtraKind === 'legbye') {
+          result.legByes = extraRuns;
+        } else {
+          result.noBalls = 1 + extraRuns;
+        }
+      }
       break;
     case 'bye':
       result.byes = extraRuns || 0;
@@ -121,8 +132,7 @@ export function totalDeliveryRuns(
   extraType: ExtraType
 ): number {
   if (extraType === 'wide') {
-    // wide always adds at least 1; extraRuns represents total wide runs (already includes the 1)
-    return (extraRuns > 0 ? extraRuns : 1);
+    return 1 + (extraRuns || 0);
   }
   if (extraType === 'noball') {
     // no-ball penalty (1) + bat runs + any additional field runs

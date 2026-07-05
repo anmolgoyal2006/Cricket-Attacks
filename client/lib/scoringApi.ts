@@ -63,6 +63,7 @@ export interface BallPayload {
   runsScored?: number;
   extraType?: 'wide' | 'noBall' | 'bye' | 'legBye' | null;
   extraRuns?: number;
+  noballExtraKind?: 'bye' | 'legbye' | 'overthrow' | null;
   isWicket?: boolean;
   wicketType?: string | null;
   dismissedPlayerId?: string | null;

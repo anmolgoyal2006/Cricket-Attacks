@@ -16,6 +16,7 @@ export interface IBall extends Document {
   runsScored: number;
   extraType: 'wide' | 'noball' | 'bye' | 'legbye' | null;
   extraRuns: number;
+  noballExtraKind: 'bye' | 'legbye' | 'overthrow' | null;
   isWicket: boolean;
   wicketType: 'bowled' | 'caught' | 'lbw' | 'runout' | 'stumped' | 'hitwicket' | 'other' | null;
   dismissedPlayerId: mongoose.Types.ObjectId | null;
@@ -49,6 +50,11 @@ const ballSchema = new Schema<IBall>(
       default: null,
     },
     extraRuns: { type: Number, default: 0 },
+    noballExtraKind: {
+      type: String,
+      enum: ['bye', 'legbye', 'overthrow', null],
+      default: null,
+    },
     isWicket:  { type: Boolean, default: false },
     wicketType: {
       type: String,

@@ -27,6 +27,7 @@ import {
   calculateExtrasBreakdown,
   totalDeliveryRuns,
   ExtraType,
+  NoballExtraKind,
 } from '../../utils/scoringLogic';
 import {
   incrementBattingStats,
@@ -66,6 +67,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       runsScored = 0,
       extraType = null,
       extraRuns = 0,
+      noballExtraKind = null,
       isWicket = false,
       wicketType = null,
       dismissedPlayerId = null,
@@ -77,6 +79,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       runsScored?: number;
       extraType?: ExtraType;
       extraRuns?: number;
+      noballExtraKind?: NoballExtraKind | null;
       isWicket?: boolean;
       wicketType?: string | null;
       dismissedPlayerId?: string | null;
@@ -164,7 +167,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // For illegal deliveries freshInnings reflects the unmodified state — correct
 
     // ── Extras breakdown ──────────────────────────────────────────────────────
-    const extrasBreakdown = calculateExtrasBreakdown(extraTypeMapped, extraRuns);
+    const extrasBreakdown = calculateExtrasBreakdown(extraTypeMapped, extraRuns, noballExtraKind);
     const deliveryRuns = totalDeliveryRuns(runsScored, extraRuns, extraTypeMapped);
 
     // ── Save ball ─────────────────────────────────────────────────────────────
@@ -184,6 +187,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
           runsScored,
           extraType: extraTypeMapped || null,
           extraRuns,
+          noballExtraKind: extraTypeMapped === 'noball' ? (noballExtraKind || 'overthrow') : null,
           isWicket,
           wicketType: isWicket ? wicketType : null,
           dismissedPlayerId: isWicket ? dismissed.id   : null,
@@ -229,6 +233,24 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       },
       session
     );
+
+    // Non-striker dismissed (e.g. run-out at the bowler's end)
+    const nonStrikerDismissed = isWicket && dismissedPlayerId != null && dismissedPlayerId === nonStrikerId;
+    if (nonStrikerDismissed) {
+      await incrementBattingStats(
+        matchIdStr,
+        nonStrk.statsKey,
+        {
+          runs: 0,
+          ballFaced: 0,
+          isBoundaryFour: false,
+          isBoundarySix: false,
+          isOut: true,
+          dismissalType: wicketType,
+        },
+        session
+      );
+    }
 
     // Runs chargeable to bowler:
     // wide: wides bucket (already includes 1 penalty) + no bat runs
@@ -364,11 +386,16 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     const match = await ScoringMatch.findById(matchIdStr).session(session);
     if (!match) throw new NotFoundError('Match');
-    if (match.status !== 'live') throw new BadRequestError('Match is not live — cannot undo');
+    if (!['live', 'innings_break', 'completed'].includes(match.status)) {
+      throw new BadRequestError('Match is not in an undoable state');
+    }
+
+    // When at innings_break, undo targets the last ball of innings 1
+    const targetInningsNumber = match.status === 'innings_break' ? 1 : match.currentInnings;
 
     const innings = await Innings.findOne({
       matchId: matchIdStr,
-      inningsNumber: match.currentInnings,
+      inningsNumber: targetInningsNumber,
     }).session(session);
     if (!innings) throw new NotFoundError('Current innings');
 
@@ -381,7 +408,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     // ── Reverse innings totals ────────────────────────────────────────────────
     const deliveryRuns = totalDeliveryRuns(lastBall.runsScored, lastBall.extraRuns, lastBall.extraType as ExtraType);
-    const extrasBreakdown = calculateExtrasBreakdown(lastBall.extraType as ExtraType, lastBall.extraRuns);
+    const extrasBreakdown = calculateExtrasBreakdown(lastBall.extraType as ExtraType, lastBall.extraRuns, lastBall.noballExtraKind as NoballExtraKind | null);
 
     innings.totalRuns = Math.max(0, innings.totalRuns - deliveryRuns);
     innings.extras.wides = Math.max(0, innings.extras.wides - extrasBreakdown.wides);
@@ -401,7 +428,36 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
       }
     }
 
+    // If the innings was previously completed, reset the flag —
+    // the next ball recorded will re-evaluate completion conditions.
+    if (innings.isCompleted) {
+      innings.isCompleted = false;
+    }
+
     await innings.save({ session });
+
+    // ── Reverse match/innings-break status ──────────────────────────
+    const wasCompleted = match.status === 'completed';
+    const wasInningsBreak = match.status === 'innings_break';
+
+    if (wasCompleted) {
+      match.status = 'live';
+      match.result = null;
+      match.statsProcessed = false;
+      await (match as any).save({ session });
+    }
+
+    if (wasInningsBreak) {
+      match.status = 'live';
+      match.currentInnings = 1;
+      match.statsProcessed = false;
+      await (match as any).save({ session });
+
+      await Innings.deleteOne({
+        matchId: matchIdStr,
+        inningsNumber: 2,
+      }, { session });
+    }
 
     // ── Reverse player stats ──────────────────────────────────────────────────
     // Reconstruct stats keys from the saved ball (handles both ObjectId and guest fields)
@@ -428,12 +484,36 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
       session
     );
 
-    const runsChargedToBowler =
-      lastBall.runsScored +
-      extrasBreakdown.wides +
-      extrasBreakdown.noBalls +
-      extrasBreakdown.byes +
-      extrasBreakdown.legByes;
+    // Non-striker dismissed reversal
+    const nonStrikerDismissed = lastBall.isWicket && (
+      (lastBall.dismissedPlayerId && lastBall.nonStrikerId && lastBall.dismissedPlayerId.toString() === lastBall.nonStrikerId.toString()) ||
+      (lastBall.guestDismissed != null && lastBall.guestDismissed === lastBall.guestNonStriker)
+    );
+    if (nonStrikerDismissed) {
+      const undoNonStrikerKey = lastBall.nonStrikerId
+        ? lastBall.nonStrikerId.toString()
+        : { guestName: lastBall.guestNonStriker ?? '' };
+
+      await decrementBattingStats(
+        matchIdStr,
+        undoNonStrikerKey,
+        {
+          runs: 0,
+          ballFaced: 0,
+          isBoundaryFour: false,
+          isBoundarySix: false,
+          isOut: true,
+          dismissalType: lastBall.wicketType,
+        },
+        session
+      );
+    }
+
+    const runsChargedToBowler = (() => {
+      if (lastBall.extraType === 'wide') return extrasBreakdown.wides;
+      if (lastBall.extraType === 'noball') return 1 + (lastBall.runsScored || 0);
+      return lastBall.runsScored || 0;
+    })();
 
     await decrementBowlingStats(
       matchIdStr,
@@ -454,6 +534,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     res.json({
       undone: lastBall,
+      matchStatus: match.status,
       innings: {
         totalRuns: innings.totalRuns,
         totalWickets: innings.totalWickets,
@@ -468,6 +549,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
     try {
       liveMatchNamespace.to(`match_${matchIdStr}`).emit('ball:undone', {
         undone: lastBall,
+        matchStatus: match.status,
         innings: {
           totalRuns: innings.totalRuns,
           totalWickets: innings.totalWickets,

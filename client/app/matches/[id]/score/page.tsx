@@ -80,6 +80,16 @@ function requiredRunRate(target: number, runs: number, oc: number, bic: number, 
   return ((needed / ballsLeft) * 6).toFixed(2);
 }
 
+/** Pull the dismissed player's id (registered ObjectId or "guest:Name") from a ball object */
+function getDismissedPlayerId(ball: Record<string, unknown>): string | null {
+  if (!ball.isWicket) return null;
+  const dp = ball.dismissedPlayerId;
+  if (dp && typeof dp === 'string') return dp;
+  if (dp && typeof dp === 'object') return (dp as { _id: string })._id;
+  if (ball.guestDismissed && typeof ball.guestDismissed === 'string') return `guest:${ball.guestDismissed}`;
+  return null;
+}
+
 const WICKET_TYPES = ['bowled', 'caught', 'lbw', 'runout', 'stumped', 'hitwicket', 'other'];
 const EXTRA_TYPES: Array<{ key: 'wide' | 'noBall' | 'bye' | 'legBye'; label: string }> = [
   { key: 'wide',   label: 'Wide' },
@@ -150,6 +160,7 @@ export default function ScorePage() {
 
   // Tracks dismissed player ids to exclude from new-batsman list
   const [outPlayerIds, setOutPlayerIds] = useState<Set<string>>(new Set());
+  const lastDismissedIdRef = useRef<string>('');
 
   // ── Scoring controls state ───────────────────────────────────────────────────
   const [posting, setPosting] = useState(false);
@@ -232,7 +243,7 @@ export default function ScorePage() {
   const localUndoRef = useRef(false);
 
   useLiveMatchSocket(matchId, {
-    onBallUndone: ({ innings: i }) => {
+    onBallUndone: ({ undone, innings: i }) => {
       if (localUndoRef.current) {
         // This is the echo of our own undo — innings state already updated locally
         localUndoRef.current = false;
@@ -241,6 +252,14 @@ export default function ScorePage() {
       // Another scorer triggered the undo — apply it
       setInnings(i);
       setCurrentOverBalls((prev) => prev.slice(0, -1));
+      const dismissedId = getDismissedPlayerId(undone as Record<string, unknown>);
+      if (dismissedId) {
+        setOutPlayerIds((prev) => {
+          const next = new Set(prev);
+          next.delete(dismissedId);
+          return next;
+        });
+      }
     },
     onMatchCompleted: ({ resultText }) => {
       if (resultText) setMatchResultText(resultText);
@@ -273,7 +292,7 @@ export default function ScorePage() {
 
   // ── Process API / socket ball response ───────────────────────────────────────
   const applyBallResult = useCallback(
-    (result: BallResult, isWicketBall = false, extraTypeBall: string | null = null, runsBall = 0) => {
+    (result: BallResult, isWicketBall = false, extraTypeBall: string | null = null, runsBall = 0, wicketDismissedId: string | null = null) => {
       const { innings: newInnings, flags } = result;
       // Preserve target from current state if server didn't send it (defensive)
       setInnings((prev) => ({
@@ -327,7 +346,9 @@ export default function ScorePage() {
       } else if (flags.needsNewBatsman) {
         // Wicket — record who got out
         if (isWicketBall) {
-          setOutPlayerIds((prev) => new Set([...prev, striker?._id ?? '']));
+          const actualDismissedId = wicketDismissedId || striker?._id || '';
+          lastDismissedIdRef.current = actualDismissedId;
+          setOutPlayerIds((prev) => new Set([...prev, actualDismissedId]));
         }
         if (singleBatsmanMode) {
           // No partner needed — innings ends (backend handles it) or just continue
@@ -381,7 +402,7 @@ export default function ScorePage() {
           dismissedPlayerId: wicket.isWicket ? wicket.dismissedId || striker._id : null,
           fielderId: wicket.fielderId || null,
         });
-        applyBallResult(result, wicket.isWicket, extra.type, runs);
+        applyBallResult(result, wicket.isWicket, extra.type, runs, wicket.dismissedId || null);
       } catch (err: unknown) {
         setPostError(err instanceof Error ? err.message : 'Failed to record ball');
       } finally {
@@ -402,6 +423,14 @@ export default function ScorePage() {
       const result = await scoringApi.undoLastBall(matchId);
       setInnings(result.innings);
       setCurrentOverBalls((prev) => prev.slice(0, -1));
+      const dismissedId = getDismissedPlayerId(result.undone);
+      if (dismissedId) {
+        setOutPlayerIds((prev) => {
+          const next = new Set(prev);
+          next.delete(dismissedId);
+          return next;
+        });
+      }
     } catch (err: unknown) {
       localUndoRef.current = false; // reset on failure so socket stays functional
       setPostError(err instanceof Error ? err.message : 'Undo failed');
@@ -456,7 +485,12 @@ export default function ScorePage() {
   const confirmNewBatsman = () => {
     if (!incomingBatsmanId) return;
     const player = toPlayers(battingTeam?.players ?? []).find((p) => p._id === incomingBatsmanId);
-    if (player) setStriker(player);
+    if (!player) return;
+    if (lastDismissedIdRef.current === nonStriker?._id && !singleBatsmanMode) {
+      setNonStriker(player);
+    } else {
+      setStriker(player);
+    }
     setActiveModal(null);
   };
 

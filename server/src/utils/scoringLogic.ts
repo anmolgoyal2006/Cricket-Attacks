@@ -72,10 +72,12 @@ export function calculateOverBall(
 /**
  * Returns which extras bucket to increment and by how much.
  * Cricket rules:
- *   wide  → wide runs (extraRuns) count, no bat runs
- *   noball → no-ball run (1) + any runs scored off the bat also count
- *   bye   → bye runs (extraRuns) count
- *   legbye → leg-bye runs (extraRuns) count
+ *   wide   → 1 penalty run always + extraRuns (overthrows).
+ *            wides bucket = 1 + extraRuns
+ *   noball → 1 penalty run + runsScored (bat) + extraRuns (field).
+ *            noBalls bucket = 1 (penalty only; bat runs go to totalRuns via runsScored)
+ *   bye    → extraRuns (no bat runs, not charged to bowler)
+ *   legbye → extraRuns (no bat runs, not charged to bowler)
  */
 export function calculateExtrasBreakdown(
   extraType: ExtraType,
@@ -85,10 +87,10 @@ export function calculateExtrasBreakdown(
   if (!extraType) return result;
   switch (extraType) {
     case 'wide':
-      result.wides = extraRuns || 1;
+      result.wides = 1 + (extraRuns || 0); // 1 penalty + any additional
       break;
     case 'noball':
-      result.noBalls = 1 + (extraRuns || 0); // 1 penalty + any additional
+      result.noBalls = 1; // just the penalty run in the no-balls bucket
       break;
     case 'bye':
       result.byes = extraRuns || 0;
@@ -102,9 +104,31 @@ export function calculateExtrasBreakdown(
 
 /**
  * Total runs added to the innings for a given delivery.
- * = runsScored (bat runs) + extraRuns
- * Note: for a wide, bat runs are 0 by convention.
+ * Cricket rules per extra type:
+ *   wide  → 1 run (penalty) + any additional overthrow runs (extraRuns)
+ *   noball → 1 run (penalty) + bat runs + any additional (extraRuns)
+ *   bye/legbye → extraRuns only (bat runs don't count)
+ *
+ * NOTE: the 'penalty' run for wides/no-balls is already captured in
+ * calculateExtrasBreakdown (wides = extraRuns||1, noBalls = 1+extraRuns).
+ * So total innings runs = runsScored + sum(extrasBreakdown).
+ * We use this simpler form: runsScored + extraRuns for bat+field runs,
+ * but wides must add the base 1-run penalty when extraRuns === 0.
  */
-export function totalDeliveryRuns(runsScored: number, extraRuns: number): number {
+export function totalDeliveryRuns(
+  runsScored: number,
+  extraRuns: number,
+  extraType: ExtraType
+): number {
+  if (extraType === 'wide') {
+    // wide always adds at least 1; extraRuns represents total wide runs (already includes the 1)
+    return (extraRuns > 0 ? extraRuns : 1);
+  }
+  if (extraType === 'noball') {
+    // no-ball penalty (1) + bat runs + any additional field runs
+    return 1 + (runsScored || 0) + (extraRuns || 0);
+  }
+  // bye / legbye: extraRuns are the runs (no bat runs count)
+  // normal delivery: runsScored
   return (runsScored || 0) + (extraRuns || 0);
 }

@@ -160,8 +160,9 @@ export default function ScorePage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
 
   // Pending extra selection (set before opening extraRuns modal)
-  const pendingExtraRef = useRef<{ type: 'wide' | 'noBall' | 'bye' | 'legBye'; runs: number } | null>(null);
+  const pendingExtraRef = useRef<{ type: 'wide' | 'noBall' | 'bye' | 'legBye'; runs: number; batRuns: number } | null>(null);
   const [extraRunsInput, setExtraRunsInput] = useState('0');
+  const [extraBatRunsInput, setExtraBatRunsInput] = useState('0'); // for no-ball: bat runs off the delivery
 
   // Wicket modal state
   const [wicketType, setWicketType] = useState('bowled');
@@ -266,11 +267,14 @@ export default function ScorePage() {
       // Add ball to current-over visual
       const extraLabel: Record<string, string> = {
         wide: 'Wd', noBall: 'Nb', bye: 'B', legBye: 'Lb',
-        // backend stores lowercase versions too
         noball: 'Nb', legbye: 'Lb',
       };
+      // For wides: show total wide runs (1 + any extra); for no-ball: show bat runs
+      const pillRuns = extraTypeBall === 'wide'
+        ? result.innings.extras.wides - (innings.extras?.wides ?? 0) // delta from server
+        : runsBall;
       const overBall: OverBall = {
-        runs: runsBall,
+        runs: pillRuns,
         isWicket: isWicketBall,
         isExtra: !!extraTypeBall,
         extraType: extraTypeBall,
@@ -382,15 +386,27 @@ export default function ScorePage() {
   const handleRuns = (runs: number) => postBall(runs);
 
   const handleExtraClick = (extraKey: 'wide' | 'noBall' | 'bye' | 'legBye') => {
-    pendingExtraRef.current = { type: extraKey, runs: 0 };
+    pendingExtraRef.current = { type: extraKey, runs: 0, batRuns: 0 };
     setExtraRunsInput('0');
+    setExtraBatRunsInput('0');
     setActiveModal('extraRuns');
   };
 
   const confirmExtra = () => {
     const extra = pendingExtraRef.current!;
-    extra.runs = parseInt(extraRunsInput, 10) || 0;
-    postBall(0, { type: extra.type, runs: extra.runs });
+    const additionalRuns = parseInt(extraRunsInput, 10) || 0;
+    const batRuns = parseInt(extraBatRunsInput, 10) || 0;
+
+    if (extra.type === 'wide') {
+      // wide: runsScored=0, extraRuns=additional overthrow runs (backend adds the 1 penalty)
+      postBall(0, { type: extra.type, runs: additionalRuns });
+    } else if (extra.type === 'noBall') {
+      // no-ball: runsScored = bat runs off the delivery, extraRuns = additional field runs
+      postBall(batRuns, { type: extra.type, runs: additionalRuns });
+    } else {
+      // bye / legBye: runsScored=0, extraRuns = runs taken
+      postBall(0, { type: extra.type, runs: additionalRuns });
+    }
     pendingExtraRef.current = null;
     setActiveModal(null);
   };
@@ -802,16 +818,89 @@ export default function ScorePage() {
       {/* ══ MODALS ════════════════════════════════════════════════════════════ */}
 
       {/* Extra runs input */}
-      {activeModal === 'extraRuns' && (
-        <Modal title={`${pendingExtraRef.current?.type ?? 'Extra'} — additional runs?`} onClose={() => setActiveModal(null)}>
-          <p className="text-xs text-gray-400 font-body mb-3">Enter overthrows or additional runs (0 if none)</p>
-          <input
-            type="number" min={0} max={99}
-            value={extraRunsInput}
-            onChange={(e) => setExtraRunsInput(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-lg font-display font-bold text-center focus:outline-none focus:ring-2 focus:ring-amber-500/50 mb-4"
-          />
-          <div className="grid grid-cols-2 gap-3">
+      {activeModal === 'extraRuns' && pendingExtraRef.current && (
+        <Modal title={
+          pendingExtraRef.current.type === 'wide' ? 'Wide' :
+          pendingExtraRef.current.type === 'noBall' ? 'No Ball' :
+          pendingExtraRef.current.type === 'bye' ? 'Bye' : 'Leg Bye'
+        } onClose={() => setActiveModal(null)}>
+
+          {/* Wide */}
+          {pendingExtraRef.current.type === 'wide' && (
+            <div className="space-y-4">
+              <div className="px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-xs text-yellow-400 font-body">1 wide run added automatically</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-body mb-2">Overthrow / additional runs (0 if none)</p>
+                <input type="number" min={0} max={9} value={extraRunsInput}
+                  onChange={(e) => setExtraRunsInput(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-lg font-display font-bold text-center focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* No Ball */}
+          {pendingExtraRef.current.type === 'noBall' && (
+            <div className="space-y-4">
+              <div className="px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-xs text-yellow-400 font-body">1 no-ball penalty added automatically</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-body mb-2">Runs scored off the bat</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {[0,1,2,3,4,6].map((r) => (
+                    <button key={r} type="button"
+                      onClick={() => setExtraBatRunsInput(String(r))}
+                      className={cn(
+                        'py-3 rounded-xl font-display font-bold text-lg border transition-all',
+                        extraBatRunsInput === String(r)
+                          ? 'bg-amber-500/30 border-amber-500/60 text-amber-300'
+                          : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      )}
+                    >{r}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-body mb-2">Additional field runs (overthrows, 0 if none)</p>
+                <input type="number" min={0} max={9} value={extraRunsInput}
+                  onChange={(e) => setExtraRunsInput(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-lg font-display font-bold text-center focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bye / Leg Bye */}
+          {(pendingExtraRef.current.type === 'bye' || pendingExtraRef.current.type === 'legBye') && (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-400 font-body">How many runs were taken?</p>
+              <div className="grid grid-cols-4 gap-2">
+                {[1,2,3,4].map((r) => (
+                  <button key={r} type="button"
+                    onClick={() => setExtraRunsInput(String(r))}
+                    className={cn(
+                      'py-4 rounded-xl font-display font-bold text-xl border transition-all',
+                      extraRunsInput === String(r)
+                        ? 'bg-amber-500/30 border-amber-500/60 text-amber-300'
+                        : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                    )}
+                  >{r}</button>
+                ))}
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-body mb-2">Or enter manually</p>
+                <input type="number" min={1} max={9} value={extraRunsInput}
+                  onChange={(e) => setExtraRunsInput(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-lg font-display font-bold text-center focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 mt-5">
             <button onClick={() => setActiveModal(null)}
               className="py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold hover:bg-white/10 transition-all">
               Cancel

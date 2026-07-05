@@ -97,6 +97,19 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     const dismissed = resolvePlayer(dismissedPlayerId);
     const fielder   = resolvePlayer(fielderId);
 
+    // Normalise extraType: frontend sends camelCase ('noBall','legBye') but
+    // backend ExtraType uses lowercase ('noball','legbye'). Map here once.
+    const extraTypeMapped: ExtraType = (() => {
+      if (!extraType) return null;
+      const map: Record<string, ExtraType> = {
+        wide: 'wide', Wide: 'wide',
+        noBall: 'noball', noball: 'noball', 'no-ball': 'noball', NoBall: 'noball',
+        bye: 'bye', Bye: 'bye',
+        legBye: 'legbye', legbye: 'legbye', 'leg-bye': 'legbye', LegBye: 'legbye',
+      };
+      return map[extraType as string] ?? (extraType as ExtraType);
+    })();
+
     const match = await ScoringMatch.findById(matchIdStr).session(session);
     if (!match) throw new NotFoundError('Match');
     if (match.status !== 'live') throw new BadRequestError('Match is not live');
@@ -109,7 +122,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     if (!innings) throw new NotFoundError('Active innings');
 
     // ── Over / ball position ──────────────────────────────────────────────────
-    const legal = isLegalDelivery(extraType as ExtraType);
+    const legal = isLegalDelivery(extraTypeMapped);
 
     // Atomically read-and-increment ballsInCurrentOver so concurrent requests
     // can never read the same stale value. findOneAndUpdate with new:false
@@ -151,8 +164,8 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // For illegal deliveries freshInnings reflects the unmodified state — correct
 
     // ── Extras breakdown ──────────────────────────────────────────────────────
-    const extrasBreakdown = calculateExtrasBreakdown(extraType as ExtraType, extraRuns);
-    const deliveryRuns = totalDeliveryRuns(runsScored, extraRuns);
+    const extrasBreakdown = calculateExtrasBreakdown(extraTypeMapped, extraRuns);
+    const deliveryRuns = totalDeliveryRuns(runsScored, extraRuns, extraTypeMapped);
 
     // ── Save ball ─────────────────────────────────────────────────────────────
     const [ball] = await BallModel.create(
@@ -169,7 +182,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
           guestBatsman:      batsman.guestName,
           guestNonStriker:   nonStrk.guestName,
           runsScored,
-          extraType: extraType || null,
+          extraType: extraTypeMapped || null,
           extraRuns,
           isWicket,
           wicketType: isWicket ? wicketType : null,
@@ -217,9 +230,16 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       session
     );
 
-    // Runs chargeable to bowler: bat runs + no-ball penalty; wides + byes + leg-byes also count
-    const runsChargedToBowler =
-      runsScored + extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes;
+    // Runs chargeable to bowler:
+    // wide: wides bucket (already includes 1 penalty) + no bat runs
+    // noball: 1 penalty + bat runs (extraRuns are field runs, not bat)
+    // bye/legbye: not charged to bowler
+    // normal: bat runs only
+    const runsChargedToBowler = (() => {
+      if (extraTypeMapped === 'wide') return extrasBreakdown.wides; // 1 + overthrows
+      if (extraTypeMapped === 'noball') return 1 + runsScored;      // penalty + bat
+      return runsScored; // normal / bye / legbye
+    })();
 
     await incrementBowlingStats(
       matchIdStr,
@@ -358,7 +378,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
     if (!lastBall) throw new BadRequestError('No balls recorded in this innings yet');
 
     // ── Reverse innings totals ────────────────────────────────────────────────
-    const deliveryRuns = totalDeliveryRuns(lastBall.runsScored, lastBall.extraRuns);
+    const deliveryRuns = totalDeliveryRuns(lastBall.runsScored, lastBall.extraRuns, lastBall.extraType as ExtraType);
     const extrasBreakdown = calculateExtrasBreakdown(lastBall.extraType as ExtraType, lastBall.extraRuns);
 
     innings.totalRuns = Math.max(0, innings.totalRuns - deliveryRuns);

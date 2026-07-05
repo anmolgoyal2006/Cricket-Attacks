@@ -79,6 +79,8 @@ export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const cricketDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileCricketDropdownRef = useRef<HTMLDivElement>(null);
 
   const isGamesActive = GAME_ITEMS.some((g) => pathname === g.href);
   const isCricketActive = CRICKET_ITEMS.some((c) => pathname === c.href || pathname.startsWith('/matches'));
@@ -86,12 +88,15 @@ export default function Navbar() {
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setGamesOpen(false);
-      }
-      if (cricketDropdownRef.current && !cricketDropdownRef.current.contains(e.target as Node)) {
-        setCricketOpen(false);
-      }
+      const target = e.target as Node;
+      const outsideGames =
+        (!dropdownRef.current || !dropdownRef.current.contains(target)) &&
+        (!mobileDropdownRef.current || !mobileDropdownRef.current.contains(target));
+      const outsideCricket =
+        (!cricketDropdownRef.current || !cricketDropdownRef.current.contains(target)) &&
+        (!mobileCricketDropdownRef.current || !mobileCricketDropdownRef.current.contains(target));
+      if (outsideGames) setGamesOpen(false);
+      if (outsideCricket) setCricketOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -323,7 +328,7 @@ export default function Navbar() {
           })}
 
           {/* Cricket dropdown trigger — mobile */}
-          <div className="relative" ref={cricketDropdownRef}>
+          <div className="relative" ref={mobileCricketDropdownRef}>
             <button
               onClick={() => { setCricketOpen((o) => !o); setGamesOpen(false); }}
               className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
@@ -366,7 +371,7 @@ export default function Navbar() {
           </div>
 
           {/* Games dropdown trigger — mobile */}
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative" ref={mobileDropdownRef}>
             <button
               onClick={() => { setGamesOpen((o) => !o); setCricketOpen(false); }}
               className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',

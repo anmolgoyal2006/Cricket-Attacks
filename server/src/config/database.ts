@@ -8,29 +8,37 @@ const MONGOOSE_OPTIONS = {
 };
 
 /**
- * One-time migration: drop the old non-sparse { matchId, playerId } unique index
- * from PlayerMatchStats. The old index treated null as a real value, causing a
- * duplicate key error (409) whenever two guest players appeared in the same match.
- * The schema now defines this index with sparse:true, but Mongoose never auto-drops
- * a changed index — we must drop it manually on startup.
- * This is a no-op once the index has been dropped (dropIndex resolves cleanly if
- * the named index doesn't exist).
+ * One-time migrations run at startup to drop stale indexes from Atlas.
+ * Mongoose never auto-drops indexes that have changed — we must do it manually.
+ * All drops are idempotent: IndexNotFound (code 27) is silently ignored.
  */
-async function migratePlayerMatchStatsIndex(): Promise<void> {
-  try {
-    const db = mongoose.connection.db;
-    if (!db) return;
-    const collection = db.collection('playermatchstats');
-    // Drop the old non-sparse compound index by its auto-generated name.
-    // We catch and ignore errors for "index not found" (code 27) so this is idempotent.
-    await collection.dropIndex('matchId_1_playerId_1');
-    console.log('[migration] Dropped old non-sparse PlayerMatchStats index matchId_1_playerId_1');
-  } catch (err: any) {
-    if (err?.code === 27 || err?.codeName === 'IndexNotFound') {
-      // Already gone — nothing to do
-    } else {
-      // Log but don't crash the server — Mongoose will re-create the correct sparse index
-      console.warn('[migration] Could not drop PlayerMatchStats index:', err?.message ?? err);
+async function runIndexMigrations(): Promise<void> {
+  const db = mongoose.connection.db;
+  if (!db) return;
+
+  const migrations: Array<{ collection: string; index: string; reason: string }> = [
+    {
+      collection: 'playermatchstats',
+      index: 'matchId_1_playerId_1',
+      reason: 'old non-sparse index — null playerId causes duplicate key for guest players',
+    },
+    {
+      collection: 'balls',
+      index: 'matchId_1_inningsId_1_over_1_ballNumber_1',
+      reason: 'illegal deliveries (wides/no-balls) share over+ballNumber with next legal ball',
+    },
+  ];
+
+  for (const m of migrations) {
+    try {
+      await db.collection(m.collection).dropIndex(m.index);
+      console.log(`[migration] Dropped index ${m.index} from ${m.collection}: ${m.reason}`);
+    } catch (err: any) {
+      if (err?.code === 27 || err?.codeName === 'IndexNotFound') {
+        // Already gone — nothing to do
+      } else {
+        console.warn(`[migration] Could not drop ${m.index} from ${m.collection}:`, err?.message ?? err);
+      }
     }
   }
 }
@@ -39,7 +47,7 @@ export async function connectDatabase(): Promise<void> {
   try {
     await mongoose.connect(config.mongodbUri, MONGOOSE_OPTIONS);
     console.log('Connected to MongoDB Atlas');
-    await migratePlayerMatchStatsIndex();
+    await runIndexMigrations();
   } catch (error) {
     console.error('MongoDB connection error:', error);
     console.log('Server will start without database — retrying in 5s...');

@@ -68,6 +68,8 @@ const ballSchema = new mongoose_1.Schema({
 }, { timestamps: false });
 ballSchema.index({ matchId: 1 });
 ballSchema.index({ inningsId: 1 });
-ballSchema.index({ matchId: 1, inningsId: 1, over: 1, ballNumber: 1 });
+// NOTE: No unique index on { matchId, inningsId, over, ballNumber } —
+// illegal deliveries (wides, no-balls) share the same over+ballNumber as
+// the next legal ball, so uniqueness cannot be enforced on this combination.
 exports.default = mongoose_1.default.model('Ball', ballSchema);
 //# sourceMappingURL=Ball.js.map

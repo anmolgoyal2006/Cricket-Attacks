@@ -227,8 +227,18 @@ export default function ScorePage() {
   }
 
   // ── Live socket sync (handles ball:undone from another scorer) ────────────────
+  // localUndoRef is set true while THIS scorer is executing an undo so the socket
+  // echo doesn't double-remove a pill from currentOverBalls.
+  const localUndoRef = useRef(false);
+
   useLiveMatchSocket(matchId, {
     onBallUndone: ({ innings: i }) => {
+      if (localUndoRef.current) {
+        // This is the echo of our own undo — innings state already updated locally
+        localUndoRef.current = false;
+        return;
+      }
+      // Another scorer triggered the undo — apply it
       setInnings(i);
       setCurrentOverBalls((prev) => prev.slice(0, -1));
     },
@@ -262,7 +272,11 @@ export default function ScorePage() {
   const applyBallResult = useCallback(
     (result: BallResult, isWicketBall = false, extraTypeBall: string | null = null, runsBall = 0) => {
       const { innings: newInnings, flags } = result;
-      setInnings(newInnings);
+      // Preserve target from current state if server didn't send it (defensive)
+      setInnings((prev) => ({
+        ...newInnings,
+        target: newInnings.target ?? prev?.target ?? null,
+      }));
 
       // Add ball to current-over visual
       const extraLabel: Record<string, string> = {
@@ -371,11 +385,13 @@ export default function ScorePage() {
     setActiveModal(null);
     setPosting(true);
     setPostError('');
+    localUndoRef.current = true; // suppress socket echo for this undo
     try {
       const result = await scoringApi.undoLastBall(matchId);
       setInnings(result.innings);
       setCurrentOverBalls((prev) => prev.slice(0, -1));
     } catch (err: unknown) {
+      localUndoRef.current = false; // reset on failure so socket stays functional
       setPostError(err instanceof Error ? err.message : 'Undo failed');
     } finally {
       setPosting(false);

@@ -208,6 +208,7 @@ async function recordBall(req, res, next) {
                 oversCompleted: freshInnings.oversCompleted,
                 ballsInCurrentOver: freshInnings.ballsInCurrentOver,
                 extras: freshInnings.extras,
+                target: freshInnings.target ?? null,
             },
             flags: {
                 strikeSwapped,
@@ -229,6 +230,7 @@ async function recordBall(req, res, next) {
                 oversCompleted: freshInnings.oversCompleted,
                 ballsInCurrentOver: freshInnings.ballsInCurrentOver,
                 extras: freshInnings.extras,
+                target: freshInnings.target ?? null,
             };
             const eventFlags = {
                 strikeSwapped,
@@ -354,6 +356,7 @@ async function undoLastBall(req, res, next) {
                 oversCompleted: innings.oversCompleted,
                 ballsInCurrentOver: innings.ballsInCurrentOver,
                 extras: innings.extras,
+                target: innings.target ?? null,
             },
         });
         // ── Phase 3: broadcast undo to /live-match namespace ─────────────────────
@@ -366,6 +369,7 @@ async function undoLastBall(req, res, next) {
                     oversCompleted: innings.oversCompleted,
                     ballsInCurrentOver: innings.ballsInCurrentOver,
                     extras: innings.extras,
+                    target: innings.target ?? null,
                 },
             });
         }

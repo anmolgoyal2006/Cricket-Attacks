@@ -286,6 +286,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
         oversCompleted: freshInnings.oversCompleted,
         ballsInCurrentOver: freshInnings.ballsInCurrentOver,
         extras: freshInnings.extras,
+        target: freshInnings.target ?? null,
       },
       flags: {
         strikeSwapped,
@@ -308,6 +309,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
         oversCompleted: freshInnings.oversCompleted,
         ballsInCurrentOver: freshInnings.ballsInCurrentOver,
         extras: freshInnings.extras,
+        target: freshInnings.target ?? null,
       };
       const eventFlags = {
         strikeSwapped,
@@ -458,6 +460,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
         oversCompleted: innings.oversCompleted,
         ballsInCurrentOver: innings.ballsInCurrentOver,
         extras: innings.extras,
+        target: innings.target ?? null,
       },
     });
 
@@ -471,6 +474,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
           oversCompleted: innings.oversCompleted,
           ballsInCurrentOver: innings.ballsInCurrentOver,
           extras: innings.extras,
+          target: innings.target ?? null,
         },
       });
     } catch (emitErr) {

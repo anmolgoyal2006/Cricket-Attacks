@@ -75,6 +75,8 @@ export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const [gamesOpen, setGamesOpen] = useState(false);
   const [cricketOpen, setCricketOpen] = useState(false);
+  const [navBottom, setNavBottom] = useState(0);
+  const navRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const cricketDropdownRef = useRef<HTMLDivElement>(null);
 

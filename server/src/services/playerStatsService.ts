@@ -25,7 +25,9 @@ function playerFilter(matchId: string | mongoose.Types.ObjectId, player: PlayerK
 
 function playerUpsertFields(player: PlayerKey): Record<string, unknown> {
   if (typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player) {
-    return { playerId: null, guestName: player.guestName };
+    // Do NOT include playerId here — we want the field to be truly absent from
+    // the document so it doesn't participate in the { matchId, playerId } index at all.
+    return { guestName: player.guestName };
   }
   return { playerId: player, guestName: null };
 }
@@ -49,14 +51,17 @@ export async function incrementBattingStats(
 ): Promise<void> {
   const filter = playerFilter(matchId, player);
   const upsertFields = playerUpsertFields(player);
+  const isGuest = typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player;
 
   // Pipeline updates don't support $setOnInsert, so we use a two-step approach:
   // ensure the doc exists first (upsert with $setOnInsert for identity fields),
   // then apply the aggregation pipeline update.
+  // For guests: setDefaultsOnInsert:false so the schema's default:null for playerId
+  // is NOT applied — the field must be fully absent to avoid the unique index collision.
   await PlayerMatchStats.findOneAndUpdate(
     filter,
     { $setOnInsert: upsertFields },
-    { upsert: true, new: false, session, setDefaultsOnInsert: true }
+    { upsert: true, new: false, session, setDefaultsOnInsert: !isGuest }
   );
 
   await PlayerMatchStats.findOneAndUpdate(
@@ -142,12 +147,14 @@ export async function incrementBowlingStats(
 ): Promise<void> {
   const filter = playerFilter(matchId, player);
   const upsertFields = playerUpsertFields(player);
+  const isGuest = typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player;
 
-  // Ensure the doc exists with correct identity fields before the pipeline update
+  // Ensure the doc exists with correct identity fields before the pipeline update.
+  // setDefaultsOnInsert:false for guests so playerId field stays absent entirely.
   await PlayerMatchStats.findOneAndUpdate(
     filter,
     { $setOnInsert: upsertFields },
-    { upsert: true, new: false, session, setDefaultsOnInsert: true }
+    { upsert: true, new: false, session, setDefaultsOnInsert: !isGuest }
   );
 
   await PlayerMatchStats.findOneAndUpdate(

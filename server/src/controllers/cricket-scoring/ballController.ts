@@ -36,6 +36,24 @@ import {
 } from '../../services/playerStatsService';
 import { checkAndHandleCompletion } from '../../services/matchCompletionService';
 
+// ── Helper: resolve "guest:Name" or real ObjectId string ─────────────────────
+// The client sends "guest:<displayName>" for players without accounts.
+// Returns the correct DB fields and the PlayerKey for stats upserts.
+const GUEST_PREFIX = 'guest:';
+
+function resolvePlayer(raw: string | null | undefined): {
+  id: mongoose.Types.ObjectId | null;
+  guestName: string | null;
+  statsKey: mongoose.Types.ObjectId | string | { guestName: string };
+} {
+  if (!raw) return { id: null, guestName: null, statsKey: '' };
+  if (raw.startsWith(GUEST_PREFIX)) {
+    const name = raw.slice(GUEST_PREFIX.length);
+    return { id: null, guestName: name, statsKey: { guestName: name } };
+  }
+  return { id: new mongoose.Types.ObjectId(raw), guestName: null, statsKey: raw };
+}
+
 // ── POST /api/scoring/matches/:matchId/balls ──────────────────────────────────
 export async function recordBall(req: AuthRequest, res: Response, next: NextFunction) {
   const session = await mongoose.startSession();
@@ -72,6 +90,13 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       throw new BadRequestError('bowlerId, batsmanOnStrikeId, nonStrikerId are required');
     }
 
+    // Resolve player ids — support both real ObjectIds and "guest:<name>" tokens
+    const bowler   = resolvePlayer(bowlerId);
+    const batsman  = resolvePlayer(batsmanOnStrikeId);
+    const nonStrk  = resolvePlayer(nonStrikerId);
+    const dismissed = resolvePlayer(dismissedPlayerId);
+    const fielder   = resolvePlayer(fielderId);
+
     const match = await ScoringMatch.findById(matchIdStr).session(session);
     if (!match) throw new NotFoundError('Match');
     if (match.status !== 'live') throw new BadRequestError('Match is not live');
@@ -106,16 +131,21 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
           inningsId: innings._id,
           over: innings.oversCompleted,
           ballNumber,
-          bowlerId,
-          batsmanOnStrikeId,
-          nonStrikerId,
+          bowlerId:          bowler.id,
+          batsmanOnStrikeId: batsman.id,
+          nonStrikerId:      nonStrk.id,
+          guestBowler:       bowler.guestName,
+          guestBatsman:      batsman.guestName,
+          guestNonStriker:   nonStrk.guestName,
           runsScored,
           extraType: extraType || null,
           extraRuns,
           isWicket,
           wicketType: isWicket ? wicketType : null,
-          dismissedPlayerId: isWicket ? dismissedPlayerId : null,
-          fielderId: fielderId || null,
+          dismissedPlayerId: isWicket ? dismissed.id   : null,
+          guestDismissed:    isWicket ? dismissed.guestName : null,
+          fielderId:         fielder.id,
+          guestFielder:      fielder.guestName,
           isLegalDelivery: legal,
           timestamp: new Date(),
         },
@@ -151,14 +181,14 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // Batsman on strike faces the ball
     await incrementBattingStats(
       matchIdStr,
-      batsmanOnStrikeId,
+      batsman.statsKey,
       {
         runs: runsScored,
         ballFaced: legal ? 1 : 0,
         isBoundaryFour: runsScored === 4,
         isBoundarySix: runsScored === 6,
-        isOut: isWicket && dismissedPlayerId === batsmanOnStrikeId,
-        dismissalType: isWicket && dismissedPlayerId === batsmanOnStrikeId ? wicketType : null,
+        isOut: isWicket && batsmanOnStrikeId === (dismissedPlayerId ?? batsmanOnStrikeId),
+        dismissalType: isWicket && batsmanOnStrikeId === (dismissedPlayerId ?? batsmanOnStrikeId) ? wicketType : null,
       },
       session
     );
@@ -169,7 +199,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
 
     await incrementBowlingStats(
       matchIdStr,
-      bowlerId,
+      bowler.statsKey,
       {
         ballBowled: legal ? 1 : 0,
         runsConceded: runsChargedToBowler,
@@ -337,15 +367,25 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
     await innings.save({ session });
 
     // ── Reverse player stats ──────────────────────────────────────────────────
+    // Reconstruct stats keys from the saved ball (handles both ObjectId and guest fields)
+    const undoBatsmanKey = lastBall.batsmanOnStrikeId
+      ? lastBall.batsmanOnStrikeId.toString()
+      : { guestName: lastBall.guestBatsman ?? '' };
+    const undoBowlerKey = lastBall.bowlerId
+      ? lastBall.bowlerId.toString()
+      : { guestName: lastBall.guestBowler ?? '' };
+
     await decrementBattingStats(
       matchIdStr,
-      lastBall.batsmanOnStrikeId.toString(),
+      undoBatsmanKey,
       {
         runs: lastBall.runsScored,
         ballFaced: lastBall.isLegalDelivery ? 1 : 0,
         isBoundaryFour: lastBall.runsScored === 4,
         isBoundarySix: lastBall.runsScored === 6,
-        isOut: lastBall.isWicket && lastBall.dismissedPlayerId?.toString() === lastBall.batsmanOnStrikeId.toString(),
+        isOut: lastBall.isWicket &&
+          (lastBall.dismissedPlayerId?.toString() === lastBall.batsmanOnStrikeId?.toString() ||
+           (lastBall.guestDismissed != null && lastBall.guestDismissed === lastBall.guestBatsman)),
         dismissalType: lastBall.wicketType,
       },
       session
@@ -360,7 +400,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     await decrementBowlingStats(
       matchIdStr,
-      lastBall.bowlerId.toString(),
+      undoBowlerKey,
       {
         ballBowled: lastBall.isLegalDelivery ? 1 : 0,
         runsConceded: runsChargedToBowler,

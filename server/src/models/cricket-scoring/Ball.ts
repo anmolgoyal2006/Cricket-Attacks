@@ -5,16 +5,23 @@ export interface IBall extends Document {
   inningsId: mongoose.Types.ObjectId;
   over: number;
   ballNumber: number;
-  bowlerId: mongoose.Types.ObjectId;
-  batsmanOnStrikeId: mongoose.Types.ObjectId;
-  nonStrikerId: mongoose.Types.ObjectId;
+  // Player references — null when the player is a guest (no account)
+  bowlerId: mongoose.Types.ObjectId | null;
+  batsmanOnStrikeId: mongoose.Types.ObjectId | null;
+  nonStrikerId: mongoose.Types.ObjectId | null;
+  // Guest display names — set when corresponding ObjectId field is null
+  guestBowler: string | null;
+  guestBatsman: string | null;
+  guestNonStriker: string | null;
   runsScored: number;
   extraType: 'wide' | 'noball' | 'bye' | 'legbye' | null;
   extraRuns: number;
   isWicket: boolean;
   wicketType: 'bowled' | 'caught' | 'lbw' | 'runout' | 'stumped' | 'hitwicket' | 'other' | null;
   dismissedPlayerId: mongoose.Types.ObjectId | null;
+  guestDismissed: string | null;
   fielderId: mongoose.Types.ObjectId | null;
+  guestFielder: string | null;
   isLegalDelivery: boolean;
   commentaryText: string | null;
   timestamp: Date;
@@ -22,33 +29,19 @@ export interface IBall extends Document {
 
 const ballSchema = new Schema<IBall>(
   {
-    matchId: {
-      type: Schema.Types.ObjectId,
-      ref: 'ScoringMatch',
-      required: true,
-    },
-    inningsId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Innings',
-      required: true,
-    },
-    over: { type: Number, required: true },
+    matchId:   { type: Schema.Types.ObjectId, ref: 'ScoringMatch', required: true },
+    inningsId: { type: Schema.Types.ObjectId, ref: 'Innings',      required: true },
+    over:       { type: Number, required: true },
     ballNumber: { type: Number, required: true },
-    bowlerId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    batsmanOnStrikeId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    nonStrikerId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
+
+    bowlerId:          { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    batsmanOnStrikeId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    nonStrikerId:      { type: Schema.Types.ObjectId, ref: 'User', default: null },
+
+    guestBowler:     { type: String, default: null },
+    guestBatsman:    { type: String, default: null },
+    guestNonStriker: { type: String, default: null },
+
     runsScored: { type: Number, default: 0 },
     extraType: {
       type: String,
@@ -56,29 +49,22 @@ const ballSchema = new Schema<IBall>(
       default: null,
     },
     extraRuns: { type: Number, default: 0 },
-    isWicket: { type: Boolean, default: false },
+    isWicket:  { type: Boolean, default: false },
     wicketType: {
       type: String,
       enum: ['bowled', 'caught', 'lbw', 'runout', 'stumped', 'hitwicket', 'other', null],
       default: null,
     },
-    dismissedPlayerId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
-    fielderId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
+    dismissedPlayerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    guestDismissed:    { type: String, default: null },
+    fielderId:         { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    guestFielder:      { type: String, default: null },
+
     isLegalDelivery: { type: Boolean, required: true },
-    commentaryText: { type: String, default: null },
-    timestamp: { type: Date, default: Date.now },
+    commentaryText:  { type: String, default: null },
+    timestamp:       { type: Date, default: Date.now },
   },
-  {
-    timestamps: false, // using explicit timestamp field above
-  }
+  { timestamps: false }
 );
 
 ballSchema.index({ matchId: 1 });

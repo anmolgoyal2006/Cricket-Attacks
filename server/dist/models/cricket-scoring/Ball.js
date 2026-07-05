@@ -35,33 +35,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const ballSchema = new mongoose_1.Schema({
-    matchId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'ScoringMatch',
-        required: true,
-    },
-    inningsId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Innings',
-        required: true,
-    },
+    matchId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'ScoringMatch', required: true },
+    inningsId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Innings', required: true },
     over: { type: Number, required: true },
     ballNumber: { type: Number, required: true },
-    bowlerId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    batsmanOnStrikeId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    nonStrikerId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
+    bowlerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    batsmanOnStrikeId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    nonStrikerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    guestBowler: { type: String, default: null },
+    guestBatsman: { type: String, default: null },
+    guestNonStriker: { type: String, default: null },
     runsScored: { type: Number, default: 0 },
     extraType: {
         type: String,
@@ -75,22 +58,14 @@ const ballSchema = new mongoose_1.Schema({
         enum: ['bowled', 'caught', 'lbw', 'runout', 'stumped', 'hitwicket', 'other', null],
         default: null,
     },
-    dismissedPlayerId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null,
-    },
-    fielderId: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null,
-    },
+    dismissedPlayerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    guestDismissed: { type: String, default: null },
+    fielderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    guestFielder: { type: String, default: null },
     isLegalDelivery: { type: Boolean, required: true },
     commentaryText: { type: String, default: null },
     timestamp: { type: Date, default: Date.now },
-}, {
-    timestamps: false, // using explicit timestamp field above
-});
+}, { timestamps: false });
 ballSchema.index({ matchId: 1 });
 ballSchema.index({ inningsId: 1 });
 ballSchema.index({ matchId: 1, inningsId: 1, over: 1, ballNumber: 1 });

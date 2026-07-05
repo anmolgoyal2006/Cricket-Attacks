@@ -293,7 +293,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Nav */}
-        <div className="md:hidden pb-3 pt-1 flex overflow-x-auto scrollbar-hide gap-1">
+        <div className="md:hidden pb-3 pt-1 flex items-center overflow-x-auto scrollbar-hide gap-1">
           {MAIN_NAV.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -308,36 +308,95 @@ export default function Navbar() {
               </Link>
             );
           })}
-          {/* Cricket items on mobile — show individually for quick access */}
-          {CRICKET_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href}
-                className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
-                  isActive ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400' : 'text-gray-400 hover:text-red-400'
-                )}
-              >
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-xs font-body whitespace-nowrap">{item.label.split(' ')[0]}</span>
-              </Link>
-            );
-          })}
-          {/* Games group on mobile */}
-          {GAME_ITEMS.map((game) => {
-            const Icon = game.icon;
-            const isActive = pathname === game.href;
-            return (
-              <Link key={game.href} href={game.href}
-                className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
-                  isActive ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400' : 'text-gray-400 hover:text-amber-400'
-                )}
-              >
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-xs font-body whitespace-nowrap">{game.label.split(' ')[0]}</span>
-              </Link>
-            );
-          })}
+
+          {/* Cricket dropdown trigger — mobile */}
+          <div className="relative" ref={cricketDropdownRef}>
+            <button
+              onClick={() => { setCricketOpen((o) => !o); setGamesOpen(false); }}
+              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
+                isCricketActive || cricketOpen ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400' : 'text-gray-400 hover:text-red-400'
+              )}
+            >
+              <Radio className="w-5 h-5 mb-1" />
+              <span className="text-xs font-body whitespace-nowrap flex items-center gap-0.5">
+                Cricket <ChevronDown className={cn('w-3 h-3 transition-transform', cricketOpen ? 'rotate-180' : '')} />
+              </span>
+            </button>
+            {cricketOpen && (
+              <div className="fixed left-4 right-4 mt-2 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50">
+                <div className="p-2">
+                  {CRICKET_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link key={item.href} href={item.href}
+                        className={cn('flex items-center gap-3 p-3 rounded-xl transition-all',
+                          isActive ? 'bg-red-500/10 border border-red-500/20' : 'hover:bg-white/5 border border-transparent'
+                        )}
+                      >
+                        <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0', item.iconBg)}>
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-display font-bold text-white">{item.label}</span>
+                            <span className={cn('text-xs px-1.5 py-0.5 rounded-full border font-body', item.badgeColor)}>{item.badge}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 font-body mt-0.5">{item.desc}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Games dropdown trigger — mobile */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => { setGamesOpen((o) => !o); setCricketOpen(false); }}
+              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
+                isGamesActive || gamesOpen ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400' : 'text-gray-400 hover:text-amber-400'
+              )}
+            >
+              <Gamepad2 className="w-5 h-5 mb-1" />
+              <span className="text-xs font-body whitespace-nowrap flex items-center gap-0.5">
+                Games <ChevronDown className={cn('w-3 h-3 transition-transform', gamesOpen ? 'rotate-180' : '')} />
+              </span>
+            </button>
+            {gamesOpen && (
+              <div className="fixed left-4 right-4 mt-2 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50">
+                <div className="p-2">
+                  {GAME_ITEMS.map((game) => {
+                    const Icon = game.icon;
+                    const isActive = pathname === game.href;
+                    return (
+                      <Link key={game.href} href={game.href}
+                        className={cn('flex items-center gap-3 p-3 rounded-xl transition-all',
+                          isActive ? 'bg-amber-500/10 border border-amber-500/20' : 'hover:bg-white/5 border border-transparent'
+                        )}
+                      >
+                        <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0', game.iconBg)}>
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-display font-bold text-white">{game.label}</span>
+                            <span className={cn('text-xs px-1.5 py-0.5 rounded-full border font-body', game.badgeColor)}>{game.badge}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 font-body mt-0.5">{game.desc}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+                <div className="px-4 pb-3 pt-1 border-t border-white/5">
+                  <p className="text-xs text-gray-500 font-body">More games coming soon 🏏</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>

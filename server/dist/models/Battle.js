@@ -73,6 +73,8 @@ const battleSchema = new mongoose_1.Schema({
             captaincy: Number,
             pressure: Number,
             overall: Number,
+            used: { type: Boolean, default: false },
+            pendingPick: { type: Boolean, default: false },
         },
     ],
     rounds: [roundResultSchema],
@@ -81,7 +83,7 @@ const battleSchema = new mongoose_1.Schema({
     computerScore: { type: Number, default: 0 },
     winner: {
         type: String,
-        enum: ['player', 'computer', 'tie'],
+        enum: ['player', 'computer', 'opponent', 'tie'],
         default: 'tie',
     },
     rewards: {

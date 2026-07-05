@@ -14,7 +14,7 @@ function shuffleArray(arr) {
     return a;
 }
 function getAttributeValue(card, attr) {
-    return card[attr] ?? 80;
+    return Math.round(card[attr] ?? 80);
 }
 function clamp(val, min = 60, max = 99) {
     return Math.max(min, Math.min(max, val));

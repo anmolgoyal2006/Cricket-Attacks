@@ -102,6 +102,22 @@ const userSchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    pvpWins: {
+        type: Number,
+        default: 0,
+    },
+    pvpLosses: {
+        type: Number,
+        default: 0,
+    },
+    pvpDraws: {
+        type: Number,
+        default: 0,
+    },
+    pvpPlayed: {
+        type: Number,
+        default: 0,
+    },
     eloRating: {
         type: Number,
         default: 1000,

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startPvE = startPvE;
+exports.computerPickHandler = computerPickHandler;
 exports.playRoundHandler = playRoundHandler;
 exports.getBattleById = getBattleById;
 exports.getBattleHistory = getBattleHistory;
@@ -13,7 +14,6 @@ const Player_1 = __importDefault(require("../models/Player"));
 const Battle_1 = __importDefault(require("../models/Battle"));
 const errors_1 = require("../utils/errors");
 const battleService_1 = require("../services/battleService");
-const leaderboardService_1 = require("../services/leaderboardService");
 const helpers_1 = require("../utils/helpers");
 async function startPvE(req, res, next) {
     try {
@@ -79,6 +79,49 @@ async function startPvE(req, res, next) {
         next(error);
     }
 }
+function pickSmartAICard(available, attribute) {
+    const useSmartPick = Math.random() < 0.7;
+    if (useSmartPick) {
+        return [...available].sort((a, b) => (b[attribute] ?? 0) - (a[attribute] ?? 0))[0];
+    }
+    return available[Math.floor(Math.random() * available.length)];
+}
+async function computerPickHandler(req, res, next) {
+    try {
+        const { battleId } = req.params;
+        const battle = await Battle_1.default.findById(battleId);
+        if (!battle)
+            throw new errors_1.NotFoundError('Battle');
+        if (battle.user.toString() !== req.userId)
+            throw new errors_1.BadRequestError('This is not your battle');
+        if (battle.status === 'completed')
+            throw new errors_1.BadRequestError('Battle is already completed');
+        // Clear any previous pending pick (safety)
+        battle.aiSquad = battle.aiSquad.map((ai) => ({ ...ai, pendingPick: false }));
+        // Available = not used and no previous round recorded for this aiId
+        const available = battle.aiSquad.filter((ai) => !ai.used && !battle.rounds.some((r) => r.aiId === ai.aiId || r.computerCardName === ai.name));
+        if (available.length === 0)
+            throw new errors_1.BadRequestError('No AI cards remaining');
+        // Pick smartly: 70% best card for this round's attribute, 30% random
+        const currentAttribute = battle.attributeOrder[battle.rounds.length] || 'batting';
+        const picked = pickSmartAICard(available, currentAttribute);
+        // Mark as pending in aiSquad
+        battle.aiSquad = battle.aiSquad.map((ai) => ai.aiId === picked.aiId ? { ...ai, pendingPick: true } : ai);
+        battle.markModified('aiSquad');
+        await battle.save();
+        // Return name + role only — no stats revealed to frontend yet
+        res.json({
+            computerCard: {
+                name: picked.name,
+                role: picked.role,
+                aiId: picked.aiId,
+            },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
 async function playRoundHandler(req, res, next) {
     try {
         const { battleId } = req.params;
@@ -99,11 +142,17 @@ async function playRoundHandler(req, res, next) {
         if (aiCards.length === 0) {
             throw new errors_1.BadRequestError('No AI cards remaining');
         }
-        const result = (0, battleService_1.playRound)(battle, aiCards, actualPlayerId);
+        // Use the pre-picked card if available, otherwise fall back to random (handles legacy/direct calls)
+        const pendingPick = battle.aiSquad.find((ai) => ai.pendingPick);
+        const aiCardsForRound = pendingPick
+            ? battle.aiSquad.filter((ai) => ai.aiId === pendingPick.aiId)
+            : aiCards;
+        const result = (0, battleService_1.playRound)(battle, aiCardsForRound, actualPlayerId);
         let rewards = null;
         if (result.computerCard) {
             battle.aiSquad = battle.aiSquad.map((ai) => ({
                 ...ai,
+                pendingPick: false, // clear pending pick
                 used: result.computerCard.aiId
                     ? ai.aiId === result.computerCard.aiId || ai.used
                     : ai.name === result.computerCard.name || ai.used,
@@ -130,33 +179,22 @@ async function playRoundHandler(req, res, next) {
             battle.status = 'completed';
             if (result.battleResult) {
                 battle.winner = result.battleResult;
-                if (result.battleResult === 'player') {
-                    battle.rewards.coins = result.trophiesEarned * 5;
-                    battle.rewards.xp = result.xpEarned;
-                    battle.rewards.trophies = result.trophiesEarned;
-                }
-                else if (result.battleResult === 'computer') {
-                    battle.rewards.coins = result.trophiesEarned * 5;
-                    battle.rewards.xp = result.xpEarned;
-                    battle.rewards.trophies = result.trophiesEarned;
-                }
-                else {
-                    battle.rewards.coins = result.trophiesEarned * 5;
-                    battle.rewards.xp = result.xpEarned;
-                    battle.rewards.trophies = result.trophiesEarned;
-                }
                 rewards = await (0, battleService_1.calculateRewards)(result.battleResult);
+                battle.rewards.coins = rewards.coins;
+                battle.rewards.xp = rewards.xp;
+                battle.rewards.trophies = rewards.trophies;
                 await User_1.default.findByIdAndUpdate(req.userId, {
                     $inc: {
                         coins: rewards.coins,
                         xp: rewards.xp,
-                        trophies: result.battleResult === 'player' ? rewards.trophies : 0,
                         battlesPlayed: 1,
                         wins: result.battleResult === 'player' ? 1 : 0,
                         losses: result.battleResult === 'computer' ? 1 : 0,
                     },
                 });
-                await (0, leaderboardService_1.updateLeaderboardForUser)(req.userId);
+                // Leaderboard and ELO/trophies are PvP-only — no update here
+                result.trophiesEarned = 0; // trophies not awarded in PvE
+                result.xpEarned = rewards.xp;
                 result.trophiesEarned = rewards.trophies;
                 result.xpEarned = rewards.xp;
             }

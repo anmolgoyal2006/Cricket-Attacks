@@ -32,7 +32,7 @@ const playerCareerStatsSchema = new Schema<IPlayerCareerStats>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
+      // unique enforced by schema.index below — don't set unique:true here to avoid duplicate index
     },
     matchesPlayed: { type: Number, default: 0 },
     totalRuns: { type: Number, default: 0 },

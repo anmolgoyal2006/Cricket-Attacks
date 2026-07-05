@@ -17,6 +17,10 @@ const historyRoutes_1 = __importDefault(require("./historyRoutes"));
 const seasonRoutes_1 = __importDefault(require("./seasonRoutes"));
 const wordleRoutes_1 = __importDefault(require("./wordleRoutes"));
 const quizRoutes_1 = __importDefault(require("./quizRoutes"));
+// Cricket Scoring Feature — Phase 2
+const matchRoutes_1 = __importDefault(require("./cricket-scoring/matchRoutes"));
+const ballRoutes_1 = __importDefault(require("./cricket-scoring/ballRoutes"));
+const statsRoutes_1 = __importDefault(require("./cricket-scoring/statsRoutes"));
 const router = (0, express_1.Router)();
 router.use('/auth', authRoutes_1.default);
 router.use('/cards', playerRoutes_1.default);
@@ -31,6 +35,10 @@ router.use('/history', historyRoutes_1.default);
 router.use('/seasons', seasonRoutes_1.default);
 router.use('/wordle', wordleRoutes_1.default);
 router.use('/quiz', quizRoutes_1.default);
+// Cricket Scoring Feature — Phase 2 (new — does not alter above lines)
+router.use('/scoring/matches', matchRoutes_1.default);
+router.use('/scoring/matches/:matchId/balls', ballRoutes_1.default);
+router.use('/scoring/stats', statsRoutes_1.default);
 // Health check
 router.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

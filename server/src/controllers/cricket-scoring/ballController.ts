@@ -43,6 +43,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
 
   try {
     const { matchId } = req.params;
+    const matchIdStr: string = Array.isArray(matchId) ? matchId[0] : matchId;
     const {
       runsScored = 0,
       extraType = null,
@@ -71,12 +72,12 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       throw new BadRequestError('bowlerId, batsmanOnStrikeId, nonStrikerId are required');
     }
 
-    const match = await ScoringMatch.findById(matchId).session(session);
+    const match = await ScoringMatch.findById(matchIdStr).session(session);
     if (!match) throw new NotFoundError('Match');
     if (match.status !== 'live') throw new BadRequestError('Match is not live');
 
     const innings = await Innings.findOne({
-      matchId,
+      matchId: matchIdStr,
       inningsNumber: match.currentInnings,
       isCompleted: false,
     }).session(session);
@@ -101,7 +102,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     const [ball] = await BallModel.create(
       [
         {
-          matchId,
+          matchId: matchIdStr,
           inningsId: innings._id,
           over: innings.oversCompleted,
           ballNumber,
@@ -149,7 +150,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // ── Player stats ──────────────────────────────────────────────────────────
     // Batsman on strike faces the ball
     await incrementBattingStats(
-      matchId,
+      matchIdStr,
       batsmanOnStrikeId,
       {
         runs: runsScored,
@@ -167,7 +168,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       runsScored + extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes;
 
     await incrementBowlingStats(
-      matchId,
+      matchIdStr,
       bowlerId,
       {
         ballBowled: legal ? 1 : 0,
@@ -184,7 +185,11 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       innings.target != null &&
       innings.totalRuns >= innings.target;
 
-    let completionResult = { inningsComplete: false, matchComplete: false, resultText: undefined as string | undefined };
+    let completionResult: { inningsComplete: boolean; matchComplete: boolean; resultText?: string } = {
+      inningsComplete: false,
+      matchComplete: false,
+      resultText: undefined,
+    };
 
     if (targetChased || innings.totalWickets >= Math.max(0, (innings.battingTeam === 'teamA' ? match.teamA.players.length : match.teamB.players.length) - 1) || innings.oversCompleted >= match.oversFormat) {
       completionResult = await checkAndHandleCompletion(innings, match, session);
@@ -218,7 +223,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // All emits are fire-and-forget after the HTTP response is sent.
     // They cannot throw or affect the response above.
     try {
-      const room = `match_${matchId}`;
+      const room = `match_${matchIdStr}`;
       const inningsSnapshot = {
         totalRuns: innings.totalRuns,
         totalWickets: innings.totalWickets,
@@ -288,13 +293,14 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
   try {
     const { matchId } = req.params;
+    const matchIdStr: string = Array.isArray(matchId) ? matchId[0] : matchId;
 
-    const match = await ScoringMatch.findById(matchId).session(session);
+    const match = await ScoringMatch.findById(matchIdStr).session(session);
     if (!match) throw new NotFoundError('Match');
     if (match.status !== 'live') throw new BadRequestError('Match is not live — cannot undo');
 
     const innings = await Innings.findOne({
-      matchId,
+      matchId: matchIdStr,
       inningsNumber: match.currentInnings,
     }).session(session);
     if (!innings) throw new NotFoundError('Current innings');
@@ -332,7 +338,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     // ── Reverse player stats ──────────────────────────────────────────────────
     await decrementBattingStats(
-      matchId,
+      matchIdStr,
       lastBall.batsmanOnStrikeId.toString(),
       {
         runs: lastBall.runsScored,
@@ -353,7 +359,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
       extrasBreakdown.legByes;
 
     await decrementBowlingStats(
-      matchId,
+      matchIdStr,
       lastBall.bowlerId.toString(),
       {
         ballBowled: lastBall.isLegalDelivery ? 1 : 0,
@@ -382,7 +388,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     // ── Phase 3: broadcast undo to /live-match namespace ─────────────────────
     try {
-      liveMatchNamespace.to(`match_${matchId}`).emit('ball:undone', {
+      liveMatchNamespace.to(`match_${matchIdStr}`).emit('ball:undone', {
         undone: lastBall,
         innings: {
           totalRuns: innings.totalRuns,

@@ -30,6 +30,8 @@ export interface ScoringMatch {
   createdBy: { _id: string; username: string } | string;
   venue?: string | null;
   currentInningsSummary?: InningsSummary | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InningsSummary {

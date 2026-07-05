@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Trophy, Sparkles, Swords, Users, Home, LogIn, UserPlus,
-  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye, ClipboardList,
+  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye, ClipboardList, Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -40,29 +40,55 @@ const GAME_ITEMS = [
   },
 ];
 
+// Cricket scoring/viewing items — merged into one "Cricket" dropdown
+const CRICKET_ITEMS = [
+  {
+    href: '/matches',
+    label: 'Live Matches',
+    icon: Radio,
+    desc: 'Watch live scores and scorecards',
+    badge: 'Live',
+    badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
+    iconBg: 'from-red-500 to-orange-600',
+  },
+  {
+    href: '/matches/create',
+    label: 'Score a Match',
+    icon: ClipboardList,
+    desc: 'Create a match and score ball by ball',
+    badge: 'Scorer',
+    badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    iconBg: 'from-amber-400 to-orange-500',
+  },
+];
+
 const MAIN_NAV = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/battle', label: 'Battle', icon: Swords },
   { href: '/packs', label: 'Packs', icon: Sparkles },
   { href: '/compare', label: 'Compare', icon: Users },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  // Cricket Scoring Feature — Phase 4 (additive only)
-  { href: '/matches/create', label: 'Score', icon: ClipboardList },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const [gamesOpen, setGamesOpen] = useState(false);
+  const [cricketOpen, setCricketOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const cricketDropdownRef = useRef<HTMLDivElement>(null);
 
   const isGamesActive = GAME_ITEMS.some((g) => pathname === g.href);
+  const isCricketActive = CRICKET_ITEMS.some((c) => pathname === c.href || pathname.startsWith('/matches'));
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setGamesOpen(false);
+      }
+      if (cricketDropdownRef.current && !cricketDropdownRef.current.contains(e.target as Node)) {
+        setCricketOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -72,6 +98,7 @@ export default function Navbar() {
   // Close on route change
   useEffect(() => {
     setGamesOpen(false);
+    setCricketOpen(false);
   }, [pathname]);
 
   return (

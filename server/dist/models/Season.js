@@ -42,5 +42,13 @@ const seasonSchema = new mongoose_1.Schema({
     isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 seasonSchema.index({ isActive: 1, seasonNumber: -1 });
+// Enforce at most one active season at the DB level.
+// A sparse unique index on a boolean field only works if we store the field
+// exclusively on the active document, so we use a partial filter expression.
+seasonSchema.index({ isActive: 1 }, {
+    unique: true,
+    partialFilterExpression: { isActive: true },
+    name: 'unique_active_season',
+});
 exports.default = mongoose_1.default.model('Season', seasonSchema);
 //# sourceMappingURL=Season.js.map

@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setupMatchmaking = setupMatchmaking;
 const User_1 = __importDefault(require("../models/User"));
+const battleRoom_1 = require("./battleRoom");
 const BASE_ELO_RANGE = 100;
 const MAX_ELO_RANGE = 500;
 const EXPAND_INTERVAL = 5000;
@@ -73,6 +74,17 @@ function setupMatchmaking(io, battleRooms) {
             const existing = queue.find((e) => e.userId === socket.userId);
             const user = await User_1.default.findById(socket.userId).lean();
             const eloRating = user?.eloRating || 1000;
+            // Check for cards on cooldown
+            const cooledCards = squad.filter((c) => (0, battleRoom_1.isCardOnCooldown)(socket.userId, c._id || c.userCardId));
+            if (cooledCards.length > 0) {
+                const cooldowns = (0, battleRoom_1.getActiveCooldowns)(socket.userId);
+                socket.emit('matchmaking:cooldown-error', {
+                    message: `${cooledCards.length} card(s) are on cooldown. Please select different cards.`,
+                    cooldowns, // { cardId: expiresAtTimestamp }
+                    cooledCardIds: cooledCards.map((c) => c._id || c.userCardId),
+                });
+                return;
+            }
             if (existing) {
                 existing.squad = squad;
                 existing.eloRating = eloRating;

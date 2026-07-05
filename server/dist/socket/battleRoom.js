@@ -36,6 +36,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.cardCooldowns = void 0;
+exports.setCardCooldowns = setCardCooldowns;
+exports.getActiveCooldowns = getActiveCooldowns;
+exports.isCardOnCooldown = isCardOnCooldown;
 exports.setupBattleRooms = setupBattleRooms;
 const mongoose_1 = __importDefault(require("mongoose"));
 const Battle_1 = __importDefault(require("../models/Battle"));
@@ -45,7 +49,49 @@ const eloService_1 = require("../services/eloService");
 const rewardsService_1 = require("../services/rewardsService");
 const ROUND_TIMEOUT = 30000;
 const TOTAL_ROUNDS = 5;
+const CARD_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const ATTRIBUTES = ['batting', 'bowling', 'fielding', 'captaincy', 'pressure'];
+// userId -> Map<cardId, cooldownExpiresAt>
+exports.cardCooldowns = new Map();
+function setCardCooldowns(userId, cardIds) {
+    if (!exports.cardCooldowns.has(userId)) {
+        exports.cardCooldowns.set(userId, new Map());
+    }
+    const userCooldowns = exports.cardCooldowns.get(userId);
+    const expiresAt = Date.now() + CARD_COOLDOWN_MS;
+    for (const cardId of cardIds) {
+        userCooldowns.set(cardId, expiresAt);
+    }
+}
+function getActiveCooldowns(userId) {
+    const userCooldowns = exports.cardCooldowns.get(userId);
+    if (!userCooldowns)
+        return {};
+    const now = Date.now();
+    const result = {};
+    for (const [cardId, expiresAt] of userCooldowns) {
+        if (expiresAt > now) {
+            result[cardId] = expiresAt;
+        }
+        else {
+            userCooldowns.delete(cardId); // clean up expired
+        }
+    }
+    return result;
+}
+function isCardOnCooldown(userId, cardId) {
+    const userCooldowns = exports.cardCooldowns.get(userId);
+    if (!userCooldowns)
+        return false;
+    const expiresAt = userCooldowns.get(cardId);
+    if (!expiresAt)
+        return false;
+    if (Date.now() >= expiresAt) {
+        userCooldowns.delete(cardId);
+        return false;
+    }
+    return true;
+}
 function shuffleArray(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -116,10 +162,29 @@ function setupBattleRooms(io) {
         }
         else {
             battle.round++;
-            io.to(battle.battleId).emit('battle:round-start', {
+            // Alternate picker each round
+            battle.roundPicker = battle.roundPicker === 'player1' ? 'player2' : 'player1';
+            const nextAttribute = battle.attributeOrder[battle.round - 1] || 'batting';
+            const pickerSocket = battle.roundPicker === 'player1'
+                ? io.sockets.sockets.get(battle.player1.socketId)
+                : io.sockets.sockets.get(battle.player2.socketId);
+            const responderSocket = battle.roundPicker === 'player1'
+                ? io.sockets.sockets.get(battle.player2.socketId)
+                : io.sockets.sockets.get(battle.player1.socketId);
+            // Tell each player whether they're picking first or responding
+            pickerSocket?.emit('battle:round-start', {
                 round: battle.round,
                 totalRounds: TOTAL_ROUNDS,
-                attribute: battle.attributeOrder[battle.round - 1] || 'batting',
+                attribute: nextAttribute,
+                yourTurn: true,
+                opponentPickedCard: null,
+            });
+            responderSocket?.emit('battle:round-start', {
+                round: battle.round,
+                totalRounds: TOTAL_ROUNDS,
+                attribute: nextAttribute,
+                yourTurn: false,
+                opponentPickedCard: null,
             });
         }
     }
@@ -127,12 +192,17 @@ function setupBattleRooms(io) {
         battle.timer = setTimeout(() => {
             const p1Socket = io.sockets.sockets.get(battle.player1.socketId);
             const p2Socket = io.sockets.sockets.get(battle.player2.socketId);
+            // Auto-select only for whoever hasn't picked yet (respects turn order)
             if (!battle.player1Choice && p1Socket?.connected) {
                 const fallback = battle.player1.cards.find((c) => !battle.player1UsedCardIds.has(c.userCardId));
                 if (fallback) {
                     battle.player1Choice = fallback;
                     battle.player1UsedCardIds.add(fallback.userCardId);
                     p1Socket.emit('battle:auto-selected', { card: fallback });
+                    // If player1 was the picker, notify player2 their card was auto-chosen
+                    if (battle.roundPicker === 'player1' && !battle.player2Choice) {
+                        p2Socket?.emit('battle:picker-chose', { cardName: fallback.name, cardRole: fallback.role });
+                    }
                 }
             }
             if (!battle.player2Choice && p2Socket?.connected) {
@@ -141,6 +211,10 @@ function setupBattleRooms(io) {
                     battle.player2Choice = fallback;
                     battle.player2UsedCardIds.add(fallback.userCardId);
                     p2Socket.emit('battle:auto-selected', { card: fallback });
+                    // If player2 was the picker, notify player1 their card was auto-chosen
+                    if (battle.roundPicker === 'player2' && !battle.player1Choice) {
+                        p1Socket?.emit('battle:picker-chose', { cardName: fallback.name, cardRole: fallback.role });
+                    }
                 }
             }
             if (battle.player1Choice && battle.player2Choice) {
@@ -150,6 +224,11 @@ function setupBattleRooms(io) {
     }
     async function endBattle(io, battle) {
         battle.status = 'completed';
+        // Apply 10-minute cooldown on used cards for both players
+        const p1CardIds = battle.player1.cards.map((c) => c.userCardId);
+        const p2CardIds = battle.player2.cards.map((c) => c.userCardId);
+        setCardCooldowns(battle.player1.userId, p1CardIds);
+        setCardCooldowns(battle.player2.userId, p2CardIds);
         let overallWinner = 'tie';
         if (battle.player1Score > battle.player2Score) {
             overallWinner = 'player1';
@@ -189,6 +268,10 @@ function setupBattleRooms(io) {
                             wins: player1Won ? 1 : 0,
                             losses: player2Won ? 1 : 0,
                             draws: isDraw ? 1 : 0,
+                            pvpPlayed: 1,
+                            pvpWins: player1Won ? 1 : 0,
+                            pvpLosses: player2Won ? 1 : 0,
+                            pvpDraws: isDraw ? 1 : 0,
                         },
                     }),
                     UserModel.findByIdAndUpdate(battle.player2.userId, {
@@ -205,6 +288,10 @@ function setupBattleRooms(io) {
                             wins: player2Won ? 1 : 0,
                             losses: player1Won ? 1 : 0,
                             draws: isDraw ? 1 : 0,
+                            pvpPlayed: 1,
+                            pvpWins: player2Won ? 1 : 0,
+                            pvpLosses: player1Won ? 1 : 0,
+                            pvpDraws: isDraw ? 1 : 0,
                         },
                     }),
                 ]);
@@ -371,6 +458,10 @@ function setupBattleRooms(io) {
                 battlesPlayed: 1,
                 wins: player1Won ? 1 : 0,
                 losses: player2Won ? 1 : 0,
+                pvpPlayed: 1,
+                pvpWins: player1Won ? 1 : 0,
+                pvpLosses: player2Won ? 1 : 0,
+                pvpDraws: isDraw ? 1 : 0,
             },
         });
         await UserModel.findByIdAndUpdate(battle.player2.userId, {
@@ -380,6 +471,10 @@ function setupBattleRooms(io) {
                 battlesPlayed: 1,
                 wins: player2Won ? 1 : 0,
                 losses: player1Won ? 1 : 0,
+                pvpPlayed: 1,
+                pvpWins: player2Won ? 1 : 0,
+                pvpLosses: player1Won ? 1 : 0,
+                pvpDraws: isDraw ? 1 : 0,
             },
         });
         await (0, leaderboardService_1.updateLeaderboardForUser)(battle.player1.userId);
@@ -388,6 +483,8 @@ function setupBattleRooms(io) {
     return {
         initializeBattle(socket, io, battleId, player1Data, player2Data) {
             const attributeOrder = shuffleArray(ATTRIBUTES);
+            // Randomly decide who picks first in round 1
+            const firstPicker = Math.random() < 0.5 ? 'player1' : 'player2';
             const battle = {
                 battleId,
                 attributeOrder,
@@ -409,14 +506,29 @@ function setupBattleRooms(io) {
                 roundHistory: [],
                 status: 'in_progress',
                 timer: null,
+                roundPicker: firstPicker,
             };
             activeBattles.set(battleId, battle);
-            io.to(battleId).emit('battle:start', {
+            // Tell each player individually whether they pick first
+            const p1Socket = io.sockets.sockets.get(player1Data.socketId);
+            const p2Socket = io.sockets.sockets.get(player2Data.socketId);
+            p1Socket?.emit('battle:start', {
                 battleId,
                 round: 1,
                 totalRounds: TOTAL_ROUNDS,
                 attribute: attributeOrder[0] || 'batting',
                 attributeOrder,
+                yourTurn: firstPicker === 'player1',
+                opponentPickedCard: null,
+            });
+            p2Socket?.emit('battle:start', {
+                battleId,
+                round: 1,
+                totalRounds: TOTAL_ROUNDS,
+                attribute: attributeOrder[0] || 'batting',
+                attributeOrder,
+                yourTurn: firstPicker === 'player2',
+                opponentPickedCard: null,
             });
             return battle;
         },
@@ -431,13 +543,23 @@ function setupBattleRooms(io) {
                 return;
             }
             const isPlayer1 = socket.userId === battle.player1.userId;
+            const myRole = isPlayer1 ? 'player1' : 'player2';
             const usedSet = isPlayer1 ? battle.player1UsedCardIds : battle.player2UsedCardIds;
             const cards = isPlayer1 ? battle.player1.cards : battle.player2.cards;
+            // Enforce turn order
+            const myChoice = isPlayer1 ? battle.player1Choice : battle.player2Choice;
+            const opponentChoice = isPlayer1 ? battle.player2Choice : battle.player1Choice;
+            const isPicker = battle.roundPicker === myRole;
+            // Responder can only pick after the picker has picked
+            if (!isPicker && !opponentChoice) {
+                socket.emit('error', { message: "Wait for your opponent to pick first" });
+                return;
+            }
             if (usedSet.has(cardId)) {
                 socket.emit('error', { message: 'Card already used this battle' });
                 return;
             }
-            if ((isPlayer1 && battle.player1Choice) || (!isPlayer1 && battle.player2Choice)) {
+            if (myChoice) {
                 socket.emit('error', { message: 'Already selected a card for this round' });
                 return;
             }
@@ -453,13 +575,23 @@ function setupBattleRooms(io) {
                 battle.player2Choice = card;
             }
             usedSet.add(cardId);
-            socket.to(battleId).emit('battle:opponent-selected');
-            if (battle.timer) {
-                clearTimeout(battle.timer);
-                battle.timer = null;
+            // If this was the picker's selection, notify the responder (name + role only)
+            if (isPicker) {
+                const responderSocketId = isPlayer1 ? battle.player2.socketId : battle.player1.socketId;
+                const responderSocket = io.sockets.sockets.get(responderSocketId);
+                responderSocket?.emit('battle:picker-chose', {
+                    cardName: card.name,
+                    cardRole: card.role,
+                });
+                // Start the full-round timer now (responder has ROUND_TIMEOUT to respond)
+                if (battle.timer)
+                    clearTimeout(battle.timer);
+                startRoundTimer(battle);
             }
-            startRoundTimer(battle);
-            checkRoundComplete(battle);
+            else {
+                // Responder picked — resolve round immediately
+                checkRoundComplete(battle);
+            }
         },
         handleDisconnect(socket) {
             for (const [battleId, battle] of activeBattles) {
@@ -495,16 +627,16 @@ function setupBattleRooms(io) {
                                     const newTier = (0, eloService_1.getTier)(eloResult.newRatingA);
                                     await UserModel.findByIdAndUpdate(winnerUserId, {
                                         $set: { eloRating: eloResult.newRatingA, rankTier: newTier, battleStreak: (winnerDoc.battleStreak || 0) + 1 },
-                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
                                     });
                                     await UserModel.findByIdAndUpdate(loserUserId, {
                                         $set: { eloRating: eloResult.newRatingB, rankTier: (0, eloService_1.getTier)(eloResult.newRatingB), battleStreak: 0 },
-                                        $inc: { battlesPlayed: 1, losses: 1 },
+                                        $inc: { battlesPlayed: 1, losses: 1, pvpPlayed: 1, pvpLosses: 1 },
                                     });
                                 }
                                 else {
                                     await UserModel.findByIdAndUpdate(winnerUserId, {
-                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1 },
+                                        $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
                                     });
                                 }
                                 await (0, leaderboardService_1.updateLeaderboardForUser)(winnerUserId);
@@ -554,6 +686,13 @@ function setupBattleRooms(io) {
                 status: battle.status,
                 yourCards: socket.userId === battle.player1.userId ? battle.player1.cards : battle.player2.cards,
                 usedCardIds: Array.from(socket.userId === battle.player1.userId ? battle.player1UsedCardIds : battle.player2UsedCardIds),
+                yourTurn: (socket.userId === battle.player1.userId && battle.roundPicker === 'player1') ||
+                    (socket.userId === battle.player2.userId && battle.roundPicker === 'player2'),
+                opponentPickedCard: (() => {
+                    const isP1 = socket.userId === battle.player1.userId;
+                    const opponentChoice = isP1 ? battle.player2Choice : battle.player1Choice;
+                    return opponentChoice ? { cardName: opponentChoice.name, cardRole: opponentChoice.role } : null;
+                })(),
             });
         },
     };

@@ -11,5 +11,7 @@ router.post('/register', rateLimiter_1.authLimiter, (0, validation_1.validate)(v
 router.post('/login', rateLimiter_1.authLimiter, (0, validation_1.validate)(validation_2.loginSchema), authController_1.login);
 router.get('/me', auth_1.authenticate, authController_1.getMe);
 router.post('/claim-coins', auth_1.authenticate, authController_1.claimCoins);
+// Cricket Scoring Feature — Phase 4: player search for match creation form
+router.get('/users/search', auth_1.authenticate, authController_1.searchUsers);
 exports.default = router;
 //# sourceMappingURL=authRoutes.js.map

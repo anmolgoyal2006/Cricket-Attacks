@@ -7,6 +7,7 @@ exports.register = register;
 exports.login = login;
 exports.getMe = getMe;
 exports.claimCoins = claimCoins;
+exports.searchUsers = searchUsers;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
 const Player_1 = __importDefault(require("../models/Player"));
@@ -149,6 +150,27 @@ async function claimCoins(req, res, next) {
             user: sanitizeUser(user),
             message: 'Claimed 500 coins successfully!',
         });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+// Cricket Scoring Feature — Phase 4
+// Search users by username prefix — used by the match creation player-select UI.
+// GET /api/auth/users/search?q=<term>  (requires auth, returns max 10 results)
+async function searchUsers(req, res, next) {
+    try {
+        const q = (req.query.q ?? '').trim();
+        if (q.length < 2) {
+            return res.json({ users: [] });
+        }
+        const users = await User_1.default.find({
+            username: { $regex: q, $options: 'i' },
+        })
+            .select('_id username')
+            .limit(10)
+            .lean();
+        res.json({ users: users.map((u) => ({ _id: u._id, username: u.username })) });
     }
     catch (error) {
         next(error);

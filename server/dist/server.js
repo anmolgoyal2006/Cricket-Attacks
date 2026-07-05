@@ -13,6 +13,7 @@ const routes_1 = __importDefault(require("./routes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const socket_1 = require("./socket");
+const seasonController_1 = require("./controllers/seasonController");
 const app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(app);
 app.set('trust proxy', 1);
@@ -29,7 +30,11 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, morgan_1.default)('dev'));
 app.use(rateLimiter_1.generalLimiter);
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: Math.floor(process.uptime()),
+    });
 });
 app.use('/api', routes_1.default);
 app.use('/api/*', (_req, res) => {
@@ -39,6 +44,9 @@ app.use(errorHandler_1.errorHandler);
 async function start() {
     await (0, database_1.connectDatabase)();
     (0, socket_1.setupSocketServer)(httpServer);
+    // Check for season expiry once on boot, then every hour.
+    (0, seasonController_1.rolloverExpiredSeason)().catch(console.error);
+    setInterval(() => (0, seasonController_1.rolloverExpiredSeason)().catch(console.error), 60 * 60 * 1000);
     httpServer.listen(config_1.config.port, () => {
         console.log(`Server running on http://localhost:${config_1.config.port}`);
         console.log(`WebSocket running on ws://localhost:${config_1.config.port}`);

@@ -15,8 +15,11 @@ async function updateLeaderboardForUser(userId, season = 1) {
     const user = await User_1.default.findById(userId);
     if (!user)
         return;
-    const battlesWon = user.wins;
-    const battlesPlayed = user.battlesPlayed;
+    // Leaderboard stats are PvP-only
+    const battlesWon = user.pvpWins ?? 0;
+    const battlesLost = user.pvpLosses ?? 0;
+    const battlesDrawn = user.pvpDraws ?? 0;
+    const battlesPlayed = user.pvpPlayed ?? 0;
     const winRate = battlesPlayed > 0 ? Math.round((battlesWon / battlesPlayed) * 100) : 0;
     await LeaderboardEntry_1.default.findOneAndUpdate({ user: userId }, {
         user: userId,
@@ -26,8 +29,8 @@ async function updateLeaderboardForUser(userId, season = 1) {
         trophies: user.trophies,
         battlesPlayed,
         battlesWon,
-        battlesLost: user.losses,
-        battlesDrawn: user.draws,
+        battlesLost,
+        battlesDrawn,
         winRate,
         xp: user.xp,
         streak: user.battleStreak,
@@ -81,9 +84,9 @@ async function getMyRank(userId, season) {
             eloRating: user.eloRating,
             rankTier: user.rankTier,
             trophies: user.trophies,
-            battlesWon: user.wins,
-            battlesPlayed: user.battlesPlayed,
-            winRate: user.battlesPlayed > 0 ? Math.round((user.wins / user.battlesPlayed) * 100) : 0,
+            battlesWon: user.pvpWins ?? 0,
+            battlesPlayed: user.pvpPlayed ?? 0,
+            winRate: (user.pvpPlayed ?? 0) > 0 ? Math.round(((user.pvpWins ?? 0) / (user.pvpPlayed ?? 0)) * 100) : 0,
             streak: user.battleStreak,
         };
     }

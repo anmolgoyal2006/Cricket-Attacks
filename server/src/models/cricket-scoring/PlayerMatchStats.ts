@@ -70,7 +70,7 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
 );
 
 playerMatchStatsSchema.index({ matchId: 1 });
-playerMatchStatsSchema.index({ playerId: 1 });
+// Removed standalone playerId index — it's a duplicate; the compound index below covers it
 playerMatchStatsSchema.index({ matchId: 1, playerId: 1 }, { unique: true });
 
 export default mongoose.model<IPlayerMatchStats>('PlayerMatchStats', playerMatchStatsSchema);

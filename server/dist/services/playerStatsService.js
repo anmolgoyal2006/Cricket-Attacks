@@ -33,7 +33,9 @@ function playerUpsertFields(player) {
         // the document so it doesn't participate in the { matchId, playerId } index at all.
         return { guestName: player.guestName };
     }
-    return { playerId: player, guestName: null };
+    // For registered players: set playerId, leave guestName absent (not null) so
+    // it doesn't participate in the sparse { matchId, guestName } unique index.
+    return { playerId: player };
 }
 async function incrementBattingStats(matchId, player, delta, session) {
     const filter = playerFilter(matchId, player);

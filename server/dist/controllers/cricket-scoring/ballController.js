@@ -57,6 +57,19 @@ async function recordBall(req, res, next) {
         const nonStrk = resolvePlayer(nonStrikerId);
         const dismissed = resolvePlayer(dismissedPlayerId);
         const fielder = resolvePlayer(fielderId);
+        // Normalise extraType: frontend sends camelCase ('noBall','legBye') but
+        // backend ExtraType uses lowercase ('noball','legbye'). Map here once.
+        const extraTypeMapped = (() => {
+            if (!extraType)
+                return null;
+            const map = {
+                wide: 'wide', Wide: 'wide',
+                noBall: 'noball', noball: 'noball', 'no-ball': 'noball', NoBall: 'noball',
+                bye: 'bye', Bye: 'bye',
+                legBye: 'legbye', legbye: 'legbye', 'leg-bye': 'legbye', LegBye: 'legbye',
+            };
+            return map[extraType] ?? extraType;
+        })();
         const match = await ScoringMatch_1.default.findById(matchIdStr).session(session);
         if (!match)
             throw new errors_1.NotFoundError('Match');
@@ -70,7 +83,7 @@ async function recordBall(req, res, next) {
         if (!innings)
             throw new errors_1.NotFoundError('Active innings');
         // ── Over / ball position ──────────────────────────────────────────────────
-        const legal = (0, scoringLogic_1.isLegalDelivery)(extraType);
+        const legal = (0, scoringLogic_1.isLegalDelivery)(extraTypeMapped);
         // Atomically read-and-increment ballsInCurrentOver so concurrent requests
         // can never read the same stale value. findOneAndUpdate with new:false
         // returns the document BEFORE the increment, giving us the pre-update counts.
@@ -100,8 +113,8 @@ async function recordBall(req, res, next) {
         }
         // For illegal deliveries freshInnings reflects the unmodified state — correct
         // ── Extras breakdown ──────────────────────────────────────────────────────
-        const extrasBreakdown = (0, scoringLogic_1.calculateExtrasBreakdown)(extraType, extraRuns);
-        const deliveryRuns = (0, scoringLogic_1.totalDeliveryRuns)(runsScored, extraRuns);
+        const extrasBreakdown = (0, scoringLogic_1.calculateExtrasBreakdown)(extraTypeMapped, extraRuns);
+        const deliveryRuns = (0, scoringLogic_1.totalDeliveryRuns)(runsScored, extraRuns, extraTypeMapped);
         // ── Save ball ─────────────────────────────────────────────────────────────
         const [ball] = await Ball_1.default.create([
             {
@@ -116,7 +129,7 @@ async function recordBall(req, res, next) {
                 guestBatsman: batsman.guestName,
                 guestNonStriker: nonStrk.guestName,
                 runsScored,
-                extraType: extraType || null,
+                extraType: extraTypeMapped || null,
                 extraRuns,
                 isWicket,
                 wicketType: isWicket ? wicketType : null,
@@ -152,8 +165,18 @@ async function recordBall(req, res, next) {
             isOut: isWicket && batsmanOnStrikeId === (dismissedPlayerId ?? batsmanOnStrikeId),
             dismissalType: isWicket && batsmanOnStrikeId === (dismissedPlayerId ?? batsmanOnStrikeId) ? wicketType : null,
         }, session);
-        // Runs chargeable to bowler: bat runs + no-ball penalty; wides + byes + leg-byes also count
-        const runsChargedToBowler = runsScored + extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes;
+        // Runs chargeable to bowler:
+        // wide: wides bucket (already includes 1 penalty) + no bat runs
+        // noball: 1 penalty + bat runs (extraRuns are field runs, not bat)
+        // bye/legbye: not charged to bowler
+        // normal: bat runs only
+        const runsChargedToBowler = (() => {
+            if (extraTypeMapped === 'wide')
+                return extrasBreakdown.wides; // 1 + overthrows
+            if (extraTypeMapped === 'noball')
+                return 1 + runsScored; // penalty + bat
+            return runsScored; // normal / bye / legbye
+        })();
         await (0, playerStatsService_1.incrementBowlingStats)(matchIdStr, bowler.statsKey, {
             ballBowled: legal ? 1 : 0,
             runsConceded: runsChargedToBowler,
@@ -271,7 +294,7 @@ async function undoLastBall(req, res, next) {
         if (!lastBall)
             throw new errors_1.BadRequestError('No balls recorded in this innings yet');
         // ── Reverse innings totals ────────────────────────────────────────────────
-        const deliveryRuns = (0, scoringLogic_1.totalDeliveryRuns)(lastBall.runsScored, lastBall.extraRuns);
+        const deliveryRuns = (0, scoringLogic_1.totalDeliveryRuns)(lastBall.runsScored, lastBall.extraRuns, lastBall.extraType);
         const extrasBreakdown = (0, scoringLogic_1.calculateExtrasBreakdown)(lastBall.extraType, lastBall.extraRuns);
         innings.totalRuns = Math.max(0, innings.totalRuns - deliveryRuns);
         innings.extras.wides = Math.max(0, innings.extras.wides - extrasBreakdown.wides);

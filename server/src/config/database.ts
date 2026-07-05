@@ -30,6 +30,9 @@ async function runIndexMigrations(): Promise<void> {
     // sparse:true version — also wrong, sparse still indexes explicit null values
     // The new schema uses partialFilterExpression instead, which truly excludes nulls
     { collection: 'playermatchstats', index: 'matchId_1_playerId_1_sparse' },
+    // { matchId, guestName } sparse index — registered players had guestName:null stored
+    // explicitly by old code, which still participates in sparse index and collides
+    { collection: 'playermatchstats', index: 'matchId_1_guestName_1' },
     // Balls unique index on over+ballNumber — wides/no-balls share same position
     { collection: 'balls', index: 'matchId_1_inningsId_1_over_1_ballNumber_1' },
   ];

@@ -254,12 +254,15 @@ export default function ScorePage() {
   const battingTeam = match ? match[battingTeamKey as 'teamA' | 'teamB'] : null;
   const bowlingTeam = match ? match[bowlingTeamKey as 'teamA' | 'teamB'] : null;
 
+  // Single-batsman mode: only one player on batting team — no non-striker needed
+  const singleBatsmanMode = (battingTeam?.players?.length ?? 0) === 1;
+
   // Available batsmen (not out, not non-striker, not striker)
   const availableBatsmen: Player[] = toPlayers(battingTeam?.players ?? []).filter(
     (p) =>
       !outPlayerIds.has(p._id) &&
       p._id !== striker?._id &&
-      p._id !== nonStriker?._id
+      (singleBatsmanMode || p._id !== nonStriker?._id)
   );
 
   // Available bowlers (all bowling-team players; optionally exclude last bowler per over)
@@ -305,8 +308,8 @@ export default function ScorePage() {
         setCurrentOverBalls((prev) => [...prev, overBall]);
       }
 
-      // Strike rotation
-      if (flags.strikeSwapped && striker && nonStriker) {
+      // Strike rotation — skip in single-batsman mode (only one batter)
+      if (flags.strikeSwapped && striker && nonStriker && !singleBatsmanMode) {
         setStriker(nonStriker);
         setNonStriker(striker);
       }
@@ -326,8 +329,13 @@ export default function ScorePage() {
         if (isWicketBall) {
           setOutPlayerIds((prev) => new Set([...prev, striker?._id ?? '']));
         }
-        setIncomingBatsmanId('');
-        setActiveModal('newBatsman');
+        if (singleBatsmanMode) {
+          // No partner needed — innings ends (backend handles it) or just continue
+          setStriker(null);
+        } else {
+          setIncomingBatsmanId('');
+          setActiveModal('newBatsman');
+        }
       } else if (flags.isEndOfOver) {
         prevBowlerRef.current = bowler?._id ?? null;
         setNewBowlerId('');
@@ -346,20 +354,24 @@ export default function ScorePage() {
         isWicket: false, type: 'bowled', dismissedId: '', fielderId: '',
       }
     ) => {
-      if (!striker || !nonStriker || !bowler) {
-        setPostError('Set striker, non-striker, and bowler before scoring');
+      if (!striker || !bowler) {
+        setPostError('Set striker and bowler before scoring');
         return;
       }
-      // Synchronous guard — prevents a second tap firing before the React state
-      // re-render has disabled the buttons. postingRef updates instantly unlike useState.
+      if (!singleBatsmanMode && !nonStriker) {
+        setPostError('Set non-striker before scoring');
+        return;
+      }
       if (postingRef.current) return;
       postingRef.current = true;
       setPosting(true);
       setPostError('');
+      // In single-batsman mode, non-striker is the same player as striker
+      const effectiveNonStriker = singleBatsmanMode ? striker : nonStriker!;
       try {
         const result = await scoringApi.recordBall(matchId, {
           batsmanOnStrikeId: striker._id,
-          nonStrikerId: nonStriker._id,
+          nonStrikerId: effectiveNonStriker._id,
           bowlerId: bowler._id,
           runsScored: runs,
           extraType: extra.type,
@@ -377,7 +389,7 @@ export default function ScorePage() {
         setPosting(false);
       }
     },
-    [matchId, striker, nonStriker, bowler, applyBallResult]
+    [matchId, striker, nonStriker, bowler, singleBatsmanMode, applyBallResult]
   );
 
   // ── Undo ──────────────────────────────────────────────────────────────────────
@@ -490,7 +502,7 @@ export default function ScorePage() {
     posting ||
     activeModal !== null ||
     !striker ||
-    !nonStriker ||
+    (!singleBatsmanMode && !nonStriker) ||
     !bowler ||
     match?.status === 'completed';
 
@@ -601,20 +613,26 @@ export default function ScorePage() {
                 {striker ? striker.username : <span className="text-gray-500">Pick player</span>}
               </p>
             </div>
-            {/* Non-striker */}
-            <div
-              className={cn('p-2 rounded-xl cursor-pointer transition-all border', nonStriker ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/30')}
-              onClick={() => {
-                if (!battingTeam) return;
-                const next = toPlayers(battingTeam.players).find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
-                if (!nonStriker && next) setNonStriker(next);
-              }}
-            >
-              <p className="text-[10px] text-blue-400 font-body mb-1">Non-Striker</p>
-              <p className="text-xs font-display font-bold text-white truncate">
-                {nonStriker ? nonStriker.username : <span className="text-gray-500">Pick player</span>}
-              </p>
-            </div>
+            {/* Non-striker — hidden in single-batsman mode */}
+            {singleBatsmanMode ? (
+              <div className="p-2 rounded-xl border bg-gray-500/10 border-gray-500/20 flex items-center justify-center">
+                <p className="text-[10px] text-gray-500 font-body text-center">Solo<br/>mode</p>
+              </div>
+            ) : (
+              <div
+                className={cn('p-2 rounded-xl cursor-pointer transition-all border', nonStriker ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/30')}
+                onClick={() => {
+                  if (!battingTeam) return;
+                  const next = toPlayers(battingTeam.players).find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
+                  if (!nonStriker && next) setNonStriker(next);
+                }}
+              >
+                <p className="text-[10px] text-blue-400 font-body mb-1">Non-Striker</p>
+                <p className="text-xs font-display font-bold text-white truncate">
+                  {nonStriker ? nonStriker.username : <span className="text-gray-500">Pick player</span>}
+                </p>
+              </div>
+            )}
             {/* Bowler */}
             <div
               className={cn('p-2 rounded-xl cursor-pointer transition-all border', bowler ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-green-500/30')}
@@ -631,14 +649,14 @@ export default function ScorePage() {
           </div>
 
           {/* Player pickers inline */}
-          {!striker || !nonStriker || !bowler ? (
+          {(!striker || (!singleBatsmanMode && !nonStriker) || !bowler) ? (
             <div className="space-y-3 border-t border-white/10 pt-3">
               {!striker && (
                 <div>
                   <p className="text-xs text-amber-400 font-body mb-1.5">Select Striker</p>
                   <div className="flex flex-wrap gap-2">
                     {toPlayers(battingTeam?.players ?? [])
-                      .filter((p) => !outPlayerIds.has(p._id) && p._id !== nonStriker?._id)
+                      .filter((p) => !outPlayerIds.has(p._id) && (singleBatsmanMode || p._id !== nonStriker?._id))
                       .map((p) => (
                         <button key={p._id} type="button"
                           onClick={() => setStriker(p)}
@@ -648,7 +666,7 @@ export default function ScorePage() {
                   </div>
                 </div>
               )}
-              {!nonStriker && striker && (
+              {!singleBatsmanMode && !nonStriker && striker && (
                 <div>
                   <p className="text-xs text-blue-400 font-body mb-1.5">Select Non-Striker</p>
                   <div className="flex flex-wrap gap-2">
@@ -663,7 +681,7 @@ export default function ScorePage() {
                   </div>
                 </div>
               )}
-              {!bowler && striker && nonStriker && (
+              {!bowler && striker && (singleBatsmanMode || nonStriker) && (
                 <div>
                   <p className="text-xs text-green-400 font-body mb-1.5">Select Bowler</p>
                   <div className="flex flex-wrap gap-2">

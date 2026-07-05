@@ -97,6 +97,17 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    function updateNavBottom() {
+      if (navRef.current) {
+        setNavBottom(navRef.current.getBoundingClientRect().bottom);
+      }
+    }
+    updateNavBottom();
+    window.addEventListener('resize', updateNavBottom);
+    return () => window.removeEventListener('resize', updateNavBottom);
+  }, []);
+
   // Close on route change
   useEffect(() => {
     setGamesOpen(false);
@@ -104,7 +115,7 @@ export default function Navbar() {
   }, [pathname]);
 
   return (
-    <nav className="sticky top-0 z-50 bg-cricket-stadium/95 backdrop-blur-lg border-b border-white/10">
+    <nav ref={navRef} className="sticky top-0 z-50 bg-cricket-stadium/95 backdrop-blur-lg border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
@@ -325,7 +336,7 @@ export default function Navbar() {
               </span>
             </button>
             {cricketOpen && (
-              <div className="fixed left-4 right-4 mt-2 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50">
+              <div className="fixed left-4 right-4 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50" style={{ top: navBottom + 8 }}>
                 <div className="p-2">
                   {CRICKET_ITEMS.map((item) => {
                     const Icon = item.icon;
@@ -368,7 +379,7 @@ export default function Navbar() {
               </span>
             </button>
             {gamesOpen && (
-              <div className="fixed left-4 right-4 mt-2 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50">
+              <div className="fixed left-4 right-4 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 bg-gray-950/95 backdrop-blur-xl z-50" style={{ top: navBottom + 8 }}>
                 <div className="p-2">
                   {GAME_ITEMS.map((game) => {
                     const Icon = game.icon;

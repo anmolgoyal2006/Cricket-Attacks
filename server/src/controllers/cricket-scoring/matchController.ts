@@ -22,12 +22,6 @@ export async function createMatch(req: AuthRequest, res: Response, next: NextFun
     if (!teamB?.name || !teamB?.players?.length) {
       throw new BadRequestError('teamB must have a name and at least one player');
     }
-    if (teamA.players.length < 2) {
-      throw new BadRequestError('teamA must have at least 2 players');
-    }
-    if (teamB.players.length < 2) {
-      throw new BadRequestError('teamB must have at least 2 players');
-    }
     if (!oversFormat || oversFormat <= 0) {
       throw new BadRequestError('oversFormat must be a positive number');
     }
@@ -142,6 +136,32 @@ export async function updateScorers(req: AuthRequest, res: Response, next: NextF
     await match.save();
 
     res.json({ scorers: match.scorers });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── PATCH /api/scoring/matches/:id/start-second-innings ──────────────────────
+// Called by the scorer when they click "Start 2nd Innings" on the innings break screen.
+// Transitions match status from 'innings_break' back to 'live' so ball recording works.
+export async function startSecondInnings(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const match = await ScoringMatch.findById(req.params.id);
+    if (!match) throw new NotFoundError('Match');
+    if (match.status !== 'innings_break') {
+      throw new BadRequestError('Match is not in innings break');
+    }
+
+    match.status = 'live';
+    await match.save();
+
+    // Attach current innings summary
+    const currentInnings = await Innings.findOne({
+      matchId: match._id,
+      inningsNumber: match.currentInnings,
+    }).lean();
+
+    res.json({ match: { ...match.toObject(), currentInningsSummary: currentInnings || null } });
   } catch (err) {
     next(err);
   }

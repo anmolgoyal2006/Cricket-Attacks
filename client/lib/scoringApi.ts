@@ -119,6 +119,11 @@ export const scoringApi = {
       method: 'PATCH',
     }),
 
+  startSecondInnings: (matchId: string) =>
+    api<{ match: ScoringMatch }>(`/scoring/matches/${matchId}/start-second-innings`, {
+      method: 'PATCH',
+    }),
+
   getMatch: (matchId: string) =>
     api<{ match: ScoringMatch }>(`/scoring/matches/${matchId}`),
 

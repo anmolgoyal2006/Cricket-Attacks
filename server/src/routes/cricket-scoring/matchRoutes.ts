@@ -13,6 +13,7 @@ import {
   getMatch,
   updateScorers,
   startMatch,
+  startSecondInnings,
   // Phase 5 additions (additive only):
   getBalls,
   getMatchStats,
@@ -25,6 +26,7 @@ router.get('/', authenticate, listMatches);
 router.get('/:id', authenticate, getMatch);
 router.patch('/:id/scorers', authenticate, updateScorers);          // only creator — checked inside controller
 router.patch('/:id/start', authenticate, isScorerOrCreator, startMatch);
+router.patch('/:id/start-second-innings', authenticate, isScorerOrCreator, startSecondInnings);
 // Phase 5: read-only spectator endpoints (no isScorerOrCreator check — all authenticated users can read)
 router.get('/:matchId/balls', authenticate, getBalls);
 router.get('/:matchId/stats', authenticate, getMatchStats);

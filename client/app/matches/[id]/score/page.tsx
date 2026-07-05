@@ -264,12 +264,21 @@ export default function ScorePage() {
       setInnings(newInnings);
 
       // Add ball to current-over visual
+      const extraLabel: Record<string, string> = {
+        wide: 'Wd', noBall: 'Nb', bye: 'B', legBye: 'Lb',
+        // backend stores lowercase versions too
+        noball: 'Nb', legbye: 'Lb',
+      };
       const overBall: OverBall = {
         runs: runsBall,
         isWicket: isWicketBall,
         isExtra: !!extraTypeBall,
         extraType: extraTypeBall,
-        label: isWicketBall ? 'W' : extraTypeBall ? extraTypeBall[0].toUpperCase() : String(runsBall),
+        label: isWicketBall
+          ? 'W'
+          : extraTypeBall
+          ? (extraLabel[extraTypeBall] ?? extraTypeBall[0].toUpperCase())
+          : String(runsBall),
       };
 
       if (flags.isEndOfOver) {
@@ -414,14 +423,34 @@ export default function ScorePage() {
     setActiveModal(null);
   };
 
-  const handleStartSecondInnings = () => {
+  const handleStartSecondInnings = async () => {
     setActiveModal(null);
+    setPosting(true);
+    try {
+      // Transition match status from 'innings_break' → 'live' so ball recording works
+      const { match: updatedMatch } = await scoringApi.startSecondInnings(matchId);
+      setMatch(updatedMatch);
+      if (updatedMatch.currentInningsSummary) {
+        const ci = updatedMatch.currentInningsSummary;
+        setInnings({
+          totalRuns: ci.totalRuns,
+          totalWickets: ci.totalWickets,
+          oversCompleted: ci.oversCompleted,
+          ballsInCurrentOver: ci.ballsInCurrentOver,
+          extras: ci.extras,
+          target: ci.target,
+        });
+      }
+    } catch (err: unknown) {
+      setPostError(err instanceof Error ? err.message : 'Failed to start second innings');
+    } finally {
+      setPosting(false);
+    }
     setCurrentOverBalls([]);
     setOutPlayerIds(new Set());
     setStriker(null);
     setNonStriker(null);
     setBowler(null);
-    fetchMatch(); // re-fetch to get updated innings state
   };
 
   // ── Disable scoring pad while modal is open or players not set ───────────────

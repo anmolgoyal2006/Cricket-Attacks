@@ -151,6 +151,12 @@ export interface BallRecord {
   bowlerId: { _id: string; username: string } | null;
   batsmanOnStrikeId: { _id: string; username: string } | null;
   nonStrikerId: string;
+  // Guest name fields — populated when the corresponding ObjectId is null
+  guestBowler: string | null;
+  guestBatsman: string | null;
+  guestNonStriker: string | null;
+  guestDismissed: string | null;
+  guestFielder: string | null;
   runsScored: number;
   extraType: 'wide' | 'noBall' | 'noball' | 'bye' | 'legBye' | 'legbye' | null;
   extraRuns: number;

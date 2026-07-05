@@ -15,7 +15,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Wifi, WifiOff,
 } from 'lucide-react';
 import Link from 'next/link';
-import { scoringApi, scoringSpectatorApi, ScoringMatch, BallRecord, PlayerMatchStat } from '@/lib/scoringApi';
+import { scoringApi, scoringSpectatorApi, ScoringMatch, BallRecord, PlayerMatchStat, MatchPlayer } from '@/lib/scoringApi';
 import { useLiveMatchSocket } from '@/lib/useLiveMatchSocket';
 import { generateCommentary, ballPillLabel, ballPillClass } from '@/lib/commentary';
 import { cn } from '@/lib/utils';
@@ -170,9 +170,12 @@ export default function MatchDetailPage() {
       },
 
       onWicketFallen: (data: unknown) => {
-        const d = data as { ball?: BallRecord };
+        const d = data as { ball?: BallRecord & { guestDismissed?: string | null } };
         if (d?.ball) {
-          const dismissed = (d.ball.dismissedPlayerId as { username?: string } | null)?.username ?? 'Batsman';
+          const dismissed =
+            (d.ball.dismissedPlayerId as { username?: string } | null)?.username ??
+            d.ball.guestDismissed ??
+            'Batsman';
           const wt = d.ball.wicketType ?? 'out';
           setWicketToast(`WICKET! ${dismissed} — ${wt}`);
         }
@@ -234,36 +237,62 @@ export default function MatchDetailPage() {
   ).slice(0, 8); // cap at 8 for display
 
   // Batting stats for the selected innings tab
-  const battingTeamKey = inningsTab === 1
-    ? (match?.currentInningsSummary?.battingTeam === 'teamA' && match.currentInnings === 1
-        ? 'teamA'
-        : match?.currentInnings === 1 ? 'teamA' : 'teamB')
-    : (match?.currentInningsSummary?.battingTeam ?? 'teamA');
+  // Derive team keys correctly from the innings data, not just currentInnings
+  // For inn 1: battingTeam is from currentInningsSummary (or toss logic)
+  // For inn 2: bowlingTeam of inn 1 = battingTeam of inn 2
+  const activeCi = match?.currentInningsSummary;
+
+  // Build a helper: given a MatchPlayer, return a stable key string
+  function playerKey(p: MatchPlayer): string {
+    if (p.userId && typeof p.userId === 'object') return `uid:${p.userId._id}`;
+    if (p.guestName) return `g:${p.guestName.toLowerCase()}`;
+    return `d:${p.displayName.toLowerCase()}`;
+  }
+
+  // Build a helper: given a PlayerMatchStat, return the same key
+  function statKey(s: PlayerMatchStat): string {
+    if (s.playerId?._id) return `uid:${s.playerId._id}`;
+    if (s.guestName) return `g:${s.guestName.toLowerCase()}`;
+    return '';
+  }
+
+  // Determine which team keys correspond to batting/bowling for the selected inningsTab
+  // For a 2-innings match: inn1 batting = whoever batted first (from toss)
+  // We rely on the Innings record stored in currentInningsSummary for the active innings,
+  // and infer inn1 batting from toss for the historical tab.
+  let battingTeamKey: 'teamA' | 'teamB';
+  let bowlingTeamKey: 'teamA' | 'teamB';
+
+  if (inningsTab === match?.currentInnings) {
+    // Active innings — use actual innings record
+    battingTeamKey = (activeCi?.battingTeam ?? 'teamA') as 'teamA' | 'teamB';
+    bowlingTeamKey = battingTeamKey === 'teamA' ? 'teamB' : 'teamA';
+  } else {
+    // Historical (innings 1 while viewing a 2-innings match)
+    // Inn 1 batting = opposite of inn 2 batting
+    const inn2Batting = (activeCi?.battingTeam ?? 'teamA') as 'teamA' | 'teamB';
+    battingTeamKey = inn2Batting === 'teamA' ? 'teamB' : 'teamA';
+    bowlingTeamKey = inn2Batting;
+  }
 
   const battingTeamPlayers = match
-    ? (match[battingTeamKey as 'teamA' | 'teamB']?.players ?? [])
+    ? (match[battingTeamKey]?.players ?? [])
     : [];
-
-  const bowlingTeamKey = battingTeamKey === 'teamA' ? 'teamB' : 'teamA';
   const bowlingTeamPlayers = match
-    ? (match[bowlingTeamKey as 'teamA' | 'teamB']?.players ?? [])
+    ? (match[bowlingTeamKey]?.players ?? [])
     : [];
 
-  // Batting stats for the selected innings tab
-  const battingStats = stats.filter((s) =>
-    battingTeamPlayers.some((p) => {
-      const pid = typeof p.userId === 'object' ? p.userId?._id : null;
-      const gn = p.guestName;
-      return (pid && pid === s.playerId?._id) || (gn && gn === s.guestName);
-    })
-  );
-  const bowlingStats = stats.filter((s) =>
-    bowlingTeamPlayers.some((p) => {
-      const pid = typeof p.userId === 'object' ? p.userId?._id : null;
-      const gn = p.guestName;
-      return (pid && pid === s.playerId?._id) || (gn && gn === s.guestName);
-    })
-  );
+  // Build lookup sets for fast membership checks
+  const battingKeys = new Set(battingTeamPlayers.map(playerKey));
+  const bowlingKeys = new Set(bowlingTeamPlayers.map(playerKey));
+  const battingStats = stats.filter((s) => {
+    const k = statKey(s);
+    return k && (battingKeys.size === 0 || battingKeys.has(k));
+  });
+  const bowlingStats = stats.filter((s) => {
+    const k = statKey(s);
+    return k && (bowlingKeys.size === 0 || bowlingKeys.has(k));
+  });
 
   const isLive = match?.status === 'live' || match?.status === 'innings_break';
   const isCompleted = match?.status === 'completed';
@@ -715,7 +744,9 @@ export default function MatchDetailPage() {
                       </p>
                       {/* Players line */}
                       <p className="text-[10px] text-gray-600 font-body mt-0.5">
-                        {ball.batsmanOnStrikeId?.username ?? '—'} vs {ball.bowlerId?.username ?? '—'}
+                        {(ball.batsmanOnStrikeId as { username?: string } | null)?.username ?? ball.guestBatsman ?? '—'}
+                        {' vs '}
+                        {(ball.bowlerId as { username?: string } | null)?.username ?? ball.guestBowler ?? '—'}
                       </p>
                     </div>
 

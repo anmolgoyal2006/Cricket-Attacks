@@ -15,7 +15,10 @@ type PlayerKey = mongoose.Types.ObjectId | string | { guestName: string };
 
 function playerFilter(matchId: string | mongoose.Types.ObjectId, player: PlayerKey) {
   if (typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player) {
-    return { matchId, playerId: null, guestName: player.guestName };
+    // Do NOT include playerId in the filter for guests — the old non-sparse { matchId, playerId }
+    // index treats null as a real value, so two guests in the same match would collide.
+    // Filter only on { matchId, guestName } so it uses the correct guest index.
+    return { matchId, guestName: player.guestName };
   }
   return { matchId, playerId: player };
 }
@@ -47,6 +50,15 @@ export async function incrementBattingStats(
   const filter = playerFilter(matchId, player);
   const upsertFields = playerUpsertFields(player);
 
+  // Pipeline updates don't support $setOnInsert, so we use a two-step approach:
+  // ensure the doc exists first (upsert with $setOnInsert for identity fields),
+  // then apply the aggregation pipeline update.
+  await PlayerMatchStats.findOneAndUpdate(
+    filter,
+    { $setOnInsert: upsertFields },
+    { upsert: true, new: false, session, setDefaultsOnInsert: true }
+  );
+
   await PlayerMatchStats.findOneAndUpdate(
     filter,
     [
@@ -74,7 +86,7 @@ export async function incrementBattingStats(
         },
       },
     ],
-    { upsert: true, new: true, session, setDefaultsOnInsert: true }
+    { session }
   );
 }
 
@@ -129,6 +141,15 @@ export async function incrementBowlingStats(
   session?: mongoose.ClientSession
 ): Promise<void> {
   const filter = playerFilter(matchId, player);
+  const upsertFields = playerUpsertFields(player);
+
+  // Ensure the doc exists with correct identity fields before the pipeline update
+  await PlayerMatchStats.findOneAndUpdate(
+    filter,
+    { $setOnInsert: upsertFields },
+    { upsert: true, new: false, session, setDefaultsOnInsert: true }
+  );
+
   await PlayerMatchStats.findOneAndUpdate(
     filter,
     [
@@ -158,7 +179,7 @@ export async function incrementBowlingStats(
         },
       },
     ],
-    { upsert: true, new: true, session }
+    { session }
   );
 }
 

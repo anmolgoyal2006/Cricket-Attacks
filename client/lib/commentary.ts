@@ -21,14 +21,27 @@ function pick(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/** Resolve the display name for a player field — handles both registered and guest */
+function playerName(
+  ref: { username?: string } | null | undefined,
+  guestFallback: string | null | undefined,
+  defaultName: string
+): string {
+  return ref?.username ?? guestFallback ?? defaultName;
+}
+
 export function generateCommentary(ball: BallRecord): string {
-  const batter = ball.batsmanOnStrikeId?.username ?? 'Batsman';
-  const bowler = ball.bowlerId?.username ?? 'Bowler';
+  const batter = playerName(ball.batsmanOnStrikeId as { username?: string } | null, ball.guestBatsman, 'Batsman');
+  const bowler = playerName(ball.bowlerId as { username?: string } | null, ball.guestBowler, 'Bowler');
 
   if (ball.isWicket) {
-    const dismissed = ball.dismissedPlayerId?.username ?? batter;
+    const dismissed = playerName(
+      ball.dismissedPlayerId as { username?: string } | null,
+      ball.guestDismissed,
+      batter
+    );
+    const fielder = playerName(ball.fielderId as { username?: string } | null, ball.guestFielder, undefined as unknown as string);
     const type = ball.wicketType ?? 'out';
-    const fielder = ball.fielderId?.username;
     switch (type) {
       case 'bowled':    return `OUT! ${dismissed} is bowled by ${bowler}!`;
       case 'caught':    return `CAUGHT! ${dismissed} caught${fielder ? ` by ${fielder}` : ''} off ${bowler}.`;

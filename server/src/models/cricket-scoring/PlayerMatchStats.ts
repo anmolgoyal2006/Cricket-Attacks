@@ -77,8 +77,13 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
 );
 
 playerMatchStatsSchema.index({ matchId: 1 });
-// sparse:true means documents where playerId is absent are excluded from this index entirely
-playerMatchStatsSchema.index({ matchId: 1, playerId: 1 }, { unique: true, sparse: true });
+// Unique index for registered players only — partialFilterExpression excludes
+// documents where playerId is null or absent, so guest players never participate.
+// This is better than sparse:true which still indexes explicit null values.
+playerMatchStatsSchema.index(
+  { matchId: 1, playerId: 1 },
+  { unique: true, partialFilterExpression: { playerId: { $type: 'objectId' } } }
+);
 // Guest player uniqueness — only documents that have a guestName field participate
 playerMatchStatsSchema.index({ matchId: 1, guestName: 1 }, { unique: true, sparse: true });
 

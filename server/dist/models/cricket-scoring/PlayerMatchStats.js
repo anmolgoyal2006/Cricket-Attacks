@@ -43,11 +43,13 @@ const playerMatchStatsSchema = new mongoose_1.Schema({
     playerId: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',
-        default: null, // null for guests
+        // No default — field is intentionally absent for guests so it doesn't
+        // participate in any index. Setting default: null would store null and
+        // trigger the { matchId, playerId } unique index for every guest doc.
     },
     guestName: {
         type: String,
-        default: null, // set when playerId is null
+        // No default — absent for registered players
     },
     battingStats: {
         runs: { type: Number, default: 0 },
@@ -75,9 +77,9 @@ const playerMatchStatsSchema = new mongoose_1.Schema({
     timestamps: true,
 });
 playerMatchStatsSchema.index({ matchId: 1 });
-// Removed standalone playerId index — it's a duplicate; the compound index below covers it
+// sparse:true means documents where playerId is absent are excluded from this index entirely
 playerMatchStatsSchema.index({ matchId: 1, playerId: 1 }, { unique: true, sparse: true });
-// Guest player index — keyed by guestName when no userId
+// Guest player uniqueness — only documents that have a guestName field participate
 playerMatchStatsSchema.index({ matchId: 1, guestName: 1 }, { unique: true, sparse: true });
 exports.default = mongoose_1.default.model('PlayerMatchStats', playerMatchStatsSchema);
 //# sourceMappingURL=PlayerMatchStats.js.map

@@ -20,19 +20,31 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const PlayerMatchStats_1 = __importDefault(require("../models/cricket-scoring/PlayerMatchStats"));
 function playerFilter(matchId, player) {
     if (typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player) {
-        return { matchId, playerId: null, guestName: player.guestName };
+        // Do NOT include playerId in the filter for guests — the old non-sparse { matchId, playerId }
+        // index treats null as a real value, so two guests in the same match would collide.
+        // Filter only on { matchId, guestName } so it uses the correct guest index.
+        return { matchId, guestName: player.guestName };
     }
     return { matchId, playerId: player };
 }
 function playerUpsertFields(player) {
     if (typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player) {
-        return { playerId: null, guestName: player.guestName };
+        // Do NOT include playerId here — we want the field to be truly absent from
+        // the document so it doesn't participate in the { matchId, playerId } index at all.
+        return { guestName: player.guestName };
     }
     return { playerId: player, guestName: null };
 }
 async function incrementBattingStats(matchId, player, delta, session) {
     const filter = playerFilter(matchId, player);
     const upsertFields = playerUpsertFields(player);
+    const isGuest = typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player;
+    // Pipeline updates don't support $setOnInsert, so we use a two-step approach:
+    // ensure the doc exists first (upsert with $setOnInsert for identity fields),
+    // then apply the aggregation pipeline update.
+    // For guests: setDefaultsOnInsert:false so the schema's default:null for playerId
+    // is NOT applied — the field must be fully absent to avoid the unique index collision.
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, { $setOnInsert: upsertFields }, { upsert: true, new: false, session, setDefaultsOnInsert: !isGuest });
     await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
@@ -57,7 +69,7 @@ async function incrementBattingStats(matchId, player, delta, session) {
                 },
             },
         },
-    ], { upsert: true, new: true, session, setDefaultsOnInsert: true });
+    ], { session });
 }
 async function decrementBattingStats(matchId, player, delta, session) {
     const filter = playerFilter(matchId, player);
@@ -86,6 +98,11 @@ async function decrementBattingStats(matchId, player, delta, session) {
 }
 async function incrementBowlingStats(matchId, player, delta, session) {
     const filter = playerFilter(matchId, player);
+    const upsertFields = playerUpsertFields(player);
+    const isGuest = typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player;
+    // Ensure the doc exists with correct identity fields before the pipeline update.
+    // setDefaultsOnInsert:false for guests so playerId field stays absent entirely.
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, { $setOnInsert: upsertFields }, { upsert: true, new: false, session, setDefaultsOnInsert: !isGuest });
     await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
@@ -112,7 +129,7 @@ async function incrementBowlingStats(matchId, player, delta, session) {
                 },
             },
         },
-    ], { upsert: true, new: true, session });
+    ], { session });
 }
 async function decrementBowlingStats(matchId, player, delta, session) {
     const filter = playerFilter(matchId, player);

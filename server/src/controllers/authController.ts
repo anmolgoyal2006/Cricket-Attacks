@@ -6,6 +6,7 @@ import { config } from '../config';
 import { AuthRequest } from '../middleware/auth';
 import { UnauthorizedError, ConflictError } from '../utils/errors';
 import { updateLeaderboardForUser } from '../services/leaderboardService';
+import { linkGuestStatsToUser } from '../services/careerStatsService';
 
 function generateToken(userId: string): string {
   return jwt.sign({ userId }, config.jwtSecret, {
@@ -73,6 +74,11 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       ownedCards: [...starterCardIds, ...bonusCardIds],
     });
     await updateLeaderboardForUser(user._id.toString());
+
+    // Link any guest match stats recorded under this username before registration
+    linkGuestStatsToUser(user._id.toString(), user.username).catch((err) =>
+      console.error('[guestStats] link failed for new user', user.username, err)
+    );
 
     const token = generateToken(user._id.toString());
 

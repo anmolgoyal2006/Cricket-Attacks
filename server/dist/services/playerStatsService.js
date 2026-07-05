@@ -1,8 +1,12 @@
 "use strict";
 /**
- * Cricket Scoring Feature — Phase 2
+ * Cricket Scoring Feature — Phase 2 + Guest Player extension
  * Increment / decrement PlayerMatchStats for batsmen and bowlers.
  * Uses findOneAndUpdate + upsert so it is safe to call without pre-creating the doc.
+ *
+ * Guest players: pass playerIdOrGuest as { guestName: string } instead of an id string.
+ * Stats are stored with playerId=null, guestName=<name>.
+ * When the guest later registers with a matching username, careerStatsService will link them.
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -12,20 +16,24 @@ exports.incrementBattingStats = incrementBattingStats;
 exports.decrementBattingStats = decrementBattingStats;
 exports.incrementBowlingStats = incrementBowlingStats;
 exports.decrementBowlingStats = decrementBowlingStats;
+const mongoose_1 = __importDefault(require("mongoose"));
 const PlayerMatchStats_1 = __importDefault(require("../models/cricket-scoring/PlayerMatchStats"));
-async function incrementBattingStats(matchId, playerId, delta, session) {
-    const inc = {
-        'battingStats.runs': delta.runs,
-        'battingStats.ballsFaced': delta.ballFaced,
-        'battingStats.fours': delta.isBoundaryFour ? 1 : 0,
-        'battingStats.sixes': delta.isBoundarySix ? 1 : 0,
-    };
-    const set = {};
-    if (delta.isOut) {
-        set['battingStats.isOut'] = true;
-        set['battingStats.dismissalType'] = delta.dismissalType || null;
+function playerFilter(matchId, player) {
+    if (typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player) {
+        return { matchId, playerId: null, guestName: player.guestName };
     }
-    const doc = await PlayerMatchStats_1.default.findOneAndUpdate({ matchId, playerId }, [
+    return { matchId, playerId: player };
+}
+function playerUpsertFields(player) {
+    if (typeof player === 'object' && !(player instanceof mongoose_1.default.Types.ObjectId) && 'guestName' in player) {
+        return { playerId: null, guestName: player.guestName };
+    }
+    return { playerId: player, guestName: null };
+}
+async function incrementBattingStats(matchId, player, delta, session) {
+    const filter = playerFilter(matchId, player);
+    const upsertFields = playerUpsertFields(player);
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
                 'battingStats.runs': { $add: ['$battingStats.runs', delta.runs] },
@@ -49,10 +57,11 @@ async function incrementBattingStats(matchId, playerId, delta, session) {
                 },
             },
         },
-    ], { upsert: true, new: true, session });
+    ], { upsert: true, new: true, session, setDefaultsOnInsert: true });
 }
-async function decrementBattingStats(matchId, playerId, delta, session) {
-    await PlayerMatchStats_1.default.findOneAndUpdate({ matchId, playerId }, [
+async function decrementBattingStats(matchId, player, delta, session) {
+    const filter = playerFilter(matchId, player);
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
                 'battingStats.runs': { $max: [0, { $subtract: ['$battingStats.runs', delta.runs] }] },
@@ -75,8 +84,9 @@ async function decrementBattingStats(matchId, playerId, delta, session) {
         },
     ], { session });
 }
-async function incrementBowlingStats(matchId, playerId, delta, session) {
-    await PlayerMatchStats_1.default.findOneAndUpdate({ matchId, playerId }, [
+async function incrementBowlingStats(matchId, player, delta, session) {
+    const filter = playerFilter(matchId, player);
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
                 'bowlingStats.ballsBowled': { $add: ['$bowlingStats.ballsBowled', delta.ballBowled] },
@@ -104,8 +114,9 @@ async function incrementBowlingStats(matchId, playerId, delta, session) {
         },
     ], { upsert: true, new: true, session });
 }
-async function decrementBowlingStats(matchId, playerId, delta, session) {
-    await PlayerMatchStats_1.default.findOneAndUpdate({ matchId, playerId }, [
+async function decrementBowlingStats(matchId, player, delta, session) {
+    const filter = playerFilter(matchId, player);
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
         {
             $set: {
                 'bowlingStats.ballsBowled': { $max: [0, { $subtract: ['$bowlingStats.ballsBowled', delta.ballBowled] }] },

@@ -1,13 +1,19 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface IMatchPlayer {
+  userId?: mongoose.Types.ObjectId | null;  // null for guests who haven't registered yet
+  guestName?: string | null;                // set when userId is null
+  displayName: string;                      // always populated — username or guestName
+}
+
 export interface IScoringMatch extends Document {
   teamA: {
     name: string;
-    players: mongoose.Types.ObjectId[];
+    players: IMatchPlayer[];
   };
   teamB: {
     name: string;
-    players: mongoose.Types.ObjectId[];
+    players: IMatchPlayer[];
   };
   oversFormat: number;
   tossWonBy: 'teamA' | 'teamB';
@@ -27,15 +33,24 @@ export interface IScoringMatch extends Document {
   updatedAt: Date;
 }
 
+const matchPlayerSchema = new Schema<IMatchPlayer>(
+  {
+    userId:      { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    guestName:   { type: String, default: null },
+    displayName: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const scoringMatchSchema = new Schema<IScoringMatch>(
   {
     teamA: {
-      name: { type: String, required: true },
-      players: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      name:    { type: String, required: true },
+      players: { type: [matchPlayerSchema], default: [] },
     },
     teamB: {
-      name: { type: String, required: true },
-      players: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      name:    { type: String, required: true },
+      players: { type: [matchPlayerSchema], default: [] },
     },
     oversFormat: { type: Number, required: true },
     tossWonBy: {
@@ -68,9 +83,9 @@ const scoringMatchSchema = new Schema<IScoringMatch>(
       ),
       default: null,
     },
-    scorers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    venue: { type: String, default: null },
+    scorers:    [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    createdBy:  { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    venue:      { type: String, default: null },
     statsProcessed: { type: Boolean, default: false },
   },
   {

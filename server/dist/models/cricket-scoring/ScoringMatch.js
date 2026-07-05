@@ -34,14 +34,19 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const matchPlayerSchema = new mongoose_1.Schema({
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', default: null },
+    guestName: { type: String, default: null },
+    displayName: { type: String, required: true },
+}, { _id: false });
 const scoringMatchSchema = new mongoose_1.Schema({
     teamA: {
         name: { type: String, required: true },
-        players: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }],
+        players: { type: [matchPlayerSchema], default: [] },
     },
     teamB: {
         name: { type: String, required: true },
-        players: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }],
+        players: { type: [matchPlayerSchema], default: [] },
     },
     oversFormat: { type: Number, required: true },
     tossWonBy: {

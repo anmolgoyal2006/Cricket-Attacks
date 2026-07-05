@@ -14,12 +14,25 @@ import {
   Trophy, X, Check, Users,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { scoringApi, ScoringMatch, BallResult } from '@/lib/scoringApi';
+import { scoringApi, ScoringMatch, BallResult, MatchPlayer } from '@/lib/scoringApi';
 import { useLiveMatchSocket } from '@/lib/useLiveMatchSocket';
 import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+// Local Player shape used throughout the scorer UI
 interface Player { _id: string; username: string; }
+
+/** Normalise MatchPlayer (registered or guest) → local Player for the scorer UI */
+function toPlayer(mp: MatchPlayer): Player {
+  const id = mp.userId?._id ?? `guest:${mp.displayName}`;
+  const name = mp.userId?.username ?? mp.displayName;
+  return { _id: id, username: name };
+}
+
+/** Convert a MatchPlayer array to local Player array */
+function toPlayers(players: MatchPlayer[]): Player[] {
+  return players.map(toPlayer);
+}
 
 interface InningsState {
   totalRuns: number;
@@ -230,7 +243,7 @@ export default function ScorePage() {
   const bowlingTeam = match ? match[bowlingTeamKey as 'teamA' | 'teamB'] : null;
 
   // Available batsmen (not out, not non-striker, not striker)
-  const availableBatsmen: Player[] = (battingTeam?.players ?? []).filter(
+  const availableBatsmen: Player[] = toPlayers(battingTeam?.players ?? []).filter(
     (p) =>
       !outPlayerIds.has(p._id) &&
       p._id !== striker?._id &&
@@ -239,7 +252,7 @@ export default function ScorePage() {
 
   // Available bowlers (all bowling-team players; optionally exclude last bowler per over)
   const prevBowlerRef = useRef<string | null>(null);
-  const availableBowlers: Player[] = (bowlingTeam?.players ?? []).filter(
+  const availableBowlers: Player[] = toPlayers(bowlingTeam?.players ?? []).filter(
     (p) => p._id !== prevBowlerRef.current
   );
 
@@ -383,14 +396,14 @@ export default function ScorePage() {
 
   const confirmNewBatsman = () => {
     if (!incomingBatsmanId) return;
-    const player = battingTeam?.players.find((p) => p._id === incomingBatsmanId);
+    const player = toPlayers(battingTeam?.players ?? []).find((p) => p._id === incomingBatsmanId);
     if (player) setStriker(player);
     setActiveModal(null);
   };
 
   const confirmNewBowler = () => {
     if (!newBowlerId) return;
-    const player = bowlingTeam?.players.find((p) => p._id === newBowlerId);
+    const player = toPlayers(bowlingTeam?.players ?? []).find((p) => p._id === newBowlerId);
     if (player) setBowler(player);
     setActiveModal(null);
   };
@@ -512,7 +525,7 @@ export default function ScorePage() {
               className={cn('p-2 rounded-xl cursor-pointer transition-all border', striker ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-amber-500/30')}
               onClick={() => {
                 if (!battingTeam) return;
-                const next = battingTeam.players.find((p) => p._id !== nonStriker?._id && !outPlayerIds.has(p._id));
+                const next = toPlayers(battingTeam.players).find((p) => p._id !== nonStriker?._id && !outPlayerIds.has(p._id));
                 if (!striker && next) setStriker(next);
               }}
             >
@@ -526,7 +539,7 @@ export default function ScorePage() {
               className={cn('p-2 rounded-xl cursor-pointer transition-all border', nonStriker ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/30')}
               onClick={() => {
                 if (!battingTeam) return;
-                const next = battingTeam.players.find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
+                const next = toPlayers(battingTeam.players).find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
                 if (!nonStriker && next) setNonStriker(next);
               }}
             >
@@ -540,7 +553,7 @@ export default function ScorePage() {
               className={cn('p-2 rounded-xl cursor-pointer transition-all border', bowler ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-green-500/30')}
               onClick={() => {
                 if (!bowlingTeam) return;
-                if (!bowler && bowlingTeam.players[0]) setBowler(bowlingTeam.players[0]);
+                if (!bowler && bowlingTeam.players[0]) setBowler(toPlayer(bowlingTeam.players[0]));
               }}
             >
               <p className="text-[10px] text-green-400 font-body mb-1">Bowler</p>
@@ -557,7 +570,7 @@ export default function ScorePage() {
                 <div>
                   <p className="text-xs text-amber-400 font-body mb-1.5">Select Striker</p>
                   <div className="flex flex-wrap gap-2">
-                    {(battingTeam?.players ?? [])
+                    {toPlayers(battingTeam?.players ?? [])
                       .filter((p) => !outPlayerIds.has(p._id) && p._id !== nonStriker?._id)
                       .map((p) => (
                         <button key={p._id} type="button"
@@ -572,7 +585,7 @@ export default function ScorePage() {
                 <div>
                   <p className="text-xs text-blue-400 font-body mb-1.5">Select Non-Striker</p>
                   <div className="flex flex-wrap gap-2">
-                    {(battingTeam?.players ?? [])
+                    {toPlayers(battingTeam?.players ?? [])
                       .filter((p) => !outPlayerIds.has(p._id) && p._id !== striker?._id)
                       .map((p) => (
                         <button key={p._id} type="button"
@@ -815,9 +828,12 @@ export default function ScorePage() {
                 <select value={fielderId} onChange={(e) => setFielderId(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-body focus:outline-none focus:ring-2 focus:ring-red-500/50">
                   <option value="">Select fielder (optional)</option>
-                  {(bowlingTeam?.players ?? []).map((p) => (
-                    <option key={p._id} value={p._id}>{p.username}</option>
-                  ))}
+                  {(bowlingTeam?.players ?? []).map((p) => {
+                    const pl = toPlayer(p);
+                    return (
+                      <option key={pl._id} value={pl._id}>{pl.username}</option>
+                    );
+                  })}
                 </select>
               </div>
             )}

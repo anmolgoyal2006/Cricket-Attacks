@@ -249,12 +249,20 @@ export default function MatchDetailPage() {
     ? (match[bowlingTeamKey as 'teamA' | 'teamB']?.players ?? [])
     : [];
 
-  // Filter stats by team membership
+  // Batting stats for the selected innings tab
   const battingStats = stats.filter((s) =>
-    battingTeamPlayers.some((p) => p._id === s.playerId?._id)
+    battingTeamPlayers.some((p) => {
+      const pid = typeof p.userId === 'object' ? p.userId?._id : null;
+      const gn = p.guestName;
+      return (pid && pid === s.playerId?._id) || (gn && gn === s.guestName);
+    })
   );
   const bowlingStats = stats.filter((s) =>
-    bowlingTeamPlayers.some((p) => p._id === s.playerId?._id)
+    bowlingTeamPlayers.some((p) => {
+      const pid = typeof p.userId === 'object' ? p.userId?._id : null;
+      const gn = p.guestName;
+      return (pid && pid === s.playerId?._id) || (gn && gn === s.guestName);
+    })
   );
 
   const isLive = match?.status === 'live' || match?.status === 'innings_break';
@@ -445,7 +453,7 @@ export default function MatchDetailPage() {
                 .slice(0, 2)
                 .map((s) => (
                   <div key={s._id} className="flex items-center justify-between">
-                    <span className="text-sm font-display font-bold text-white">{s.playerId.username}</span>
+                    <span className="text-sm font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</span>
                     <span className="text-sm font-body text-gray-300">
                       {s.battingStats.runs} <span className="text-gray-500 text-xs">({s.battingStats.ballsFaced})</span>
                     </span>
@@ -461,7 +469,7 @@ export default function MatchDetailPage() {
                     .slice(0, 1)
                     .map((s) => (
                       <div key={s._id} className="flex items-center justify-between">
-                        <span className="text-sm font-display font-bold text-white">{s.playerId.username}</span>
+                        <span className="text-sm font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</span>
                         <span className="text-sm font-body text-gray-300">
                           {bowlingOvers(s.bowlingStats.ballsBowled)}-{s.bowlingStats.maidens}-{s.bowlingStats.runsConceded}-{s.bowlingStats.wickets}
                         </span>
@@ -555,7 +563,7 @@ export default function MatchDetailPage() {
                     {battingStats.map((s) => (
                       <tr key={s._id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="px-4 py-2.5">
-                          <p className="font-display font-bold text-white">{s.playerId.username}</p>
+                          <p className="font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</p>
                           <p className="text-gray-600 text-[10px] capitalize">
                             {s.battingStats.isOut
                               ? s.battingStats.dismissalType ?? 'out'
@@ -629,7 +637,7 @@ export default function MatchDetailPage() {
                       .map((s) => (
                         <tr key={s._id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="px-4 py-2.5 font-display font-bold text-white">
-                            {s.playerId.username}
+                            {s.playerId?.username ?? s.guestName ?? '—'}
                           </td>
                           <td className="text-right px-2 py-2.5 text-gray-400">
                             {bowlingOvers(s.bowlingStats.ballsBowled)}

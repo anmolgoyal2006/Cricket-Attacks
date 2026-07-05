@@ -22,6 +22,12 @@ export async function createMatch(req: AuthRequest, res: Response, next: NextFun
     if (!teamB?.name || !teamB?.players?.length) {
       throw new BadRequestError('teamB must have a name and at least one player');
     }
+    if (teamA.players.length < 2) {
+      throw new BadRequestError('teamA must have at least 2 players');
+    }
+    if (teamB.players.length < 2) {
+      throw new BadRequestError('teamB must have at least 2 players');
+    }
     if (!oversFormat || oversFormat <= 0) {
       throw new BadRequestError('oversFormat must be a positive number');
     }
@@ -32,9 +38,25 @@ export async function createMatch(req: AuthRequest, res: Response, next: NextFun
       throw new BadRequestError('tossDecision must be "bat" or "bowl"');
     }
 
+    // Normalise player entries from client:
+    // Registered:  { id: '<objectId>', displayName: 'username' }
+    // Guest:       { guestName: 'SomeName', displayName: 'SomeName' }
+    type RawPlayer = { id?: string; guestName?: string; displayName?: string };
+
+    function normalisePlayers(raw: RawPlayer[]) {
+      return raw.map((p) => {
+        if (p.id) {
+          return { userId: new mongoose.Types.ObjectId(p.id), guestName: null, displayName: p.displayName || '' };
+        }
+        const name = (p.guestName || p.displayName || '').trim();
+        if (!name) throw new BadRequestError('Each player must have a name');
+        return { userId: null, guestName: name, displayName: name };
+      });
+    }
+
     const match = await ScoringMatch.create({
-      teamA,
-      teamB,
+      teamA: { name: teamA.name, players: normalisePlayers(teamA.players) },
+      teamB: { name: teamB.name, players: normalisePlayers(teamB.players) },
       oversFormat,
       tossWonBy,
       tossDecision,
@@ -75,8 +97,8 @@ export async function listMatches(req: AuthRequest, res: Response, next: NextFun
 export async function getMatch(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const match = await ScoringMatch.findById(req.params.id)
-      .populate('teamA.players', 'username')
-      .populate('teamB.players', 'username')
+      .populate('teamA.players.userId', 'username')
+      .populate('teamB.players.userId', 'username')
       .populate('createdBy', 'username')
       .populate('scorers', 'username')
       .lean();

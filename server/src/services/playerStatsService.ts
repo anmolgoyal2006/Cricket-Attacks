@@ -1,11 +1,31 @@
 /**
- * Cricket Scoring Feature — Phase 2
+ * Cricket Scoring Feature — Phase 2 + Guest Player extension
  * Increment / decrement PlayerMatchStats for batsmen and bowlers.
  * Uses findOneAndUpdate + upsert so it is safe to call without pre-creating the doc.
+ *
+ * Guest players: pass playerIdOrGuest as { guestName: string } instead of an id string.
+ * Stats are stored with playerId=null, guestName=<name>.
+ * When the guest later registers with a matching username, careerStatsService will link them.
  */
 
 import mongoose from 'mongoose';
 import PlayerMatchStats from '../models/cricket-scoring/PlayerMatchStats';
+
+type PlayerKey = mongoose.Types.ObjectId | string | { guestName: string };
+
+function playerFilter(matchId: string | mongoose.Types.ObjectId, player: PlayerKey) {
+  if (typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player) {
+    return { matchId, playerId: null, guestName: player.guestName };
+  }
+  return { matchId, playerId: player };
+}
+
+function playerUpsertFields(player: PlayerKey): Record<string, unknown> {
+  if (typeof player === 'object' && !(player instanceof mongoose.Types.ObjectId) && 'guestName' in player) {
+    return { playerId: null, guestName: player.guestName };
+  }
+  return { playerId: player, guestName: null };
+}
 
 // ─── Batting ─────────────────────────────────────────────────────────────────
 
@@ -20,25 +40,15 @@ interface BattingDelta {
 
 export async function incrementBattingStats(
   matchId: mongoose.Types.ObjectId | string,
-  playerId: mongoose.Types.ObjectId | string,
+  player: PlayerKey,
   delta: BattingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
-  const inc: Record<string, number> = {
-    'battingStats.runs': delta.runs,
-    'battingStats.ballsFaced': delta.ballFaced,
-    'battingStats.fours': delta.isBoundaryFour ? 1 : 0,
-    'battingStats.sixes': delta.isBoundarySix ? 1 : 0,
-  };
+  const filter = playerFilter(matchId, player);
+  const upsertFields = playerUpsertFields(player);
 
-  const set: Record<string, any> = {};
-  if (delta.isOut) {
-    set['battingStats.isOut'] = true;
-    set['battingStats.dismissalType'] = delta.dismissalType || null;
-  }
-
-  const doc = await PlayerMatchStats.findOneAndUpdate(
-    { matchId, playerId },
+  await PlayerMatchStats.findOneAndUpdate(
+    filter,
     [
       {
         $set: {
@@ -64,18 +74,19 @@ export async function incrementBattingStats(
         },
       },
     ],
-    { upsert: true, new: true, session }
+    { upsert: true, new: true, session, setDefaultsOnInsert: true }
   );
 }
 
 export async function decrementBattingStats(
   matchId: mongoose.Types.ObjectId | string,
-  playerId: mongoose.Types.ObjectId | string,
+  player: PlayerKey,
   delta: BattingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
+  const filter = playerFilter(matchId, player);
   await PlayerMatchStats.findOneAndUpdate(
-    { matchId, playerId },
+    filter,
     [
       {
         $set: {
@@ -113,12 +124,13 @@ interface BowlingDelta {
 
 export async function incrementBowlingStats(
   matchId: mongoose.Types.ObjectId | string,
-  playerId: mongoose.Types.ObjectId | string,
+  player: PlayerKey,
   delta: BowlingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
+  const filter = playerFilter(matchId, player);
   await PlayerMatchStats.findOneAndUpdate(
-    { matchId, playerId },
+    filter,
     [
       {
         $set: {
@@ -152,12 +164,13 @@ export async function incrementBowlingStats(
 
 export async function decrementBowlingStats(
   matchId: mongoose.Types.ObjectId | string,
-  playerId: mongoose.Types.ObjectId | string,
+  player: PlayerKey,
   delta: BowlingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
+  const filter = playerFilter(matchId, player);
   await PlayerMatchStats.findOneAndUpdate(
-    { matchId, playerId },
+    filter,
     [
       {
         $set: {

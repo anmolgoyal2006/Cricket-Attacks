@@ -11,9 +11,16 @@ export interface ScoringPlayer {
   username: string;
 }
 
+/** A player in a match — either a registered user or a guest-by-name */
+export interface MatchPlayer {
+  userId?: { _id: string; username: string } | null;
+  guestName?: string | null;
+  displayName: string;
+}
+
 export interface ScoringTeam {
   name: string;
-  players: ScoringPlayer[];
+  players: MatchPlayer[];
 }
 
 export interface ScoringMatch {
@@ -82,9 +89,15 @@ export interface BallResult {
   };
 }
 
+export interface CreateMatchPlayerPayload {
+  id?: string;          // registered user ObjectId
+  guestName?: string;   // guest name (no account)
+  displayName: string;  // always present
+}
+
 export interface CreateMatchPayload {
-  teamA: { name: string; players: string[] };
-  teamB: { name: string; players: string[] };
+  teamA: { name: string; players: CreateMatchPlayerPayload[] };
+  teamB: { name: string; players: CreateMatchPlayerPayload[] };
   oversFormat: number;
   tossWonBy: 'teamA' | 'teamB';
   tossDecision: 'bat' | 'bowl';
@@ -152,7 +165,9 @@ export interface BallRecord {
 export interface PlayerMatchStat {
   _id: string;
   matchId: string;
-  playerId: { _id: string; username: string };
+  playerId: { _id: string; username: string } | null;
+  guestName: string | null;
+  displayName?: string;
   battingStats: {
     runs: number;
     ballsFaced: number;

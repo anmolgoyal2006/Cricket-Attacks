@@ -62,6 +62,12 @@ async function createMatch(req, res, next) {
         if (!teamB?.name || !teamB?.players?.length) {
             throw new errors_1.BadRequestError('teamB must have a name and at least one player');
         }
+        if (teamA.players.length < 2) {
+            throw new errors_1.BadRequestError('teamA must have at least 2 players');
+        }
+        if (teamB.players.length < 2) {
+            throw new errors_1.BadRequestError('teamB must have at least 2 players');
+        }
         if (!oversFormat || oversFormat <= 0) {
             throw new errors_1.BadRequestError('oversFormat must be a positive number');
         }
@@ -71,9 +77,20 @@ async function createMatch(req, res, next) {
         if (!['bat', 'bowl'].includes(tossDecision)) {
             throw new errors_1.BadRequestError('tossDecision must be "bat" or "bowl"');
         }
+        function normalisePlayers(raw) {
+            return raw.map((p) => {
+                if (p.id) {
+                    return { userId: new mongoose_1.default.Types.ObjectId(p.id), guestName: null, displayName: p.displayName || '' };
+                }
+                const name = (p.guestName || p.displayName || '').trim();
+                if (!name)
+                    throw new errors_1.BadRequestError('Each player must have a name');
+                return { userId: null, guestName: name, displayName: name };
+            });
+        }
         const match = await ScoringMatch_1.default.create({
-            teamA,
-            teamB,
+            teamA: { name: teamA.name, players: normalisePlayers(teamA.players) },
+            teamB: { name: teamB.name, players: normalisePlayers(teamB.players) },
             oversFormat,
             tossWonBy,
             tossDecision,
@@ -112,8 +129,8 @@ async function listMatches(req, res, next) {
 async function getMatch(req, res, next) {
     try {
         const match = await ScoringMatch_1.default.findById(req.params.id)
-            .populate('teamA.players', 'username')
-            .populate('teamB.players', 'username')
+            .populate('teamA.players.userId', 'username')
+            .populate('teamB.players.userId', 'username')
             .populate('createdBy', 'username')
             .populate('scorers', 'username')
             .lean();

@@ -2,7 +2,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPlayerMatchStats extends Document {
   matchId: mongoose.Types.ObjectId;
-  playerId: mongoose.Types.ObjectId;
+  playerId: mongoose.Types.ObjectId | null;  // null for guest players
+  guestName: string | null;                  // set when playerId is null
   battingStats: {
     runs: number;
     ballsFaced: number;
@@ -39,7 +40,11 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
     playerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,       // null for guests
+    },
+    guestName: {
+      type: String,
+      default: null,       // set when playerId is null
     },
     battingStats: {
       runs: { type: Number, default: 0 },
@@ -71,6 +76,8 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
 
 playerMatchStatsSchema.index({ matchId: 1 });
 // Removed standalone playerId index — it's a duplicate; the compound index below covers it
-playerMatchStatsSchema.index({ matchId: 1, playerId: 1 }, { unique: true });
+playerMatchStatsSchema.index({ matchId: 1, playerId: 1 }, { unique: true, sparse: true });
+// Guest player index — keyed by guestName when no userId
+playerMatchStatsSchema.index({ matchId: 1, guestName: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IPlayerMatchStats>('PlayerMatchStats', playerMatchStatsSchema);

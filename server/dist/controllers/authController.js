@@ -14,6 +14,7 @@ const Player_1 = __importDefault(require("../models/Player"));
 const config_1 = require("../config");
 const errors_1 = require("../utils/errors");
 const leaderboardService_1 = require("../services/leaderboardService");
+const careerStatsService_1 = require("../services/careerStatsService");
 function generateToken(userId) {
     return jsonwebtoken_1.default.sign({ userId }, config_1.config.jwtSecret, {
         expiresIn: config_1.config.jwtExpiresIn,
@@ -70,6 +71,8 @@ async function register(req, res, next) {
             ownedCards: [...starterCardIds, ...bonusCardIds],
         });
         await (0, leaderboardService_1.updateLeaderboardForUser)(user._id.toString());
+        // Link any guest match stats recorded under this username before registration
+        (0, careerStatsService_1.linkGuestStatsToUser)(user._id.toString(), user.username).catch((err) => console.error('[guestStats] link failed for new user', user.username, err));
         const token = generateToken(user._id.toString());
         res.status(201).json({
             token,

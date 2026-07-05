@@ -210,29 +210,31 @@ export default function MatchDetailPage() {
   );
 
   // ── Scorecard helpers ─────────────────────────────────────────────────────────
-  // Balls for the currently-viewed innings tab
-  const inningsBalls = balls.filter((b) => {
-    if (!match) return false;
-    const ci = match.currentInningsSummary;
-    if (!ci) return true;
-    // Distinguish innings by over range: inn1 balls have inningsId from inn1
-    // Since we don't have inningsId populated here, use the innings number from currentInnings
-    // For now show all balls when on active innings, none on inn1 if currentInnings === 2
-    if (inningsTab === 1 && match.currentInnings === 2) {
-      // Rough heuristic: inn1 balls are the older ones.
-      // A better approach requires inningsId populated — use all balls for single-innings
-      return false; // Will be resolved by a proper innings filter when stats are available
-    }
-    return true;
+  // Filter balls to the currently-selected innings tab.
+  // BallRecord.inningsId is a raw ObjectId string that matches the innings `_id`.
+  // When viewing innings 1 while the match is in innings 2, balls whose inningsId
+  // doesn't match the current innings summary are innings 1 deliveries.
+  const filteredBalls = balls.filter((b) => {
+    if (!match || !match.currentInningsSummary) return true;
+    // Single-innings match — show everything
+    if (match.currentInnings === 1) return true;
+    // Two-innings match: match inningsId against the selected tab
+    const currentInningsId = match.currentInningsSummary._id;
+    if (inningsTab === 2) return b.inningsId === currentInningsId;
+    // inn 1 tab while match is in inn 2: show balls NOT in the current innings
+    return b.inningsId !== currentInningsId;
   });
 
-  // Current over balls (last 6 legal + extra deliveries)
+  // Current over balls (last 6 legal + extra deliveries), oldest-first
   const currentOverBalls = (innings
-    ? balls.filter(
-        (b) =>
-          b.over === innings.oversCompleted &&
-          b.inningsId === match?.currentInningsSummary?._id
-      )
+    ? balls
+        .filter(
+          (b) =>
+            b.over === innings.oversCompleted &&
+            b.inningsId === match?.currentInningsSummary?._id
+        )
+        .slice()
+        .reverse()
     : []
   ).slice(0, 8); // cap at 8 for display
 
@@ -296,7 +298,7 @@ export default function MatchDetailPage() {
 
   const isLive = match?.status === 'live' || match?.status === 'innings_break';
   const isCompleted = match?.status === 'completed';
-  const displayBalls = showAllBalls ? balls : balls.slice(0, 20);
+  const displayBalls = showAllBalls ? filteredBalls : filteredBalls.slice(0, 20);
 
   // ── Guard renders ─────────────────────────────────────────────────────────────
   if (loading) return (

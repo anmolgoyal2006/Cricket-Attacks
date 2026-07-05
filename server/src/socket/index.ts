@@ -4,6 +4,8 @@ import { config } from '../config';
 import { AuthenticatedSocket, socketAuth } from './auth';
 import { setupMatchmaking } from './matchmaking';
 import { setupBattleRooms, getActiveCooldowns } from './battleRoom';
+// Cricket Scoring Feature — Phase 3: register the live-match namespace (additive only)
+import { setupLiveMatchSocket } from './liveMatchSocket';
 
 export function setupSocketServer(httpServer: HTTPServer) {
   const io = new Server(httpServer, {
@@ -16,6 +18,9 @@ export function setupSocketServer(httpServer: HTTPServer) {
   });
 
   io.use(socketAuth);
+
+  // Cricket Scoring Feature — Phase 3: mount /live-match namespace (additive, no existing code changed)
+  setupLiveMatchSocket(io);
 
   const battleRooms = setupBattleRooms(io);
   const matchmaking = setupMatchmaking(io, battleRooms as any);

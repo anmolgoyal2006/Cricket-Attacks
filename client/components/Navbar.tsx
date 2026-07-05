@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Trophy, Sparkles, Swords, Users, Home, LogIn, UserPlus,
-  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye,
+  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye, ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -46,6 +46,8 @@ const MAIN_NAV = [
   { href: '/packs', label: 'Packs', icon: Sparkles },
   { href: '/compare', label: 'Compare', icon: Users },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  // Cricket Scoring Feature — Phase 4 (additive only)
+  { href: '/matches/create', label: 'Score', icon: ClipboardList },
 ];
 
 export default function Navbar() {

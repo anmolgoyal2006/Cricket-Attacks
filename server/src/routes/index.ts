@@ -12,6 +12,10 @@ import historyRoutes from './historyRoutes';
 import seasonRoutes from './seasonRoutes';
 import wordleRoutes from './wordleRoutes';
 import quizRoutes from './quizRoutes';
+// Cricket Scoring Feature — Phase 2
+import scoringMatchRoutes from './cricket-scoring/matchRoutes';
+import scoringBallRoutes from './cricket-scoring/ballRoutes';
+import scoringStatsRoutes from './cricket-scoring/statsRoutes';
 
 const router = Router();
 
@@ -28,6 +32,10 @@ router.use('/history', historyRoutes);
 router.use('/seasons', seasonRoutes);
 router.use('/wordle', wordleRoutes);
 router.use('/quiz', quizRoutes);
+// Cricket Scoring Feature — Phase 2 (new — does not alter above lines)
+router.use('/scoring/matches', scoringMatchRoutes);
+router.use('/scoring/matches/:matchId/balls', scoringBallRoutes);
+router.use('/scoring/stats', scoringStatsRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

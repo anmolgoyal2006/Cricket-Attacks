@@ -167,3 +167,25 @@ export async function claimCoins(req: AuthRequest, res: Response, next: NextFunc
     next(error);
   }
 }
+
+// Cricket Scoring Feature — Phase 4
+// Search users by username prefix — used by the match creation player-select UI.
+// GET /api/auth/users/search?q=<term>  (requires auth, returns max 10 results)
+export async function searchUsers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const q = (req.query.q as string ?? '').trim();
+    if (q.length < 2) {
+      return res.json({ users: [] });
+    }
+    const users = await User.find({
+      username: { $regex: q, $options: 'i' },
+    })
+      .select('_id username')
+      .limit(10)
+      .lean();
+
+    res.json({ users: users.map((u) => ({ _id: u._id, username: u.username })) });
+  } catch (error) {
+    next(error);
+  }
+}

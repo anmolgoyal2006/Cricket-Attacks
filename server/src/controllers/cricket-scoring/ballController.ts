@@ -1,0 +1,403 @@
+/**
+ * Cricket Scoring Feature — Phase 2 + Phase 3
+ * Ball controller: record a delivery, undo the last delivery.
+ * Wraps multi-document writes in a MongoDB transaction (Atlas replica set).
+ *
+ * RISK NOTE: If transactions are unavailable (standalone MongoDB), the writes are
+ * sequenced Ball → Innings → PlayerMatchStats. A crash between steps will leave
+ * partial state. Run in Atlas (replica set) to avoid this.
+ *
+ * Phase 3 addition: after each successful write, broadcast to /live-match namespace.
+ * All socket emits are fire-and-forget AFTER res.json() — they cannot affect HTTP responses.
+ */
+
+import { Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
+import { AuthRequest } from '../../middleware/auth';
+import { BadRequestError, NotFoundError } from '../../utils/errors';
+// Cricket Scoring Feature — Phase 3: live broadcasting (import after namespace is wired)
+import { liveMatchNamespace } from '../../socket/liveMatchSocket';
+import ScoringMatch from '../../models/cricket-scoring/ScoringMatch';
+import Innings from '../../models/cricket-scoring/Innings';
+import BallModel from '../../models/cricket-scoring/Ball';
+import {
+  isLegalDelivery,
+  shouldRotateStrike,
+  calculateOverBall,
+  calculateExtrasBreakdown,
+  totalDeliveryRuns,
+  ExtraType,
+} from '../../utils/scoringLogic';
+import {
+  incrementBattingStats,
+  decrementBattingStats,
+  incrementBowlingStats,
+  decrementBowlingStats,
+} from '../../services/playerStatsService';
+import { checkAndHandleCompletion } from '../../services/matchCompletionService';
+
+// ── POST /api/scoring/matches/:matchId/balls ──────────────────────────────────
+export async function recordBall(req: AuthRequest, res: Response, next: NextFunction) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { matchId } = req.params;
+    const {
+      runsScored = 0,
+      extraType = null,
+      extraRuns = 0,
+      isWicket = false,
+      wicketType = null,
+      dismissedPlayerId = null,
+      fielderId = null,
+      bowlerId,
+      batsmanOnStrikeId,
+      nonStrikerId,
+    } = req.body as {
+      runsScored?: number;
+      extraType?: ExtraType;
+      extraRuns?: number;
+      isWicket?: boolean;
+      wicketType?: string | null;
+      dismissedPlayerId?: string | null;
+      fielderId?: string | null;
+      bowlerId: string;
+      batsmanOnStrikeId: string;
+      nonStrikerId: string;
+    };
+
+    if (!bowlerId || !batsmanOnStrikeId || !nonStrikerId) {
+      throw new BadRequestError('bowlerId, batsmanOnStrikeId, nonStrikerId are required');
+    }
+
+    const match = await ScoringMatch.findById(matchId).session(session);
+    if (!match) throw new NotFoundError('Match');
+    if (match.status !== 'live') throw new BadRequestError('Match is not live');
+
+    const innings = await Innings.findOne({
+      matchId,
+      inningsNumber: match.currentInnings,
+      isCompleted: false,
+    }).session(session);
+    if (!innings) throw new NotFoundError('Active innings');
+
+    // ── Over / ball position ──────────────────────────────────────────────────
+    const legal = isLegalDelivery(extraType as ExtraType);
+    const { over, ballsInCurrentOver, oversCompleted, isEndOfOver } = calculateOverBall(
+      innings.oversCompleted,
+      innings.ballsInCurrentOver,
+      legal
+    );
+
+    // Legal ball number within the over (for storage)
+    const ballNumber = legal ? innings.ballsInCurrentOver + 1 : innings.ballsInCurrentOver;
+
+    // ── Extras breakdown ──────────────────────────────────────────────────────
+    const extrasBreakdown = calculateExtrasBreakdown(extraType as ExtraType, extraRuns);
+    const deliveryRuns = totalDeliveryRuns(runsScored, extraRuns);
+
+    // ── Save ball ─────────────────────────────────────────────────────────────
+    const [ball] = await BallModel.create(
+      [
+        {
+          matchId,
+          inningsId: innings._id,
+          over: innings.oversCompleted,
+          ballNumber,
+          bowlerId,
+          batsmanOnStrikeId,
+          nonStrikerId,
+          runsScored,
+          extraType: extraType || null,
+          extraRuns,
+          isWicket,
+          wicketType: isWicket ? wicketType : null,
+          dismissedPlayerId: isWicket ? dismissedPlayerId : null,
+          fielderId: fielderId || null,
+          isLegalDelivery: legal,
+          timestamp: new Date(),
+        },
+      ],
+      { session }
+    );
+
+    // ── Update innings totals ─────────────────────────────────────────────────
+    innings.totalRuns += deliveryRuns;
+    innings.extras.wides += extrasBreakdown.wides;
+    innings.extras.noBalls += extrasBreakdown.noBalls;
+    innings.extras.byes += extrasBreakdown.byes;
+    innings.extras.legByes += extrasBreakdown.legByes;
+
+    if (isWicket) innings.totalWickets += 1;
+
+    if (legal) {
+      if (isEndOfOver) {
+        innings.oversCompleted += 1;
+        innings.ballsInCurrentOver = 0;
+      } else {
+        innings.ballsInCurrentOver += 1;
+      }
+    }
+    await innings.save({ session });
+
+    // ── Strike rotation ───────────────────────────────────────────────────────
+    const rotate = shouldRotateStrike(runsScored, legal, isEndOfOver);
+    // End-of-over always swaps; mid-over swap only on odd runs
+    const strikeSwapped = isEndOfOver || rotate;
+
+    // ── Player stats ──────────────────────────────────────────────────────────
+    // Batsman on strike faces the ball
+    await incrementBattingStats(
+      matchId,
+      batsmanOnStrikeId,
+      {
+        runs: runsScored,
+        ballFaced: legal ? 1 : 0,
+        isBoundaryFour: runsScored === 4,
+        isBoundarySix: runsScored === 6,
+        isOut: isWicket && dismissedPlayerId === batsmanOnStrikeId,
+        dismissalType: isWicket && dismissedPlayerId === batsmanOnStrikeId ? wicketType : null,
+      },
+      session
+    );
+
+    // Runs chargeable to bowler: bat runs + no-ball penalty; wides + byes + leg-byes also count
+    const runsChargedToBowler =
+      runsScored + extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes;
+
+    await incrementBowlingStats(
+      matchId,
+      bowlerId,
+      {
+        ballBowled: legal ? 1 : 0,
+        runsConceded: runsChargedToBowler,
+        isWicket: isWicket && !['runout'].includes(wicketType || ''),
+      },
+      session
+    );
+
+    // ── Check innings / match completion ──────────────────────────────────────
+    // Also check target mid-over for 2nd innings
+    const targetChased =
+      innings.inningsNumber === 2 &&
+      innings.target != null &&
+      innings.totalRuns >= innings.target;
+
+    let completionResult = { inningsComplete: false, matchComplete: false, resultText: undefined as string | undefined };
+
+    if (targetChased || innings.totalWickets >= Math.max(0, (innings.battingTeam === 'teamA' ? match.teamA.players.length : match.teamB.players.length) - 1) || innings.oversCompleted >= match.oversFormat) {
+      completionResult = await checkAndHandleCompletion(innings, match, session);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const needsNewBatsman = isWicket && !completionResult.inningsComplete && !completionResult.matchComplete;
+
+    res.status(201).json({
+      ball,
+      innings: {
+        totalRuns: innings.totalRuns,
+        totalWickets: innings.totalWickets,
+        oversCompleted: innings.oversCompleted,
+        ballsInCurrentOver: innings.ballsInCurrentOver,
+        extras: innings.extras,
+      },
+      flags: {
+        strikeSwapped,
+        isEndOfOver,
+        needsNewBatsman,
+        inningsComplete: completionResult.inningsComplete,
+        matchComplete: completionResult.matchComplete,
+        resultText: completionResult.resultText || null,
+      },
+    });
+
+    // ── Phase 3: broadcast to /live-match namespace ───────────────────────────
+    // All emits are fire-and-forget after the HTTP response is sent.
+    // They cannot throw or affect the response above.
+    try {
+      const room = `match_${matchId}`;
+      const inningsSnapshot = {
+        totalRuns: innings.totalRuns,
+        totalWickets: innings.totalWickets,
+        oversCompleted: innings.oversCompleted,
+        ballsInCurrentOver: innings.ballsInCurrentOver,
+        extras: innings.extras,
+      };
+      const eventFlags = {
+        strikeSwapped,
+        isEndOfOver,
+        needsNewBatsman,
+        inningsComplete: completionResult.inningsComplete,
+        matchComplete: completionResult.matchComplete,
+        resultText: completionResult.resultText || null,
+      };
+
+      // Core ball event — all connected spectators update their scorecard
+      liveMatchNamespace.to(room).emit('ball:recorded', {
+        ball,
+        innings: inningsSnapshot,
+        flags: eventFlags,
+      });
+
+      // Dismissal event — UI can trigger a dedicated toast / animation
+      if (isWicket) {
+        liveMatchNamespace.to(room).emit('wicket:fallen', {
+          ball,
+          dismissedPlayerId,
+          wicketType,
+          fielderId,
+          innings: inningsSnapshot,
+        });
+      }
+
+      // Innings-complete event — UI shows innings break screen + target
+      if (completionResult.inningsComplete && !completionResult.matchComplete) {
+        liveMatchNamespace.to(room).emit('innings:completed', {
+          completedInningsNumber: match.currentInnings,
+          innings: inningsSnapshot,
+          target: innings.inningsNumber === 1 ? innings.totalRuns + 1 : null,
+          resultText: completionResult.resultText || null,
+        });
+      }
+
+      // Match-complete event — UI shows final result screen
+      if (completionResult.matchComplete) {
+        liveMatchNamespace.to(room).emit('match:completed', {
+          resultText: completionResult.resultText || null,
+          innings: inningsSnapshot,
+        });
+      }
+    } catch (emitErr) {
+      // Never let a socket emit error bubble up and affect the HTTP layer
+      console.error('[live-match] emit error in recordBall:', emitErr);
+    }
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+}
+
+// ── DELETE /api/scoring/matches/:matchId/balls/last ───────────────────────────
+export async function undoLastBall(req: AuthRequest, res: Response, next: NextFunction) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { matchId } = req.params;
+
+    const match = await ScoringMatch.findById(matchId).session(session);
+    if (!match) throw new NotFoundError('Match');
+    if (match.status !== 'live') throw new BadRequestError('Match is not live — cannot undo');
+
+    const innings = await Innings.findOne({
+      matchId,
+      inningsNumber: match.currentInnings,
+    }).session(session);
+    if (!innings) throw new NotFoundError('Current innings');
+
+    // Find the most recent ball for this innings
+    const lastBall = await BallModel.findOne({ inningsId: innings._id })
+      .sort({ _id: -1 })
+      .session(session);
+
+    if (!lastBall) throw new BadRequestError('No balls recorded in this innings yet');
+
+    // ── Reverse innings totals ────────────────────────────────────────────────
+    const deliveryRuns = totalDeliveryRuns(lastBall.runsScored, lastBall.extraRuns);
+    const extrasBreakdown = calculateExtrasBreakdown(lastBall.extraType as ExtraType, lastBall.extraRuns);
+
+    innings.totalRuns = Math.max(0, innings.totalRuns - deliveryRuns);
+    innings.extras.wides = Math.max(0, innings.extras.wides - extrasBreakdown.wides);
+    innings.extras.noBalls = Math.max(0, innings.extras.noBalls - extrasBreakdown.noBalls);
+    innings.extras.byes = Math.max(0, innings.extras.byes - extrasBreakdown.byes);
+    innings.extras.legByes = Math.max(0, innings.extras.legByes - extrasBreakdown.legByes);
+
+    if (lastBall.isWicket) innings.totalWickets = Math.max(0, innings.totalWickets - 1);
+
+    if (lastBall.isLegalDelivery) {
+      // Were we at the start of a fresh over?
+      if (innings.ballsInCurrentOver === 0 && innings.oversCompleted > 0) {
+        innings.oversCompleted -= 1;
+        innings.ballsInCurrentOver = 5; // rewind to 5 balls in previous over
+      } else {
+        innings.ballsInCurrentOver = Math.max(0, innings.ballsInCurrentOver - 1);
+      }
+    }
+
+    await innings.save({ session });
+
+    // ── Reverse player stats ──────────────────────────────────────────────────
+    await decrementBattingStats(
+      matchId,
+      lastBall.batsmanOnStrikeId.toString(),
+      {
+        runs: lastBall.runsScored,
+        ballFaced: lastBall.isLegalDelivery ? 1 : 0,
+        isBoundaryFour: lastBall.runsScored === 4,
+        isBoundarySix: lastBall.runsScored === 6,
+        isOut: lastBall.isWicket && lastBall.dismissedPlayerId?.toString() === lastBall.batsmanOnStrikeId.toString(),
+        dismissalType: lastBall.wicketType,
+      },
+      session
+    );
+
+    const runsChargedToBowler =
+      lastBall.runsScored +
+      extrasBreakdown.wides +
+      extrasBreakdown.noBalls +
+      extrasBreakdown.byes +
+      extrasBreakdown.legByes;
+
+    await decrementBowlingStats(
+      matchId,
+      lastBall.bowlerId.toString(),
+      {
+        ballBowled: lastBall.isLegalDelivery ? 1 : 0,
+        runsConceded: runsChargedToBowler,
+        isWicket: lastBall.isWicket && !['runout'].includes(lastBall.wicketType || ''),
+      },
+      session
+    );
+
+    // ── Delete the ball ───────────────────────────────────────────────────────
+    await BallModel.deleteOne({ _id: lastBall._id }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({
+      undone: lastBall,
+      innings: {
+        totalRuns: innings.totalRuns,
+        totalWickets: innings.totalWickets,
+        oversCompleted: innings.oversCompleted,
+        ballsInCurrentOver: innings.ballsInCurrentOver,
+        extras: innings.extras,
+      },
+    });
+
+    // ── Phase 3: broadcast undo to /live-match namespace ─────────────────────
+    try {
+      liveMatchNamespace.to(`match_${matchId}`).emit('ball:undone', {
+        undone: lastBall,
+        innings: {
+          totalRuns: innings.totalRuns,
+          totalWickets: innings.totalWickets,
+          oversCompleted: innings.oversCompleted,
+          ballsInCurrentOver: innings.ballsInCurrentOver,
+          extras: innings.extras,
+        },
+      });
+    } catch (emitErr) {
+      console.error('[live-match] emit error in undoLastBall:', emitErr);
+    }
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+}

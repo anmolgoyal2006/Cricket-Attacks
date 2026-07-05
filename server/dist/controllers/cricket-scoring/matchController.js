@@ -44,6 +44,7 @@ exports.createMatch = createMatch;
 exports.listMatches = listMatches;
 exports.getMatch = getMatch;
 exports.updateScorers = updateScorers;
+exports.startSecondInnings = startSecondInnings;
 exports.startMatch = startMatch;
 exports.getBalls = getBalls;
 exports.getMatchStats = getMatchStats;
@@ -61,12 +62,6 @@ async function createMatch(req, res, next) {
         }
         if (!teamB?.name || !teamB?.players?.length) {
             throw new errors_1.BadRequestError('teamB must have a name and at least one player');
-        }
-        if (teamA.players.length < 2) {
-            throw new errors_1.BadRequestError('teamA must have at least 2 players');
-        }
-        if (teamB.players.length < 2) {
-            throw new errors_1.BadRequestError('teamB must have at least 2 players');
         }
         if (!oversFormat || oversFormat <= 0) {
             throw new errors_1.BadRequestError('oversFormat must be a positive number');
@@ -169,6 +164,30 @@ async function updateScorers(req, res, next) {
         match.scorers = filtered;
         await match.save();
         res.json({ scorers: match.scorers });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+// ── PATCH /api/scoring/matches/:id/start-second-innings ──────────────────────
+// Called by the scorer when they click "Start 2nd Innings" on the innings break screen.
+// Transitions match status from 'innings_break' back to 'live' so ball recording works.
+async function startSecondInnings(req, res, next) {
+    try {
+        const match = await ScoringMatch_1.default.findById(req.params.id);
+        if (!match)
+            throw new errors_1.NotFoundError('Match');
+        if (match.status !== 'innings_break') {
+            throw new errors_1.BadRequestError('Match is not in innings break');
+        }
+        match.status = 'live';
+        await match.save();
+        // Attach current innings summary
+        const currentInnings = await Innings_1.default.findOne({
+            matchId: match._id,
+            inningsNumber: match.currentInnings,
+        }).lean();
+        res.json({ match: { ...match.toObject(), currentInningsSummary: currentInnings || null } });
     }
     catch (err) {
         next(err);

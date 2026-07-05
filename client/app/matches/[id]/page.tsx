@@ -478,7 +478,7 @@ export default function MatchDetailPage() {
             <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3">At the crease</p>
             <div className="space-y-2">
               {battingStats
-                .filter((s) => !s.battingStats.isOut)
+                .filter((s) => s.battingStats && !s.battingStats.isOut)
                 .slice(0, 2)
                 .map((s) => (
                   <div key={s._id} className="flex items-center justify-between">
@@ -494,13 +494,14 @@ export default function MatchDetailPage() {
                 <div className="border-t border-white/10 mt-3 pt-3">
                   <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-2">Bowling</p>
                   {bowlingStats
-                    .sort((a, b) => b.bowlingStats.ballsBowled - a.bowlingStats.ballsBowled)
+                    .filter((s) => s.bowlingStats)
+                    .sort((a, b) => (b.bowlingStats?.ballsBowled ?? 0) - (a.bowlingStats?.ballsBowled ?? 0))
                     .slice(0, 1)
                     .map((s) => (
                       <div key={s._id} className="flex items-center justify-between">
                         <span className="text-sm font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</span>
                         <span className="text-sm font-body text-gray-300">
-                          {bowlingOvers(s.bowlingStats.ballsBowled)}-{s.bowlingStats.maidens}-{s.bowlingStats.runsConceded}-{s.bowlingStats.wickets}
+                          {bowlingOvers(s.bowlingStats?.ballsBowled ?? 0)}-{s.bowlingStats?.maidens ?? 0}-{s.bowlingStats?.runsConceded ?? 0}-{s.bowlingStats?.wickets ?? 0}
                         </span>
                       </div>
                     ))}
@@ -594,23 +595,23 @@ export default function MatchDetailPage() {
                         <td className="px-4 py-2.5">
                           <p className="font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</p>
                           <p className="text-gray-600 text-[10px] capitalize">
-                            {s.battingStats.isOut
+                            {s.battingStats?.isOut
                               ? s.battingStats.dismissalType ?? 'out'
                               : 'not out'}
                           </p>
                         </td>
                         <td className={cn(
                           'text-right px-2 py-2.5 font-display font-bold',
-                          s.battingStats.runs >= 50 ? 'text-amber-400' : 'text-white'
+                          (s.battingStats?.runs ?? 0) >= 50 ? 'text-amber-400' : 'text-white'
                         )}>
-                          {s.battingStats.runs}
-                          {s.battingStats.runs >= 100 && <span className="text-amber-400 ml-0.5">★</span>}
+                          {s.battingStats?.runs ?? 0}
+                          {(s.battingStats?.runs ?? 0) >= 100 && <span className="text-amber-400 ml-0.5">★</span>}
                         </td>
-                        <td className="text-right px-2 py-2.5 text-gray-400">{s.battingStats.ballsFaced}</td>
-                        <td className="text-right px-2 py-2.5 text-blue-400">{s.battingStats.fours}</td>
-                        <td className="text-right px-2 py-2.5 text-purple-400">{s.battingStats.sixes}</td>
+                        <td className="text-right px-2 py-2.5 text-gray-400">{s.battingStats?.ballsFaced ?? 0}</td>
+                        <td className="text-right px-2 py-2.5 text-blue-400">{s.battingStats?.fours ?? 0}</td>
+                        <td className="text-right px-2 py-2.5 text-purple-400">{s.battingStats?.sixes ?? 0}</td>
                         <td className="text-right px-3 py-2.5 text-gray-400">
-                          {strikeRate(s.battingStats.runs, s.battingStats.ballsFaced)}
+                          {strikeRate(s.battingStats?.runs ?? 0, s.battingStats?.ballsFaced ?? 0)}
                         </td>
                       </tr>
                     ))}
@@ -662,25 +663,25 @@ export default function MatchDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {bowlingStats
-                      .filter((s) => s.bowlingStats.ballsBowled > 0)
+                      .filter((s) => (s.bowlingStats?.ballsBowled ?? 0) > 0)
                       .map((s) => (
                         <tr key={s._id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="px-4 py-2.5 font-display font-bold text-white">
                             {s.playerId?.username ?? s.guestName ?? '—'}
                           </td>
                           <td className="text-right px-2 py-2.5 text-gray-400">
-                            {bowlingOvers(s.bowlingStats.ballsBowled)}
+                            {bowlingOvers(s.bowlingStats?.ballsBowled ?? 0)}
                           </td>
-                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats.maidens}</td>
-                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats.runsConceded}</td>
+                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats?.maidens ?? 0}</td>
+                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats?.runsConceded ?? 0}</td>
                           <td className={cn(
                             'text-right px-2 py-2.5 font-display font-bold',
-                            s.bowlingStats.wickets >= 3 ? 'text-amber-400' : 'text-white'
+                            (s.bowlingStats?.wickets ?? 0) >= 3 ? 'text-amber-400' : 'text-white'
                           )}>
-                            {s.bowlingStats.wickets}
+                            {s.bowlingStats?.wickets ?? 0}
                           </td>
                           <td className="text-right px-3 py-2.5 text-gray-400">
-                            {economy(s.bowlingStats.runsConceded, s.bowlingStats.ballsBowled)}
+                            {economy(s.bowlingStats?.runsConceded ?? 0, s.bowlingStats?.ballsBowled ?? 0)}
                           </td>
                         </tr>
                       ))}

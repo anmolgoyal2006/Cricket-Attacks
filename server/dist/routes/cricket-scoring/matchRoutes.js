@@ -15,6 +15,7 @@ router.get('/', auth_1.authenticate, matchController_1.listMatches);
 router.get('/:id', auth_1.authenticate, matchController_1.getMatch);
 router.patch('/:id/scorers', auth_1.authenticate, matchController_1.updateScorers); // only creator — checked inside controller
 router.patch('/:id/start', auth_1.authenticate, isScorerOrCreator_1.isScorerOrCreator, matchController_1.startMatch);
+router.patch('/:id/start-second-innings', auth_1.authenticate, isScorerOrCreator_1.isScorerOrCreator, matchController_1.startSecondInnings);
 // Phase 5: read-only spectator endpoints (no isScorerOrCreator check — all authenticated users can read)
 router.get('/:matchId/balls', auth_1.authenticate, matchController_1.getBalls);
 router.get('/:matchId/stats', auth_1.authenticate, matchController_1.getMatchStats);

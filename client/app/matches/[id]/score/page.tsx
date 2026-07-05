@@ -153,6 +153,7 @@ export default function ScorePage() {
 
   // ── Scoring controls state ───────────────────────────────────────────────────
   const [posting, setPosting] = useState(false);
+  const postingRef = useRef(false); // synchronous guard — prevents double-tap before state re-renders
   const [postError, setPostError] = useState('');
 
   // ── Modal state ──────────────────────────────────────────────────────────────
@@ -322,6 +323,10 @@ export default function ScorePage() {
         setPostError('Set striker, non-striker, and bowler before scoring');
         return;
       }
+      // Synchronous guard — prevents a second tap firing before the React state
+      // re-render has disabled the buttons. postingRef updates instantly unlike useState.
+      if (postingRef.current) return;
+      postingRef.current = true;
       setPosting(true);
       setPostError('');
       try {
@@ -341,6 +346,7 @@ export default function ScorePage() {
       } catch (err: unknown) {
         setPostError(err instanceof Error ? err.message : 'Failed to record ball');
       } finally {
+        postingRef.current = false;
         setPosting(false);
       }
     },

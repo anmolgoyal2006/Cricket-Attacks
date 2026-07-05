@@ -71,9 +71,34 @@ async function recordBall(req, res, next) {
             throw new errors_1.NotFoundError('Active innings');
         // ── Over / ball position ──────────────────────────────────────────────────
         const legal = (0, scoringLogic_1.isLegalDelivery)(extraType);
-        const { over, ballsInCurrentOver, oversCompleted, isEndOfOver } = (0, scoringLogic_1.calculateOverBall)(innings.oversCompleted, innings.ballsInCurrentOver, legal);
-        // Legal ball number within the over (for storage)
-        const ballNumber = legal ? innings.ballsInCurrentOver + 1 : innings.ballsInCurrentOver;
+        // Atomically read-and-increment ballsInCurrentOver so concurrent requests
+        // can never read the same stale value. findOneAndUpdate with new:false
+        // returns the document BEFORE the increment, giving us the pre-update counts.
+        // For illegal deliveries (wide/no-ball) we don't increment — just read.
+        const inningsBeforeUpdate = await Innings_1.default.findOneAndUpdate({ _id: innings._id, isCompleted: false }, legal ? { $inc: { ballsInCurrentOver: 1 } } : {}, { new: false, session });
+        if (!inningsBeforeUpdate)
+            throw new errors_1.BadRequestError('Innings already completed');
+        // Re-read the current innings doc (with any increments applied) for use below
+        const freshInnings = await Innings_1.default.findById(innings._id).session(session);
+        if (!freshInnings)
+            throw new errors_1.NotFoundError('Active innings');
+        // Use the PRE-increment values to determine this ball's position
+        const prevOversCompleted = inningsBeforeUpdate.oversCompleted;
+        const prevBallsInOver = inningsBeforeUpdate.ballsInCurrentOver;
+        const { over, ballsInCurrentOver, oversCompleted, isEndOfOver } = (0, scoringLogic_1.calculateOverBall)(prevOversCompleted, prevBallsInOver, legal);
+        // ballNumber for storage: 1-indexed legal ball within the over
+        const ballNumber = legal ? prevBallsInOver + 1 : prevBallsInOver;
+        // If the atomic $inc just completed this over (ballsInCurrentOver hit 6),
+        // fix up the innings doc inside the transaction
+        if (legal && ballNumber === 6) {
+            freshInnings.oversCompleted = prevOversCompleted + 1;
+            freshInnings.ballsInCurrentOver = 0;
+        }
+        else if (legal) {
+            // The $inc already wrote ballsInCurrentOver+1; nothing else needed here
+            freshInnings.ballsInCurrentOver = prevBallsInOver + 1;
+        }
+        // For illegal deliveries freshInnings reflects the unmodified state — correct
         // ── Extras breakdown ──────────────────────────────────────────────────────
         const extrasBreakdown = (0, scoringLogic_1.calculateExtrasBreakdown)(extraType, extraRuns);
         const deliveryRuns = (0, scoringLogic_1.totalDeliveryRuns)(runsScored, extraRuns);
@@ -81,8 +106,8 @@ async function recordBall(req, res, next) {
         const [ball] = await Ball_1.default.create([
             {
                 matchId: matchIdStr,
-                inningsId: innings._id,
-                over: innings.oversCompleted,
+                inningsId: freshInnings._id,
+                over: prevOversCompleted,
                 ballNumber,
                 bowlerId: bowler.id,
                 batsmanOnStrikeId: batsman.id,
@@ -104,23 +129,15 @@ async function recordBall(req, res, next) {
             },
         ], { session });
         // ── Update innings totals ─────────────────────────────────────────────────
-        innings.totalRuns += deliveryRuns;
-        innings.extras.wides += extrasBreakdown.wides;
-        innings.extras.noBalls += extrasBreakdown.noBalls;
-        innings.extras.byes += extrasBreakdown.byes;
-        innings.extras.legByes += extrasBreakdown.legByes;
+        freshInnings.totalRuns += deliveryRuns;
+        freshInnings.extras.wides += extrasBreakdown.wides;
+        freshInnings.extras.noBalls += extrasBreakdown.noBalls;
+        freshInnings.extras.byes += extrasBreakdown.byes;
+        freshInnings.extras.legByes += extrasBreakdown.legByes;
         if (isWicket)
-            innings.totalWickets += 1;
-        if (legal) {
-            if (isEndOfOver) {
-                innings.oversCompleted += 1;
-                innings.ballsInCurrentOver = 0;
-            }
-            else {
-                innings.ballsInCurrentOver += 1;
-            }
-        }
-        await innings.save({ session });
+            freshInnings.totalWickets += 1;
+        // ballsInCurrentOver / oversCompleted already updated above via $inc + fixup
+        await freshInnings.save({ session });
         // ── Strike rotation ───────────────────────────────────────────────────────
         const rotate = (0, scoringLogic_1.shouldRotateStrike)(runsScored, legal, isEndOfOver);
         // End-of-over always swaps; mid-over swap only on odd runs
@@ -143,17 +160,19 @@ async function recordBall(req, res, next) {
             isWicket: isWicket && !['runout'].includes(wicketType || ''),
         }, session);
         // ── Check innings / match completion ──────────────────────────────────────
-        // Also check target mid-over for 2nd innings
-        const targetChased = innings.inningsNumber === 2 &&
-            innings.target != null &&
-            innings.totalRuns >= innings.target;
+        const targetChased = freshInnings.inningsNumber === 2 &&
+            freshInnings.target != null &&
+            freshInnings.totalRuns >= freshInnings.target;
         let completionResult = {
             inningsComplete: false,
             matchComplete: false,
             resultText: undefined,
         };
-        if (targetChased || innings.totalWickets >= Math.max(0, (innings.battingTeam === 'teamA' ? match.teamA.players.length : match.teamB.players.length) - 1) || innings.oversCompleted >= match.oversFormat) {
-            completionResult = await (0, matchCompletionService_1.checkAndHandleCompletion)(innings, match, session);
+        const battingTeamSize = freshInnings.battingTeam === 'teamA' ? match.teamA.players.length : match.teamB.players.length;
+        if (targetChased ||
+            freshInnings.totalWickets >= Math.max(0, battingTeamSize - 1) ||
+            freshInnings.oversCompleted >= match.oversFormat) {
+            completionResult = await (0, matchCompletionService_1.checkAndHandleCompletion)(freshInnings, match, session);
         }
         await session.commitTransaction();
         session.endSession();
@@ -161,11 +180,11 @@ async function recordBall(req, res, next) {
         res.status(201).json({
             ball,
             innings: {
-                totalRuns: innings.totalRuns,
-                totalWickets: innings.totalWickets,
-                oversCompleted: innings.oversCompleted,
-                ballsInCurrentOver: innings.ballsInCurrentOver,
-                extras: innings.extras,
+                totalRuns: freshInnings.totalRuns,
+                totalWickets: freshInnings.totalWickets,
+                oversCompleted: freshInnings.oversCompleted,
+                ballsInCurrentOver: freshInnings.ballsInCurrentOver,
+                extras: freshInnings.extras,
             },
             flags: {
                 strikeSwapped,
@@ -182,11 +201,11 @@ async function recordBall(req, res, next) {
         try {
             const room = `match_${matchIdStr}`;
             const inningsSnapshot = {
-                totalRuns: innings.totalRuns,
-                totalWickets: innings.totalWickets,
-                oversCompleted: innings.oversCompleted,
-                ballsInCurrentOver: innings.ballsInCurrentOver,
-                extras: innings.extras,
+                totalRuns: freshInnings.totalRuns,
+                totalWickets: freshInnings.totalWickets,
+                oversCompleted: freshInnings.oversCompleted,
+                ballsInCurrentOver: freshInnings.ballsInCurrentOver,
+                extras: freshInnings.extras,
             };
             const eventFlags = {
                 strikeSwapped,
@@ -196,32 +215,20 @@ async function recordBall(req, res, next) {
                 matchComplete: completionResult.matchComplete,
                 resultText: completionResult.resultText || null,
             };
-            // Core ball event — all connected spectators update their scorecard
-            liveMatchSocket_1.liveMatchNamespace.to(room).emit('ball:recorded', {
-                ball,
-                innings: inningsSnapshot,
-                flags: eventFlags,
-            });
-            // Dismissal event — UI can trigger a dedicated toast / animation
+            liveMatchSocket_1.liveMatchNamespace.to(room).emit('ball:recorded', { ball, innings: inningsSnapshot, flags: eventFlags });
             if (isWicket) {
                 liveMatchSocket_1.liveMatchNamespace.to(room).emit('wicket:fallen', {
-                    ball,
-                    dismissedPlayerId,
-                    wicketType,
-                    fielderId,
-                    innings: inningsSnapshot,
+                    ball, dismissedPlayerId, wicketType, fielderId, innings: inningsSnapshot,
                 });
             }
-            // Innings-complete event — UI shows innings break screen + target
             if (completionResult.inningsComplete && !completionResult.matchComplete) {
                 liveMatchSocket_1.liveMatchNamespace.to(room).emit('innings:completed', {
                     completedInningsNumber: match.currentInnings,
                     innings: inningsSnapshot,
-                    target: innings.inningsNumber === 1 ? innings.totalRuns + 1 : null,
+                    target: freshInnings.inningsNumber === 1 ? freshInnings.totalRuns + 1 : null,
                     resultText: completionResult.resultText || null,
                 });
             }
-            // Match-complete event — UI shows final result screen
             if (completionResult.matchComplete) {
                 liveMatchSocket_1.liveMatchNamespace.to(room).emit('match:completed', {
                     resultText: completionResult.resultText || null,
@@ -230,7 +237,6 @@ async function recordBall(req, res, next) {
             }
         }
         catch (emitErr) {
-            // Never let a socket emit error bubble up and affect the HTTP layer
             console.error('[live-match] emit error in recordBall:', emitErr);
         }
     }

@@ -273,12 +273,13 @@ export default function ScorePage() {
   const battingTeam = match ? match[battingTeamKey as 'teamA' | 'teamB'] : null;
   const bowlingTeam = match ? match[bowlingTeamKey as 'teamA' | 'teamB'] : null;
 
-  // Single-batsman mode: either explicitly set at match creation (individualBattingMode),
-  // OR only one batsman remains available (all others are out — last man standing).
+  // Single-batsman mode: only when the match was created with individualBattingMode ON
+  // AND only one batsman remains available. With the toggle OFF, a lone remaining batsman
+  // means the innings is over (normal cricket — handled by the backend).
   const availableBatsmenCount = toPlayers(battingTeam?.players ?? []).filter(
     (p) => !outPlayerIds.has(p._id)
   ).length;
-  const singleBatsmanMode = !!match?.individualBattingMode || availableBatsmenCount <= 1;
+  const singleBatsmanMode = !!match?.individualBattingMode && availableBatsmenCount <= 1;
 
   // Available batsmen (not out, not non-striker, not striker)
   const availableBatsmen: Player[] = toPlayers(battingTeam?.players ?? []).filter(

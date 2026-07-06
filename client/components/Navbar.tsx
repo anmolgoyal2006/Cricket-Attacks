@@ -319,7 +319,7 @@ export default function Navbar() {
             const isActive = pathname === item.href;
             return (
               <Link key={item.href} href={item.href}
-                className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
+                className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] flex-shrink-0 transition-all',
                   isActive ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400' : 'text-gray-400 hover:text-amber-400'
                 )}
               >
@@ -333,7 +333,7 @@ export default function Navbar() {
           <div className="relative" ref={mobileCricketDropdownRef}>
             <button
               onClick={() => { setCricketOpen((o) => !o); setGamesOpen(false); }}
-              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
+              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] flex-shrink-0 transition-all',
                 isCricketActive || cricketOpen ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400' : 'text-gray-400 hover:text-red-400'
               )}
             >
@@ -376,7 +376,7 @@ export default function Navbar() {
           <div className="relative" ref={mobileDropdownRef}>
             <button
               onClick={() => { setGamesOpen((o) => !o); setCricketOpen(false); }}
-              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] transition-all',
+              className={cn('flex flex-col items-center justify-center px-3 py-2 rounded-lg min-w-[60px] flex-shrink-0 transition-all',
                 isGamesActive || gamesOpen ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400' : 'text-gray-400 hover:text-amber-400'
               )}
             >

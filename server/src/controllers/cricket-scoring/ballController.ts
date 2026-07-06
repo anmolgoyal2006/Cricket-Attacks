@@ -290,9 +290,12 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     };
 
     const battingTeamSize = freshInnings.battingTeam === 'teamA' ? match.teamA.players.length : match.teamB.players.length;
+    // In individualBattingMode every player can bat alone, so all wickets must fall
+    // before the innings ends. In normal mode it's the usual N-1 rule.
+    const allOutWickets = match.individualBattingMode ? battingTeamSize : Math.max(0, battingTeamSize - 1);
     if (
       targetChased ||
-      freshInnings.totalWickets >= Math.max(0, battingTeamSize - 1) ||
+      freshInnings.totalWickets >= allOutWickets ||
       freshInnings.oversCompleted >= match.oversFormat
     ) {
       completionResult = await checkAndHandleCompletion(freshInnings, match, session);

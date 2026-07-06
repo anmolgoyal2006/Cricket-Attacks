@@ -2,19 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, TrendingUp, Loader2, Users, ChevronLeft, ChevronRight, Crown, Shield, Swords } from 'lucide-react';
+import { Trophy, Medal, Loader2, Users, ChevronLeft, ChevronRight, Crown, Star, Gem } from 'lucide-react';
 import { leaderboardApi, seasonApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import RankBadge from '@/components/RankBadge';
 import Link from 'next/link';
 
 const TIER_ORDER = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master'];
 
 function getTierIcon(tier: string) {
-  const icons: Record<string, string> = {
-    Bronze: '🟤', Silver: '🥈', Gold: '🥇', Platinum: '💎', Diamond: '🔷', Master: '👑',
+  const icons: Record<string, React.ReactNode> = {
+    Bronze: <Medal className="w-4 h-4 text-amber-700" />,
+    Silver: <Medal className="w-4 h-4 text-gray-300" />,
+    Gold: <Crown className="w-4 h-4 text-amber-400" />,
+    Platinum: <Star className="w-4 h-4 text-purple-400" />,
+    Diamond: <Gem className="w-4 h-4 text-cyan-400" />,
+    Master: <Trophy className="w-4 h-4 text-amber-400" />,
   };
-  return icons[tier] || '🟤';
+  return icons[tier] || icons.Bronze;
 }
 
 export default function LeaderboardPage() {
@@ -69,7 +73,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto pt-28 md:pt-12">
+      <div className="max-w-7xl mx-auto pt-32 md:pt-12">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -272,7 +276,7 @@ export default function LeaderboardPage() {
                   <p className="text-sm text-gray-400 font-body">Keep battling to climb higher!</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 flex-wrap">
                 <div className="text-center">
                   <p className="text-xs text-gray-400 font-body">ELO</p>
                   <p className="text-lg font-display font-bold text-amber-400">{myRank.eloRating}</p>

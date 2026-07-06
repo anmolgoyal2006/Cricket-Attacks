@@ -350,13 +350,18 @@ export default function ScorePage() {
         setActiveModal('inningsBreak');
       } else if (flags.needsNewBatsman) {
         // Wicket — record who got out
-        if (isWicketBall) {
-          const actualDismissedId = wicketDismissedId || striker?._id || '';
+        const actualDismissedId = isWicketBall ? (wicketDismissedId || striker?._id || '') : '';
+        if (isWicketBall && actualDismissedId) {
           lastDismissedIdRef.current = actualDismissedId;
           setOutPlayerIds((prev) => new Set([...prev, actualDismissedId]));
         }
-        if (singleBatsmanMode) {
-          // No partner needed — innings ends (backend handles it) or just continue
+        // Re-derive solo mode with the NEW outPlayerIds (post-wicket) synchronously,
+        // because setOutPlayerIds is async and singleBatsmanMode in this closure is stale.
+        const newOutCount = outPlayerIds.size + (isWicketBall && actualDismissedId ? 1 : 0);
+        const remainingBatsmen = (battingTeam?.players?.length ?? 0) - newOutCount;
+        const willBeSoloMode = !!match?.individualBattingMode && remainingBatsmen <= 1;
+        if (willBeSoloMode) {
+          // Last batsman — no partner needed, continue solo
           setStriker(null);
         } else {
           setIncomingBatsmanId('');
@@ -368,7 +373,7 @@ export default function ScorePage() {
         setActiveModal('newBowler');
       }
     },
-    [striker, nonStriker, bowler]
+    [striker, nonStriker, bowler, outPlayerIds, battingTeam, match]
   );
 
   // ── Core POST ball ────────────────────────────────────────────────────────────

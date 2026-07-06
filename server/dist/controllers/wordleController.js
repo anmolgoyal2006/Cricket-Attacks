@@ -363,6 +363,7 @@ async function getDailyFaceReveal(req, res, next) {
         const playersWithPhoto = uniquePlayers.filter(p => p.image &&
             p.image.trim() !== '' &&
             !p.image.includes('via.placeholder.com') &&
+            !p.image.includes('placehold.co') &&
             !p.image.includes('placeholder'));
         if (playersWithPhoto.length === 0)
             return res.status(404).json({ error: 'No players with photos found' });

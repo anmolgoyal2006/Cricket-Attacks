@@ -68,8 +68,8 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto pt-28 md:pt-12">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,14 +128,14 @@ export default function LeaderboardPage() {
             {/* Leaderboard List */}
             <div className="glass rounded-2xl overflow-hidden">
               <div className="p-6 border-b border-white/10 hidden md:grid md:grid-cols-12 gap-4 text-xs text-gray-400 font-body uppercase tracking-wider">
-                <div className="col-span-1">Rank</div>
-                <div className="col-span-4">Player</div>
-                <div className="col-span-2 text-center">ELO</div>
-                <div className="col-span-1 text-center">Tier</div>
-                <div className="col-span-1 text-center">W</div>
-                <div className="col-span-1 text-center">L</div>
-                <div className="col-span-1 text-center">D</div>
-                <div className="col-span-1 text-center">Streak</div>
+                <div className="md:col-span-1">Rank</div>
+                <div className="md:col-span-4">Player</div>
+                <div className="md:col-span-2 text-center">ELO</div>
+                <div className="md:col-span-1 text-center">Tier</div>
+                <div className="md:col-span-1 text-center">W</div>
+                <div className="md:col-span-1 text-center">L</div>
+                <div className="md:col-span-1 text-center">D</div>
+                <div className="md:col-span-1 text-center">Streak</div>
               </div>
               <div className="divide-y divide-white/10">
                 {paged.map((entry: any, index: number) => {
@@ -149,7 +149,7 @@ export default function LeaderboardPage() {
                         transition={{ delay: index * 0.03 }}
                         className={`grid grid-cols-2 md:grid-cols-12 gap-4 items-center p-4 transition-all hover:bg-white/5 cursor-pointer ${isYou ? 'bg-amber-500/10 border-l-2 border-l-amber-400' : ''}`}
                       >
-                        <div className="col-span-1 flex items-center gap-2">
+                        <div className="col-span-1 md:col-span-1 flex items-center gap-2">
                           {displayRank <= 3 ? (
                             <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getRankGradient(displayRank)} flex items-center justify-center`}>
                               {displayRank === 1 ? <Crown className="w-4 h-4 text-white" /> :
@@ -162,7 +162,7 @@ export default function LeaderboardPage() {
                             </span>
                           )}
                         </div>
-                        <div className="col-span-4 flex items-center gap-3">
+                        <div className="col-span-1 md:col-span-4 flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-lg">
                             {entry.avatar || getTierIcon(entry.rankTier)}
                           </div>
@@ -171,22 +171,22 @@ export default function LeaderboardPage() {
                             {isYou && <span className="text-[10px] text-amber-400 font-body">You</span>}
                           </div>
                         </div>
-                        <div className="col-span-2 text-center">
+                        <div className="col-span-1 md:col-span-2 text-center">
                           <span className="text-lg font-display font-bold text-amber-400">{entry.eloRating}</span>
                         </div>
-                        <div className="col-span-1 text-center">
+                        <div className="hidden md:block md:col-span-1 text-center">
                           <span className="text-xs">{getTierIcon(entry.rankTier)}</span>
                         </div>
-                        <div className="col-span-1 text-center">
+                        <div className="hidden md:block md:col-span-1 text-center">
                           <span className="text-sm font-display font-bold text-green-400">{entry.battlesWon || 0}</span>
                         </div>
-                        <div className="col-span-1 text-center">
+                        <div className="hidden md:block md:col-span-1 text-center">
                           <span className="text-sm font-display font-bold text-red-400">{entry.battlesLost || 0}</span>
                         </div>
-                        <div className="col-span-1 text-center">
+                        <div className="hidden md:block md:col-span-1 text-center">
                           <span className="text-sm font-display font-bold text-amber-400">{entry.battlesDrawn || 0}</span>
                         </div>
-                        <div className="col-span-1 text-center">
+                        <div className="hidden md:block md:col-span-1 text-center">
                           <span className={`text-sm font-display font-bold ${(entry.streak || 0) > 0 ? 'text-purple-400' : 'text-gray-400'}`}>
                             {(entry.streak || 0) > 0 ? `🔥${entry.streak}` : '-'}
                           </span>

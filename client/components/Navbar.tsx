@@ -138,7 +138,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2">
             {MAIN_NAV.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -147,7 +147,7 @@ export default function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'px-3 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
+                    'px-3.5 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
                     'flex items-center gap-1.5 group relative',
                     isActive
                       ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400'
@@ -163,12 +163,14 @@ export default function Navbar() {
               );
             })}
 
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
             {/* Games Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => { setGamesOpen((o) => !o); setCricketOpen(false); }}
                 className={cn(
-                  'px-3 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
+                  'px-3.5 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
                   'flex items-center gap-1.5 group relative',
                   isGamesActive || gamesOpen
                     ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400'
@@ -220,7 +222,7 @@ export default function Navbar() {
               <button
                 onClick={() => { setCricketOpen((o) => !o); setGamesOpen(false); }}
                 className={cn(
-                  'px-3 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
+                  'px-3.5 py-2 rounded-lg font-body text-sm font-medium transition-all duration-200',
                   'flex items-center gap-1.5 group relative',
                   isCricketActive || cricketOpen
                     ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400'
@@ -266,7 +268,7 @@ export default function Navbar() {
           </div>
 
           {/* Auth Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {loading ? (
               <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
             ) : user ? (

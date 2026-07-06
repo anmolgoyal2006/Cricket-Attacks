@@ -147,49 +147,82 @@ export default function LeaderboardPage() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className={`grid grid-cols-2 md:grid-cols-12 gap-4 items-center p-4 transition-all hover:bg-white/5 cursor-pointer ${isYou ? 'bg-amber-500/10 border-l-2 border-l-amber-400' : ''}`}
+                        className={`p-4 transition-all hover:bg-white/5 cursor-pointer ${isYou ? 'bg-amber-500/10 border-l-2 border-l-amber-400' : ''}`}
                       >
-                        <div className="col-span-1 md:col-span-1 flex items-center gap-2">
-                          {displayRank <= 3 ? (
-                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getRankGradient(displayRank)} flex items-center justify-center`}>
-                              {displayRank === 1 ? <Crown className="w-4 h-4 text-white" /> :
-                               displayRank === 2 ? <Medal className="w-4 h-4 text-white" /> :
-                               <Medal className="w-4 h-4 text-white" />}
+                        {/* Mobile layout */}
+                        <div className="flex md:hidden items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {displayRank <= 3 ? (
+                              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getRankGradient(displayRank)} flex items-center justify-center flex-shrink-0`}>
+                                {displayRank === 1 ? <Crown className="w-4 h-4 text-white" /> : <Medal className="w-4 h-4 text-white" />}
+                              </div>
+                            ) : (
+                              <span className="w-8 h-8 flex items-center justify-center text-sm font-display font-bold text-gray-400 flex-shrink-0">
+                                #{displayRank}
+                              </span>
+                            )}
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                              {entry.avatar || getTierIcon(entry.rankTier)}
                             </div>
-                          ) : (
-                            <span className="w-8 h-8 flex items-center justify-center text-sm font-display font-bold text-gray-400">
-                              #{displayRank}
+                            <div className="min-w-0">
+                              <p className="text-sm font-display font-bold text-white truncate">{entry.username}</p>
+                              <p className="text-[10px] text-gray-500 font-body">
+                                {getTierIcon(entry.rankTier)} {entry.rankTier}{isYou && <span className="text-amber-400 ml-1">· You</span>}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-lg font-display font-bold text-amber-400">{entry.eloRating}</p>
+                            <p className="text-[10px] text-gray-400 font-body">
+                              <span className="text-green-400">{entry.battlesWon || 0}W</span>{' '}
+                              <span className="text-red-400">{entry.battlesLost || 0}L</span>{' '}
+                              <span className="text-amber-400">{entry.battlesDrawn || 0}D</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Desktop layout */}
+                        <div className="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                          <div className="col-span-1 flex items-center gap-2">
+                            {displayRank <= 3 ? (
+                              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getRankGradient(displayRank)} flex items-center justify-center`}>
+                                {displayRank === 1 ? <Crown className="w-4 h-4 text-white" /> : <Medal className="w-4 h-4 text-white" />}
+                              </div>
+                            ) : (
+                              <span className="w-8 h-8 flex items-center justify-center text-sm font-display font-bold text-gray-400">
+                                #{displayRank}
+                              </span>
+                            )}
+                          </div>
+                          <div className="col-span-4 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-lg">
+                              {entry.avatar || getTierIcon(entry.rankTier)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-display font-bold text-white truncate">{entry.username}</p>
+                              {isYou && <span className="text-[10px] text-amber-400 font-body">You</span>}
+                            </div>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            <span className="text-lg font-display font-bold text-amber-400">{entry.eloRating}</span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-xs">{getTierIcon(entry.rankTier)}</span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-sm font-display font-bold text-green-400">{entry.battlesWon || 0}</span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-sm font-display font-bold text-red-400">{entry.battlesLost || 0}</span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-sm font-display font-bold text-amber-400">{entry.battlesDrawn || 0}</span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className={`text-sm font-display font-bold ${(entry.streak || 0) > 0 ? 'text-purple-400' : 'text-gray-400'}`}>
+                              {(entry.streak || 0) > 0 ? `🔥${entry.streak}` : '-'}
                             </span>
-                          )}
-                        </div>
-                        <div className="col-span-1 md:col-span-4 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-lg">
-                            {entry.avatar || getTierIcon(entry.rankTier)}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-display font-bold text-white truncate">{entry.username}</p>
-                            {isYou && <span className="text-[10px] text-amber-400 font-body">You</span>}
-                          </div>
-                        </div>
-                        <div className="col-span-1 md:col-span-2 text-center">
-                          <span className="text-lg font-display font-bold text-amber-400">{entry.eloRating}</span>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 text-center">
-                          <span className="text-xs">{getTierIcon(entry.rankTier)}</span>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 text-center">
-                          <span className="text-sm font-display font-bold text-green-400">{entry.battlesWon || 0}</span>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 text-center">
-                          <span className="text-sm font-display font-bold text-red-400">{entry.battlesLost || 0}</span>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 text-center">
-                          <span className="text-sm font-display font-bold text-amber-400">{entry.battlesDrawn || 0}</span>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 text-center">
-                          <span className={`text-sm font-display font-bold ${(entry.streak || 0) > 0 ? 'text-purple-400' : 'text-gray-400'}`}>
-                            {(entry.streak || 0) > 0 ? `🔥${entry.streak}` : '-'}
-                          </span>
                         </div>
                       </motion.div>
                     </Link>

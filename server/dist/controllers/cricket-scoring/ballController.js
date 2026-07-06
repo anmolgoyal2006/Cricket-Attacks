@@ -157,7 +157,7 @@ async function recordBall(req, res, next) {
         const strikeSwapped = isEndOfOver || rotate;
         // ── Player stats ──────────────────────────────────────────────────────────
         // Batsman on strike faces the ball
-        await (0, playerStatsService_1.incrementBattingStats)(matchIdStr, batsman.statsKey, {
+        await (0, playerStatsService_1.incrementBattingStats)(matchIdStr, freshInnings.inningsNumber, batsman.statsKey, {
             runs: runsScored,
             ballFaced: legal ? 1 : 0,
             isBoundaryFour: runsScored === 4,
@@ -177,7 +177,7 @@ async function recordBall(req, res, next) {
                 return 1 + runsScored; // penalty + bat
             return runsScored; // normal / bye / legbye
         })();
-        await (0, playerStatsService_1.incrementBowlingStats)(matchIdStr, bowler.statsKey, {
+        await (0, playerStatsService_1.incrementBowlingStats)(matchIdStr, freshInnings.inningsNumber, bowler.statsKey, {
             ballBowled: legal ? 1 : 0,
             runsConceded: runsChargedToBowler,
             isWicket: isWicket && !['runout'].includes(wicketType || ''),
@@ -324,7 +324,7 @@ async function undoLastBall(req, res, next) {
         const undoBowlerKey = lastBall.bowlerId
             ? lastBall.bowlerId.toString()
             : { guestName: lastBall.guestBowler ?? '' };
-        await (0, playerStatsService_1.decrementBattingStats)(matchIdStr, undoBatsmanKey, {
+        await (0, playerStatsService_1.decrementBattingStats)(matchIdStr, innings.inningsNumber, undoBatsmanKey, {
             runs: lastBall.runsScored,
             ballFaced: lastBall.isLegalDelivery ? 1 : 0,
             isBoundaryFour: lastBall.runsScored === 4,
@@ -339,7 +339,7 @@ async function undoLastBall(req, res, next) {
             extrasBreakdown.noBalls +
             extrasBreakdown.byes +
             extrasBreakdown.legByes;
-        await (0, playerStatsService_1.decrementBowlingStats)(matchIdStr, undoBowlerKey, {
+        await (0, playerStatsService_1.decrementBowlingStats)(matchIdStr, innings.inningsNumber, undoBowlerKey, {
             ballBowled: lastBall.isLegalDelivery ? 1 : 0,
             runsConceded: runsChargedToBowler,
             isWicket: lastBall.isWicket && !['runout'].includes(lastBall.wicketType || ''),

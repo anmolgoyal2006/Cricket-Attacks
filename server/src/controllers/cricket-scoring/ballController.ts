@@ -222,6 +222,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     // Batsman on strike faces the ball
     await incrementBattingStats(
       matchIdStr,
+      freshInnings.inningsNumber as 1 | 2,
       batsman.statsKey,
       {
         runs: runsScored,
@@ -239,6 +240,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
     if (nonStrikerDismissed) {
       await incrementBattingStats(
         matchIdStr,
+        freshInnings.inningsNumber as 1 | 2,
         nonStrk.statsKey,
         {
           runs: 0,
@@ -265,6 +267,7 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
 
     await incrementBowlingStats(
       matchIdStr,
+      freshInnings.inningsNumber as 1 | 2,
       bowler.statsKey,
       {
         ballBowled: legal ? 1 : 0,
@@ -470,6 +473,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     await decrementBattingStats(
       matchIdStr,
+      innings.inningsNumber as 1 | 2,
       undoBatsmanKey,
       {
         runs: lastBall.runsScored,
@@ -496,6 +500,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
       await decrementBattingStats(
         matchIdStr,
+        innings.inningsNumber as 1 | 2,
         undoNonStrikerKey,
         {
           runs: 0,
@@ -517,6 +522,7 @@ export async function undoLastBall(req: AuthRequest, res: Response, next: NextFu
 
     await decrementBowlingStats(
       matchIdStr,
+      innings.inningsNumber as 1 | 2,
       undoBowlerKey,
       {
         ballBowled: lastBall.isLegalDelivery ? 1 : 0,

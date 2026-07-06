@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPlayerMatchStats extends Document {
   matchId: mongoose.Types.ObjectId;
+  inningsNumber: 1 | 2;
   playerId?: mongoose.Types.ObjectId | null;  // absent for guest players
   guestName?: string | null;                  // set when playerId is absent
   battingStats: {
@@ -35,6 +36,11 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
     matchId: {
       type: Schema.Types.ObjectId,
       ref: 'ScoringMatch',
+      required: true,
+    },
+    inningsNumber: {
+      type: Number,
+      enum: [1, 2],
       required: true,
     },
     playerId: {
@@ -76,18 +82,15 @@ const playerMatchStatsSchema = new Schema<IPlayerMatchStats>(
   }
 );
 
-playerMatchStatsSchema.index({ matchId: 1 });
-// Unique index for registered players only — partialFilterExpression excludes
-// documents where playerId is null or absent, so guest players never participate.
-// This is better than sparse:true which still indexes explicit null values.
+playerMatchStatsSchema.index({ matchId: 1, inningsNumber: 1 });
+// Unique index for registered players, scoped to innings
 playerMatchStatsSchema.index(
-  { matchId: 1, playerId: 1 },
+  { matchId: 1, inningsNumber: 1, playerId: 1 },
   { unique: true, partialFilterExpression: { playerId: { $type: 'objectId' } } }
 );
-// Guest player uniqueness — partialFilterExpression ensures only docs where
-// guestName is actually a string (not null/absent) participate in this index.
+// Guest player uniqueness, scoped to innings
 playerMatchStatsSchema.index(
-  { matchId: 1, guestName: 1 },
+  { matchId: 1, inningsNumber: 1, guestName: 1 },
   { unique: true, partialFilterExpression: { guestName: { $type: 'string' } } }
 );
 

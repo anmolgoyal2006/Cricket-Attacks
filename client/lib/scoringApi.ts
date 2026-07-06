@@ -177,6 +177,7 @@ export interface BallRecord {
 export interface PlayerMatchStat {
   _id: string;
   matchId: string;
+  inningsNumber?: 1 | 2;
   playerId: { _id: string; username: string } | null;
   guestName: string | null;
   displayName?: string;

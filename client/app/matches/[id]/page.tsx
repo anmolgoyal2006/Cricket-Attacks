@@ -289,11 +289,11 @@ export default function MatchDetailPage() {
   const bowlingKeys = new Set(bowlingTeamPlayers.map(playerKey));
   const battingStats = stats.filter((s) => {
     const k = statKey(s);
-    return k && (battingKeys.size === 0 || battingKeys.has(k));
+    return k && (battingKeys.size === 0 || battingKeys.has(k)) && (s.inningsNumber ?? 1) === inningsTab;
   });
   const bowlingStats = stats.filter((s) => {
     const k = statKey(s);
-    return k && (bowlingKeys.size === 0 || bowlingKeys.has(k));
+    return k && (bowlingKeys.size === 0 || bowlingKeys.has(k)) && (s.inningsNumber ?? 1) === inningsTab;
   });
 
   const isLive = match?.status === 'live' || match?.status === 'innings_break';

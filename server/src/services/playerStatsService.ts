@@ -25,14 +25,14 @@ function isGuestKey(player: PlayerKey): player is { guestName: string } {
 
 /**
  * Filter for finding the stat document.
- * Guests: match on { matchId, guestName } — no playerId in filter.
- * Registered: match on { matchId, playerId }.
+ * Guests: match on { matchId, inningsNumber, guestName }.
+ * Registered: match on { matchId, inningsNumber, playerId }.
  */
-function playerFilter(matchId: string | mongoose.Types.ObjectId, player: PlayerKey) {
+function playerFilter(matchId: string | mongoose.Types.ObjectId, inningsNumber: 1 | 2, player: PlayerKey) {
   if (isGuestKey(player)) {
-    return { matchId, guestName: player.guestName };
+    return { matchId, inningsNumber, guestName: player.guestName };
   }
-  return { matchId, playerId: player };
+  return { matchId, inningsNumber, playerId: player };
 }
 
 /**
@@ -41,7 +41,7 @@ function playerFilter(matchId: string | mongoose.Types.ObjectId, player: PlayerK
  * Registered: only playerId — guestName field stays fully absent.
  * Both: initialize all numeric stat sub-fields to 0 so $inc always works.
  */
-function setOnInsertFields(player: PlayerKey): Record<string, unknown> {
+function setOnInsertFields(player: PlayerKey, inningsNumber: 1 | 2): Record<string, unknown> {
   const statsDefaults = {
     'battingStats.runs': 0,
     'battingStats.ballsFaced': 0,
@@ -62,9 +62,9 @@ function setOnInsertFields(player: PlayerKey): Record<string, unknown> {
   };
 
   if (isGuestKey(player)) {
-    return { guestName: player.guestName, ...statsDefaults };
+    return { guestName: player.guestName, inningsNumber, ...statsDefaults };
   }
-  return { playerId: player, ...statsDefaults };
+  return { playerId: player, inningsNumber, ...statsDefaults };
 }
 
 // ─── Batting ─────────────────────────────────────────────────────────────────
@@ -80,18 +80,19 @@ interface BattingDelta {
 
 export async function incrementBattingStats(
   matchId: mongoose.Types.ObjectId | string,
+  inningsNumber: 1 | 2,
   player: PlayerKey,
   delta: BattingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
   if (!player || (typeof player === 'string' && !player)) return;
 
-  const filter = playerFilter(matchId, player);
+  const filter = playerFilter(matchId, inningsNumber, player);
 
   // Step 1: ensure doc exists with all fields initialized
   await PlayerMatchStats.findOneAndUpdate(
     filter,
-    { $setOnInsert: setOnInsertFields(player) },
+    { $setOnInsert: setOnInsertFields(player, inningsNumber) },
     { upsert: true, new: false, session, setDefaultsOnInsert: false }
   );
 
@@ -128,13 +129,14 @@ export async function incrementBattingStats(
 
 export async function decrementBattingStats(
   matchId: mongoose.Types.ObjectId | string,
+  inningsNumber: 1 | 2,
   player: PlayerKey,
   delta: BattingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
   if (!player || (typeof player === 'string' && !player)) return;
 
-  const filter = playerFilter(matchId, player);
+  const filter = playerFilter(matchId, inningsNumber, player);
 
   // Clamp at 0 via pipeline (only place we need pipeline — for the $max clamping)
   await PlayerMatchStats.findOneAndUpdate(
@@ -176,18 +178,19 @@ interface BowlingDelta {
 
 export async function incrementBowlingStats(
   matchId: mongoose.Types.ObjectId | string,
+  inningsNumber: 1 | 2,
   player: PlayerKey,
   delta: BowlingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
   if (!player || (typeof player === 'string' && !player)) return;
 
-  const filter = playerFilter(matchId, player);
+  const filter = playerFilter(matchId, inningsNumber, player);
 
   // Ensure doc exists
   await PlayerMatchStats.findOneAndUpdate(
     filter,
-    { $setOnInsert: setOnInsertFields(player) },
+    { $setOnInsert: setOnInsertFields(player, inningsNumber) },
     { upsert: true, new: false, session, setDefaultsOnInsert: false }
   );
 
@@ -211,13 +214,14 @@ export async function incrementBowlingStats(
 
 export async function decrementBowlingStats(
   matchId: mongoose.Types.ObjectId | string,
+  inningsNumber: 1 | 2,
   player: PlayerKey,
   delta: BowlingDelta,
   session?: mongoose.ClientSession
 ): Promise<void> {
   if (!player || (typeof player === 'string' && !player)) return;
 
-  const filter = playerFilter(matchId, player);
+  const filter = playerFilter(matchId, inningsNumber, player);
 
   await PlayerMatchStats.findOneAndUpdate(
     filter,

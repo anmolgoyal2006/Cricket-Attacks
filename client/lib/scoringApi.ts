@@ -30,6 +30,8 @@ export interface ScoringMatch {
   oversFormat: number;
   tossWonBy: 'teamA' | 'teamB';
   tossDecision: 'bat' | 'bowl';
+  /** When true: no non-striker slot — one batsman faces every ball alone. */
+  individualBattingMode: boolean;
   status: 'upcoming' | 'live' | 'innings_break' | 'completed';
   currentInnings: number;
   result: { winner: string; margin: string; method: string } | null;
@@ -102,6 +104,8 @@ export interface CreateMatchPayload {
   oversFormat: number;
   tossWonBy: 'teamA' | 'teamB';
   tossDecision: 'bat' | 'bowl';
+  /** When true: no non-striker slot — one batsman faces every ball alone. */
+  individualBattingMode?: boolean;
   venue?: string;
 }
 

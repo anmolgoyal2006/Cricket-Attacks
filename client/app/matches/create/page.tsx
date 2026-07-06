@@ -182,6 +182,7 @@ export default function CreateMatchPage() {
   const [tossWonBy, setTossWonBy] = useState<'teamA' | 'teamB'>('teamA');
   const [tossDecision, setTossDecision] = useState<'bat' | 'bowl'>('bat');
   const [venue, setVenue] = useState('');
+  const [individualBattingMode, setIndividualBattingMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -194,8 +195,9 @@ export default function CreateMatchPage() {
     if (!teamAName.trim()) return 'Team A name is required';
     if (!teamBName.trim()) return 'Team B name is required';
     if (teamAName.trim() === teamBName.trim()) return 'Team names must be different';
-    if (teamAPlayers.length < 2) return 'Team A needs at least 2 players';
-    if (teamBPlayers.length < 2) return 'Team B needs at least 2 players';
+    const minPlayers = individualBattingMode ? 1 : 2;
+    if (teamAPlayers.length < minPlayers) return `Team A needs at least ${minPlayers} player${minPlayers > 1 ? 's' : ''}`;
+    if (teamBPlayers.length < minPlayers) return `Team B needs at least ${minPlayers} player${minPlayers > 1 ? 's' : ''}`;
     if (finalOvers < 1 || finalOvers > 100) return 'Overs must be between 1 and 100';
     return null;
   };
@@ -221,6 +223,7 @@ export default function CreateMatchPage() {
         oversFormat: finalOvers,
         tossWonBy,
         tossDecision,
+        individualBattingMode,
         venue: venue.trim() || undefined,
       });
       await scoringApi.startMatch(match._id);
@@ -291,7 +294,7 @@ export default function CreateMatchPage() {
                   />
                 </div>
                 <PlayerSelector
-                  label={`Players (${teamAPlayers.length} added, min 2)`}
+                  label={`Players (${teamAPlayers.length} added, min ${individualBattingMode ? 1 : 2})`}
                   selected={teamAPlayers}
                   onAdd={(p) => setTeamAPlayers((prev) => [...prev, p])}
                   onRemove={(name) => setTeamAPlayers((prev) => prev.filter((p) => p.displayName !== name))}
@@ -317,7 +320,7 @@ export default function CreateMatchPage() {
                   />
                 </div>
                 <PlayerSelector
-                  label={`Players (${teamBPlayers.length} added, min 2)`}
+                  label={`Players (${teamBPlayers.length} added, min ${individualBattingMode ? 1 : 2})`}
                   selected={teamBPlayers}
                   onAdd={(p) => setTeamBPlayers((prev) => [...prev, p])}
                   onRemove={(name) => setTeamBPlayers((prev) => prev.filter((p) => p.displayName !== name))}
@@ -401,6 +404,34 @@ export default function CreateMatchPage() {
               placeholder="e.g. Wankhede Stadium, Mumbai" maxLength={80}
               className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 font-body text-sm transition-all"
             />
+          </div>
+
+          {/* Individual batting mode */}
+          <div className="glass-dark rounded-2xl p-5 border border-white/10">
+            <button
+              type="button"
+              onClick={() => setIndividualBattingMode((v) => !v)}
+              className="w-full flex items-center justify-between gap-4"
+            >
+              <div className="flex-1 text-left">
+                <p className="text-base font-display font-bold text-white">Individual batting (no non-striker)</p>
+                <p className="text-xs text-gray-400 font-body mt-0.5">
+                  One batsman faces every ball alone — no strike rotation, no partner. Useful for solo net sessions or 1v1 formats.
+                </p>
+              </div>
+              {/* Toggle pill */}
+              <div className={cn(
+                'relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 border',
+                individualBattingMode
+                  ? 'bg-amber-500 border-amber-500'
+                  : 'bg-white/10 border-white/20'
+              )}>
+                <span className={cn(
+                  'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200',
+                  individualBattingMode ? 'translate-x-6' : 'translate-x-0.5'
+                )} />
+              </div>
+            </button>
           </div>
 
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}

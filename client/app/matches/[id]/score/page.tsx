@@ -273,8 +273,8 @@ export default function ScorePage() {
   const battingTeam = match ? match[battingTeamKey as 'teamA' | 'teamB'] : null;
   const bowlingTeam = match ? match[bowlingTeamKey as 'teamA' | 'teamB'] : null;
 
-  // Single-batsman mode: only one player on batting team — no non-striker needed
-  const singleBatsmanMode = (battingTeam?.players?.length ?? 0) === 1;
+  // Single-batsman mode: explicitly set at match creation — no non-striker needed
+  const singleBatsmanMode = !!match?.individualBattingMode;
 
   // Available batsmen (not out, not non-striker, not striker)
   const availableBatsmen: Player[] = toPlayers(battingTeam?.players ?? []).filter(

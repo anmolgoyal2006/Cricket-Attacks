@@ -14,7 +14,7 @@ import Innings from '../../models/cricket-scoring/Innings';
 // ── POST /api/scoring/matches ─────────────────────────────────────────────────
 export async function createMatch(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { teamA, teamB, oversFormat, tossWonBy, tossDecision, venue, scorers } = req.body;
+    const { teamA, teamB, oversFormat, tossWonBy, tossDecision, venue, scorers, individualBattingMode } = req.body;
 
     if (!teamA?.name || !teamA?.players?.length) {
       throw new BadRequestError('teamA must have a name and at least one player');
@@ -54,6 +54,7 @@ export async function createMatch(req: AuthRequest, res: Response, next: NextFun
       oversFormat,
       tossWonBy,
       tossDecision,
+      individualBattingMode: !!individualBattingMode,
       venue: venue || null,
       createdBy: req.userId,
       scorers: scorers || [],

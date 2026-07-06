@@ -18,6 +18,8 @@ export interface IScoringMatch extends Document {
   oversFormat: number;
   tossWonBy: 'teamA' | 'teamB';
   tossDecision: 'bat' | 'bowl';
+  /** When true: no non-striker slot — one batsman faces every ball alone. */
+  individualBattingMode: boolean;
   status: 'upcoming' | 'live' | 'innings_break' | 'completed';
   currentInnings: number;
   result: {
@@ -62,6 +64,10 @@ const scoringMatchSchema = new Schema<IScoringMatch>(
       type: String,
       enum: ['bat', 'bowl'],
       required: true,
+    },
+    individualBattingMode: {
+      type: Boolean,
+      default: false,
     },
     status: {
       type: String,

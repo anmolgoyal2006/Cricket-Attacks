@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Trophy, Sparkles, Swords, Users, Home, LogIn, UserPlus,
-  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye, ClipboardList, Radio,
+  LogOut, Hash, HelpCircle, Gamepad2, ChevronDown, Eye, ClipboardList, Radio, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -60,6 +60,15 @@ const CRICKET_ITEMS = [
     badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     iconBg: 'from-amber-400 to-orange-500',
   },
+  {
+    href: '/cricket-stats/__self__', // resolved to /cricket-stats/[userId] at render time
+    label: 'Player Stats',
+    icon: BarChart3,
+    desc: 'Your career runs, wickets & match history',
+    badge: 'Stats',
+    badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    iconBg: 'from-blue-500 to-indigo-600',
+  },
 ];
 
 const MAIN_NAV = [
@@ -83,7 +92,15 @@ export default function Navbar() {
   const mobileCricketDropdownRef = useRef<HTMLDivElement>(null);
 
   const isGamesActive = GAME_ITEMS.some((g) => pathname === g.href);
-  const isCricketActive = CRICKET_ITEMS.some((c) => pathname === c.href || pathname.startsWith('/matches'));
+  const isCricketActive = CRICKET_ITEMS.some((c) => pathname === c.href || pathname.startsWith('/matches') || pathname.startsWith('/cricket-stats'));
+
+  /** Resolve the __self__ sentinel to the logged-in user's stats URL */
+  function cricketHref(raw: string): string {
+    if (raw === '/cricket-stats/__self__') {
+      return user ? `/cricket-stats/${user.id}` : '/login';
+    }
+    return raw;
+  }
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -241,9 +258,10 @@ export default function Navbar() {
                   <div className="p-2">
                     {CRICKET_ITEMS.map((item) => {
                       const Icon = item.icon;
-                      const isActive = pathname === item.href;
+                      const href = cricketHref(item.href);
+                      const isActive = pathname === href;
                       return (
-                        <Link key={item.href} href={item.href}
+                        <Link key={item.href} href={href}
                           className={cn('flex items-center gap-3 p-3 rounded-xl transition-all',
                             isActive ? 'bg-red-500/10 border border-red-500/20' : 'hover:bg-white/5 border border-transparent'
                           )}
@@ -347,9 +365,10 @@ export default function Navbar() {
                 <div className="p-2">
                   {CRICKET_ITEMS.map((item) => {
                     const Icon = item.icon;
-                    const isActive = pathname === item.href;
+                    const href = cricketHref(item.href);
+                    const isActive = pathname === href;
                     return (
-                      <Link key={item.href} href={item.href}
+                      <Link key={item.href} href={href}
                         className={cn('flex items-center gap-3 p-3 rounded-xl transition-all',
                           isActive ? 'bg-red-500/10 border border-red-500/20' : 'hover:bg-white/5 border border-transparent'
                         )}

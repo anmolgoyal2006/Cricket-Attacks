@@ -146,6 +146,116 @@ export const scoringApi = {
     }>(`/scoring/matches/${matchId}/balls/last`, { method: 'DELETE' }),
 };
 
+// ── Career & match-history stats ─────────────────────────────────────────────
+
+/** Populated playerId field on career stats */
+export interface CareerStatsPlayer {
+  _id: string;
+  username: string;
+}
+
+/**
+ * Shape returned by GET /api/scoring/stats/player/:playerId/career
+ * Mirrors IPlayerCareerStats with playerId populated as { _id, username }.
+ */
+export interface PlayerCareerStats {
+  _id: string;
+  playerId: CareerStatsPlayer;
+  matchesPlayed: number;
+  totalRuns: number;
+  totalBallsFaced: number;
+  highestScore: number;
+  totalFours: number;
+  totalSixes: number;
+  battingAverage: number;
+  battingStrikeRate: number;
+  timesOut: number;
+  totalWickets: number;
+  totalOversBowled: number;
+  totalRunsConceded: number;
+  bestBowlingFigures: {
+    wickets: number;
+    runs: number;
+  };
+  bowlingAverage: number;
+  economyRate: number;
+  totalCatches: number;
+  totalRunOuts: number;
+  totalStumpings: number;
+  lastUpdated: string;
+}
+
+/** Populated matchId on per-match stat rows */
+export interface MatchSummary {
+  _id: string;
+  teamA: { name: string };
+  teamB: { name: string };
+  status: 'upcoming' | 'live' | 'innings_break' | 'completed';
+  result: { winner: string; margin: string; method: string } | null;
+  createdAt: string;
+  oversFormat: number;
+}
+
+/**
+ * A single row from GET /api/scoring/stats/player/:playerId/matches
+ * matchId is populated with the match summary.
+ */
+export interface PlayerMatchHistoryEntry {
+  _id: string;
+  matchId: MatchSummary;
+  inningsNumber: 1 | 2;
+  playerId: { _id: string; username: string } | null;
+  guestName: string | null;
+  battingStats: {
+    runs: number;
+    ballsFaced: number;
+    fours: number;
+    sixes: number;
+    isOut: boolean;
+    dismissalType: string | null;
+    strikeRate: number;
+  };
+  bowlingStats: {
+    oversBowled: number;
+    ballsBowled: number;
+    runsConceded: number;
+    wickets: number;
+    maidens: number;
+    economy: number;
+  };
+  fieldingStats: {
+    catches: number;
+    runOuts: number;
+    stumpings: number;
+  };
+  createdAt: string;
+}
+
+export interface MatchHistoryPagination {
+  page: number;
+  pages: number;
+  total: number;
+}
+
+export const scoringStatsApi = {
+  /**
+   * GET /api/scoring/stats/player/:playerId/career
+   * Returns the aggregated career stats for a registered player.
+   * Throws NotFoundError (404) if the player has no recorded matches yet.
+   */
+  getCareerStats: (playerId: string) =>
+    api<{ stats: PlayerCareerStats }>(`/scoring/stats/player/${playerId}/career`),
+
+  /**
+   * GET /api/scoring/stats/player/:playerId/matches
+   * Returns per-match stat rows for a player, newest first, with pagination.
+   */
+  getMatchHistory: (playerId: string, page = 1, limit = 15) =>
+    api<{ matchStats: PlayerMatchHistoryEntry[]; pagination: MatchHistoryPagination }>(
+      `/scoring/stats/player/${playerId}/matches?page=${page}&limit=${limit}`
+    ),
+};
+
 // ── Phase 5 additions ─────────────────────────────────────────────────────────
 
 export interface BallRecord {

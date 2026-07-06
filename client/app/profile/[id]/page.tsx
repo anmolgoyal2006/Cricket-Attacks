@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Trophy, Swords, TrendingUp, Calendar, Loader2, ArrowLeft, User, Zap, Crown, Shield } from 'lucide-react';
+import { Trophy, Swords, TrendingUp, Calendar, Loader2, ArrowLeft, User, Zap, Crown, Shield, BarChart3 } from 'lucide-react';
 import { profileApi, historyApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import RankBadge from '@/components/RankBadge';
@@ -167,11 +167,20 @@ export default function ProfilePage() {
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-display font-bold text-white">Recent Matches</h3>
-            {isOwnProfile && (
-              <Link href="/history" className="text-sm text-amber-400 font-body hover:underline">
-                View all
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/cricket-stats/${id}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/15 to-indigo-500/15 border border-blue-500/25 text-blue-400 hover:border-blue-400/50 transition-all text-xs font-body font-semibold"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Cricket Stats
               </Link>
-            )}
+              {isOwnProfile && (
+                <Link href="/history" className="text-sm text-amber-400 font-body hover:underline">
+                  View all
+                </Link>
+              )}
+            </div>
           </div>
 
           {matches.length === 0 ? (

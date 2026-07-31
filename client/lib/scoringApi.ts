@@ -109,6 +109,17 @@ export interface CreateMatchPayload {
   venue?: string;
 }
 
+/** A team roster derived from the user's previous matches, for reuse when creating one. */
+export interface SavedTeam {
+  name: string;
+  lastUsed: string;
+  players: {
+    id: string | null;
+    displayName: string;
+    isGuest: boolean;
+  }[];
+}
+
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 export const scoringApi = {
@@ -118,6 +129,9 @@ export const scoringApi = {
 
   createMatch: (payload: CreateMatchPayload) =>
     api<{ match: ScoringMatch }>('/scoring/matches', { method: 'POST', body: payload }),
+
+  /** GET /api/scoring/matches/my-teams — teams from matches this user created */
+  getMyTeams: () => api<{ teams: SavedTeam[] }>('/scoring/matches/my-teams'),
 
   startMatch: (matchId: string) =>
     api<{ match: ScoringMatch; message: string }>(`/scoring/matches/${matchId}/start`, {

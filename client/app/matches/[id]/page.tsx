@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { scoringApi, scoringSpectatorApi, ScoringMatch, BallRecord, PlayerMatchStat, MatchPlayer } from '@/lib/scoringApi';
 import { useLiveMatchSocket } from '@/lib/useLiveMatchSocket';
 import { generateCommentary, ballPillLabel, ballPillClass } from '@/lib/commentary';
+import MatchScorecard from '@/components/MatchScorecard';
 import { cn } from '@/lib/utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -34,14 +35,6 @@ function rrr(target: number, runs: number, oc: number, bic: number, totalOvers: 
   const needed = target - runs;
   if (needed <= 0) return '0.00';
   return ((needed / ballsLeft) * 6).toFixed(2);
-}
-
-function strikeRate(runs: number, balls: number) {
-  return balls === 0 ? '0.00' : ((runs / balls) * 100).toFixed(1);
-}
-
-function economy(runs: number, balls: number) {
-  return balls === 0 ? '0.00' : ((runs / balls) * 6).toFixed(2);
 }
 
 function bowlingOvers(ballsBowled: number) {
@@ -100,7 +93,6 @@ interface InningsState {
   target?: number | null;
 }
 
-type ScorecardTab = 'batting' | 'bowling';
 type InningsTab = 1 | 2;
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -118,7 +110,6 @@ export default function MatchDetailPage() {
   const [pageError, setPageError] = useState('');
 
   // ── UI state ─────────────────────────────────────────────────────────────────
-  const [scorecardTab, setScorecardTab] = useState<ScorecardTab>('batting');
   const [inningsTab, setInningsTab] = useState<InningsTab>(1);
   const [wicketToast, setWicketToast] = useState<string | null>(null);
   const [inningsBreakMsg, setInningsBreakMsg] = useState<string | null>(null);
@@ -532,167 +523,8 @@ export default function MatchDetailPage() {
           </motion.div>
         )}
 
-        {/* ── SCORECARD ─────────────────────────────────────────────────────── */}
-        <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-          {/* Innings tabs (show only if 2 innings exist) */}
-          {match.currentInnings === 2 && (
-            <div className="flex border-b border-white/10">
-              {([1, 2] as InningsTab[]).map((inn) => (
-                <button
-                  key={inn}
-                  onClick={() => setInningsTab(inn)}
-                  className={cn(
-                    'flex-1 py-3 text-sm font-display font-bold transition-all',
-                    inningsTab === inn
-                      ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
-                      : 'text-gray-500 hover:text-gray-300'
-                  )}
-                >
-                  Innings {inn}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Batting / Bowling tab switcher */}
-          <div className="flex border-b border-white/10">
-            {(['batting', 'bowling'] as ScorecardTab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setScorecardTab(tab)}
-                className={cn(
-                  'flex-1 py-2.5 text-xs font-body font-semibold uppercase tracking-wider transition-all capitalize',
-                  scorecardTab === tab
-                    ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
-                    : 'text-gray-500 hover:text-gray-300'
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Batting scorecard */}
-          {scorecardTab === 'batting' && (
-            <div className="overflow-x-auto">
-              {battingStats.length === 0 ? (
-                <p className="text-xs text-gray-600 font-body text-center py-8">
-                  No batting data yet
-                </p>
-              ) : (
-                <table className="w-full text-xs font-body">
-                  <thead>
-                    <tr className="border-b border-white/10 text-gray-500 uppercase tracking-wider">
-                      <th className="text-left px-4 py-2.5 font-semibold">Batter</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">R</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">B</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">4s</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">6s</th>
-                      <th className="text-right px-3 py-2.5 font-semibold">SR</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {battingStats.map((s) => (
-                      <tr key={s._id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-2.5">
-                          <p className="font-display font-bold text-white">{s.playerId?.username ?? s.guestName ?? '—'}</p>
-                          <p className="text-gray-600 text-[10px] capitalize">
-                            {s.battingStats?.isOut
-                              ? s.battingStats.dismissalType ?? 'out'
-                              : 'not out'}
-                          </p>
-                        </td>
-                        <td className={cn(
-                          'text-right px-2 py-2.5 font-display font-bold',
-                          (s.battingStats?.runs ?? 0) >= 50 ? 'text-amber-400' : 'text-white'
-                        )}>
-                          {s.battingStats?.runs ?? 0}
-                          {(s.battingStats?.runs ?? 0) >= 100 && <span className="text-amber-400 ml-0.5">★</span>}
-                        </td>
-                        <td className="text-right px-2 py-2.5 text-gray-400">{s.battingStats?.ballsFaced ?? 0}</td>
-                        <td className="text-right px-2 py-2.5 text-blue-400">{s.battingStats?.fours ?? 0}</td>
-                        <td className="text-right px-2 py-2.5 text-purple-400">{s.battingStats?.sixes ?? 0}</td>
-                        <td className="text-right px-3 py-2.5 text-gray-400">
-                          {strikeRate(s.battingStats?.runs ?? 0, s.battingStats?.ballsFaced ?? 0)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  {/* Extras row */}
-                  {innings && (
-                    <tfoot>
-                      <tr className="border-t border-white/10">
-                        <td className="px-4 py-2 text-gray-500 text-[10px]" colSpan={6}>
-                          Extras: {Object.values(innings.extras).reduce((a, b) => a + b, 0)}&nbsp;
-                          (Wd {innings.extras.wides}, Nb {innings.extras.noBalls},&nbsp;
-                          B {innings.extras.byes}, Lb {innings.extras.legByes})
-                        </td>
-                      </tr>
-                      <tr className="border-t border-white/10 bg-white/[0.02]">
-                        <td className="px-4 py-2 text-white font-display font-bold text-sm">Total</td>
-                        <td className="px-2 py-2 text-right text-white font-display font-bold text-sm" colSpan={5}>
-                          {innings.totalRuns}/{innings.totalWickets}&nbsp;
-                          <span className="text-gray-500 font-body text-xs">
-                            ({oversStr(innings.oversCompleted, innings.ballsInCurrentOver)} ov)
-                          </span>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* Bowling scorecard */}
-          {scorecardTab === 'bowling' && (
-            <div className="overflow-x-auto">
-              {bowlingStats.length === 0 ? (
-                <p className="text-xs text-gray-600 font-body text-center py-8">
-                  No bowling data yet
-                </p>
-              ) : (
-                <table className="w-full text-xs font-body">
-                  <thead>
-                    <tr className="border-b border-white/10 text-gray-500 uppercase tracking-wider">
-                      <th className="text-left px-4 py-2.5 font-semibold">Bowler</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">O</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">M</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">R</th>
-                      <th className="text-right px-2 py-2.5 font-semibold">W</th>
-                      <th className="text-right px-3 py-2.5 font-semibold">Econ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {bowlingStats
-                      .filter((s) => (s.bowlingStats?.ballsBowled ?? 0) > 0)
-                      .map((s) => (
-                        <tr key={s._id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="px-4 py-2.5 font-display font-bold text-white">
-                            {s.playerId?.username ?? s.guestName ?? '—'}
-                          </td>
-                          <td className="text-right px-2 py-2.5 text-gray-400">
-                            {bowlingOvers(s.bowlingStats?.ballsBowled ?? 0)}
-                          </td>
-                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats?.maidens ?? 0}</td>
-                          <td className="text-right px-2 py-2.5 text-gray-400">{s.bowlingStats?.runsConceded ?? 0}</td>
-                          <td className={cn(
-                            'text-right px-2 py-2.5 font-display font-bold',
-                            (s.bowlingStats?.wickets ?? 0) >= 3 ? 'text-amber-400' : 'text-white'
-                          )}>
-                            {s.bowlingStats?.wickets ?? 0}
-                          </td>
-                          <td className="text-right px-3 py-2.5 text-gray-400">
-                            {economy(s.bowlingStats?.runsConceded ?? 0, s.bowlingStats?.ballsBowled ?? 0)}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </div>
+        {/* -- SCORECARD -- */}
+        <MatchScorecard match={match} stats={stats} innings={innings} />
 
         {/* ── BALL-BY-BALL FEED ─────────────────────────────────────────────── */}
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">

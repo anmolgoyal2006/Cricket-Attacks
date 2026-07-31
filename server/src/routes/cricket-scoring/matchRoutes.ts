@@ -11,6 +11,7 @@ import {
   createMatch,
   listMatches,
   getMatch,
+  getMyTeams,
   updateScorers,
   startMatch,
   startSecondInnings,
@@ -23,6 +24,8 @@ const router = Router();
 
 router.post('/', authenticate, createMatch);
 router.get('/', authenticate, listMatches);
+// Must precede GET /:id, otherwise "my-teams" is parsed as a match id
+router.get('/my-teams', authenticate, getMyTeams);
 router.get('/:id', authenticate, getMatch);
 router.patch('/:id/scorers', authenticate, updateScorers);          // only creator — checked inside controller
 router.patch('/:id/start', authenticate, isScorerOrCreator, startMatch);

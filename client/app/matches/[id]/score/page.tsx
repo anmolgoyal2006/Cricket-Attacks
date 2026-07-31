@@ -11,11 +11,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader2, AlertCircle, RotateCcw, ChevronRight,
-  Trophy, X, Check, Users,
+  Trophy, X, Check, Users, ClipboardList, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { scoringApi, ScoringMatch, BallResult, MatchPlayer } from '@/lib/scoringApi';
+import { scoringApi, scoringSpectatorApi, ScoringMatch, BallResult, MatchPlayer, PlayerMatchStat } from '@/lib/scoringApi';
 import { useLiveMatchSocket } from '@/lib/useLiveMatchSocket';
+import MatchScorecard from '@/components/MatchScorecard';
 import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -243,6 +244,27 @@ export default function ScorePage() {
   const postingRef = useRef(false); // synchronous guard — prevents double-tap before state re-renders
   const [postError, setPostError] = useState('');
 
+  // ── Scoring pad vs scorecard ─────────────────────────────────────────────────
+  const [view, setView] = useState<'pad' | 'scorecard'>('pad');
+  const [stats, setStats] = useState<PlayerMatchStat[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+  // Bumped to force a refetch while the scorecard stays open
+  const [statsNonce, setStatsNonce] = useState(0);
+
+  // Stats are fetched only while the scorecard is open — keeping them out of the
+  // per-ball path. The `view` dependency also refetches on every reopen.
+  useEffect(() => {
+    if (view !== 'scorecard') return;
+    let cancelled = false;
+    setStatsLoading(true);
+    scoringSpectatorApi
+      .getMatchStats(matchId)
+      .then(({ stats: s }) => { if (!cancelled) setStats(s); })
+      .catch(() => { if (!cancelled) setStats([]); })
+      .finally(() => { if (!cancelled) setStatsLoading(false); });
+    return () => { cancelled = true; };
+  }, [view, matchId, statsNonce]);
+
   // ── Modal state ──────────────────────────────────────────────────────────────
   const [activeModal, setActiveModal] = useState<ModalType>(null);
 
@@ -412,14 +434,18 @@ export default function ScorePage() {
       }
 
       // Handle flags in priority order
+      // Each of these opens a modal, so return to the pad — otherwise the scorer
+      // is left staring at the scorecard once they dismiss it.
       if (flags.matchComplete) {
         setMatchResultText(flags.resultText ?? 'Match complete');
+        setView('pad');
         setActiveModal('matchComplete');
       } else if (flags.inningsComplete) {
         setInningsBreakData({
           target: result.innings.target ?? null,
           resultText: flags.resultText ?? null,
         });
+        setView('pad');
         setActiveModal('inningsBreak');
       } else if (flags.needsNewBatsman) {
         // Wicket — record who got out
@@ -438,11 +464,13 @@ export default function ScorePage() {
           setStriker(null);
         } else {
           setIncomingBatsmanId('');
+          setView('pad');
           setActiveModal('newBatsman');
         }
       } else if (flags.isEndOfOver) {
         prevBowlerRef.current = bowler?._id ?? null;
         setNewBowlerId('');
+        setView('pad');
         setActiveModal('newBowler');
       }
     },
@@ -739,6 +767,52 @@ export default function ScorePage() {
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 space-y-4">
 
+        {/* ── VIEW TOGGLE ──────────────────────────────────────────────────── */}
+        <div className="flex gap-2">
+          {([
+            { key: 'pad' as const, label: 'Scoring', icon: Users },
+            { key: 'scorecard' as const, label: 'Scorecard', icon: ClipboardList },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setView(t.key)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-body font-semibold transition-all border',
+                view === t.key
+                  ? 'text-amber-400 border-amber-500/50 bg-amber-500/10'
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/8 hover:text-gray-300'
+              )}
+            >
+              <t.icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {view === 'scorecard' && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 font-body uppercase tracking-wider">
+                {battingTeamName} batting · Inn {match.currentInnings}
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatsNonce((n) => n + 1)}
+                disabled={statsLoading}
+                className="flex items-center gap-1.5 text-xs text-amber-400 font-body hover:text-amber-300 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw className={cn('w-3.5 h-3.5', statsLoading && 'animate-spin')} />
+                Refresh
+              </button>
+            </div>
+            <MatchScorecard match={match} stats={stats} innings={innings} />
+          </>
+        )}
+
+        {view === 'pad' && (
+        <>
+
         {/* ── CURRENT PLAYERS BAR ──────────────────────────────────────────── */}
         <div className="glass rounded-2xl p-4 border border-white/10">
           <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3">Current Players</p>
@@ -991,6 +1065,8 @@ export default function ScorePage() {
             </span>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* ══ MODALS ════════════════════════════════════════════════════════════ */}

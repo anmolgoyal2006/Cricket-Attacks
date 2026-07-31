@@ -80,6 +80,82 @@ function requiredRunRate(target: number, runs: number, oc: number, bic: number, 
   return ((needed / ballsLeft) * 6).toFixed(2);
 }
 
+const EXTRA_LABELS: Record<string, string> = {
+  wide: 'Wd', noBall: 'Nb', bye: 'B', legBye: 'Lb',
+  noball: 'Nb', legbye: 'Lb',
+};
+
+function buildOverBall(
+  runs: number,
+  extraType: string | null,
+  isWicket: boolean,
+  wideRunsDelta: number
+): OverBall {
+  return {
+    // Wides display the full wide cost (penalty + overthrows); others show bat runs
+    runs: extraType === 'wide' ? wideRunsDelta : runs,
+    isWicket,
+    isExtra: !!extraType,
+    extraType,
+    label: isWicket
+      ? 'W'
+      : extraType
+      ? (EXTRA_LABELS[extraType] ?? extraType[0].toUpperCase())
+      : String(runs),
+  };
+}
+
+/**
+ * Predicts the innings totals for a delivery so the score can paint before the
+ * server responds. Mirrors totalDeliveryRuns/calculateExtrasBreakdown in
+ * server/src/utils/scoringLogic.ts — the server response remains authoritative
+ * and overwrites this once it lands.
+ */
+function predictInnings(
+  prev: InningsState,
+  runs: number,
+  extra: { type: 'wide' | 'noBall' | 'bye' | 'legBye' | null; runs: number },
+  isWicket: boolean
+): InningsState {
+  const extraRuns = extra.runs || 0;
+  const extras = { ...prev.extras };
+  let delivered: number;
+
+  switch (extra.type) {
+    case 'wide':
+      delivered = 1 + extraRuns;
+      extras.wides += 1 + extraRuns;
+      break;
+    case 'noBall':
+      delivered = 1 + runs + extraRuns;
+      extras.noBalls += 1 + extraRuns;
+      break;
+    case 'bye':
+      delivered = extraRuns;
+      extras.byes += extraRuns;
+      break;
+    case 'legBye':
+      delivered = extraRuns;
+      extras.legByes += extraRuns;
+      break;
+    default:
+      delivered = runs;
+  }
+
+  // Wides and no-balls don't advance the over
+  const legal = extra.type !== 'wide' && extra.type !== 'noBall';
+  const rollover = legal && prev.ballsInCurrentOver >= 5;
+
+  return {
+    ...prev,
+    totalRuns: prev.totalRuns + delivered,
+    totalWickets: prev.totalWickets + (isWicket ? 1 : 0),
+    extras,
+    oversCompleted: prev.oversCompleted + (rollover ? 1 : 0),
+    ballsInCurrentOver: legal ? (rollover ? 0 : prev.ballsInCurrentOver + 1) : prev.ballsInCurrentOver,
+  };
+}
+
 /** Pull the dismissed player's id (registered ObjectId or "guest:Name") from a ball object */
 function getDismissedPlayerId(ball: Record<string, unknown>): string | null {
   if (!ball.isWicket) return null;
@@ -297,7 +373,16 @@ export default function ScorePage() {
 
   // ── Process API / socket ball response ───────────────────────────────────────
   const applyBallResult = useCallback(
-    (result: BallResult, isWicketBall = false, extraTypeBall: string | null = null, runsBall = 0, wicketDismissedId: string | null = null) => {
+    (
+      result: BallResult,
+      isWicketBall = false,
+      extraTypeBall: string | null = null,
+      runsBall = 0,
+      wicketDismissedId: string | null = null,
+      // Pre-ball wides total. postBall passes its snapshot because `innings` in
+      // this closure already holds the optimistic value by the time we run.
+      widesBefore: number = innings.extras?.wides ?? 0
+    ) => {
       const { innings: newInnings, flags } = result;
       // Preserve target from current state if server didn't send it (defensive)
       setInnings((prev) => ({
@@ -306,25 +391,13 @@ export default function ScorePage() {
       }));
 
       // Add ball to current-over visual
-      const extraLabel: Record<string, string> = {
-        wide: 'Wd', noBall: 'Nb', bye: 'B', legBye: 'Lb',
-        noball: 'Nb', legbye: 'Lb',
-      };
       // For wides: show total wide runs (1 + any extra); for no-ball: show bat runs
-      const pillRuns = extraTypeBall === 'wide'
-        ? result.innings.extras.wides - (innings.extras?.wides ?? 0) // delta from server
-        : runsBall;
-      const overBall: OverBall = {
-        runs: pillRuns,
-        isWicket: isWicketBall,
-        isExtra: !!extraTypeBall,
-        extraType: extraTypeBall,
-        label: isWicketBall
-          ? 'W'
-          : extraTypeBall
-          ? (extraLabel[extraTypeBall] ?? extraTypeBall[0].toUpperCase())
-          : String(runsBall),
-      };
+      const overBall = buildOverBall(
+        runsBall,
+        extraTypeBall,
+        isWicketBall,
+        result.innings.extras.wides - widesBefore // delta from server
+      );
 
       if (flags.isEndOfOver) {
         setCurrentOverBalls([]);
@@ -399,6 +472,20 @@ export default function ScorePage() {
       setPostError('');
       // In single-batsman mode, non-striker is the same player as striker
       const effectiveNonStriker = singleBatsmanMode ? striker : nonStriker!;
+
+      // ── Optimistic paint ────────────────────────────────────────────────────
+      // Show the new score immediately instead of waiting for the round trip.
+      // Only the score numbers and the ball pill are predicted — every flag that
+      // drives a modal (end of over, wicket, innings/match complete) stays
+      // server-authoritative and is applied in applyBallResult below.
+      const snapshot = { innings, currentOverBalls };
+      const optimistic = predictInnings(innings, runs, extra, wicket.isWicket);
+      setInnings(optimistic);
+      setCurrentOverBalls((prev) => [
+        ...prev,
+        buildOverBall(runs, extra.type, wicket.isWicket, optimistic.extras.wides - innings.extras.wides),
+      ]);
+
       try {
         const result = await scoringApi.recordBall(matchId, {
           batsmanOnStrikeId: striker._id,
@@ -412,15 +499,27 @@ export default function ScorePage() {
           dismissedPlayerId: wicket.isWicket ? wicket.dismissedId || striker._id : null,
           fielderId: wicket.fielderId || null,
         });
-        applyBallResult(result, wicket.isWicket, extra.type, runs, wicket.dismissedId || null);
+        // Roll the optimistic pill back first so applyBallResult re-adds exactly
+        // one authoritative pill (and can clear the over when the server says so).
+        setCurrentOverBalls(snapshot.currentOverBalls);
+        applyBallResult(
+          result,
+          wicket.isWicket,
+          extra.type,
+          runs,
+          wicket.dismissedId || null,
+          snapshot.innings.extras.wides
+        );
       } catch (err: unknown) {
+        setInnings(snapshot.innings);
+        setCurrentOverBalls(snapshot.currentOverBalls);
         setPostError(err instanceof Error ? err.message : 'Failed to record ball');
       } finally {
         postingRef.current = false;
         setPosting(false);
       }
     },
-    [matchId, striker, nonStriker, bowler, singleBatsmanMode, applyBallResult]
+    [matchId, striker, nonStriker, bowler, singleBatsmanMode, applyBallResult, innings, currentOverBalls]
   );
 
   // ── Undo ──────────────────────────────────────────────────────────────────────
@@ -542,8 +641,9 @@ export default function ScorePage() {
   };
 
   // ── Disable scoring pad while modal is open or players not set ───────────────
+  // `posting` is deliberately NOT included — the score paints optimistically, so
+  // the pad stays live. postingRef still blocks a genuine double-submit.
   const scoringDisabled =
-    posting ||
     activeModal !== null ||
     !striker ||
     (!singleBatsmanMode && !nonStriker) ||
@@ -871,9 +971,9 @@ export default function ScorePage() {
           </div>
 
           {posting && (
-            <div className="mt-3 flex items-center justify-center gap-2 text-amber-400">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-xs font-body">Recording…</span>
+            <div className="mt-3 flex items-center justify-center gap-2 text-gray-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="text-[11px] font-body">Saving…</span>
             </div>
           )}
         </div>

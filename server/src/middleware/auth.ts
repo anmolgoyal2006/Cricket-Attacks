@@ -3,10 +3,13 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { UnauthorizedError } from '../utils/errors';
 import User from '../models/User';
+import type { IScoringMatch } from '../models/cricket-scoring/ScoringMatch';
 
 export interface AuthRequest extends Request {
   user?: any;
   userId?: string;
+  /** Set by isScorerOrCreator so handlers don't re-query the match. */
+  scoringMatch?: IScoringMatch;
 }
 
 export async function authenticate(req: AuthRequest, _res: Response, next: NextFunction) {

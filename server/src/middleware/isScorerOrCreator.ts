@@ -7,7 +7,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import { NotFoundError, UnauthorizedError } from '../utils/errors';
-import ScoringMatch from '../models/cricket-scoring/ScoringMatch';
+import ScoringMatch, { IScoringMatch } from '../models/cricket-scoring/ScoringMatch';
 
 export async function isScorerOrCreator(
   req: AuthRequest,
@@ -16,7 +16,8 @@ export async function isScorerOrCreator(
 ): Promise<void> {
   try {
     const matchId = req.params.matchId || req.params.id;
-    const match = await ScoringMatch.findById(matchId).select('createdBy scorers').lean();
+    // Not .lean() — downstream handlers mutate and .save() this document.
+    const match = await ScoringMatch.findById(matchId);
     if (!match) throw new NotFoundError('Match');
 
     const userId = req.userId!;
@@ -27,6 +28,7 @@ export async function isScorerOrCreator(
       throw new UnauthorizedError('You are not authorized to score this match');
     }
 
+    req.scoringMatch = match;
     next();
   } catch (err) {
     next(err);

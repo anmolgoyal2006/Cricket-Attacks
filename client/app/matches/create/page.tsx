@@ -9,7 +9,7 @@
  *   2. Guests — type any name; if they register later their stats get linked
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -583,7 +583,7 @@ function LoadTeamButton({
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function CreateMatchPage() {
+function CreateMatchInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
@@ -1002,5 +1002,14 @@ export default function CreateMatchPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Wrap in Suspense — required by Next.js App Router when useSearchParams is used
+export default function CreateMatchPage() {
+  return (
+    <Suspense>
+      <CreateMatchInner />
+    </Suspense>
   );
 }

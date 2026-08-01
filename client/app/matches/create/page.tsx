@@ -9,12 +9,12 @@
  *   2. Guests — type any name; if they register later their stats get linked
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Users, Shuffle, ChevronRight, AlertCircle,
-  Loader2, X, Search, PlusCircle, UserPlus, History,
+  Loader2, X, Search, PlusCircle, UserPlus, History, Pencil, Check, ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
@@ -30,19 +30,91 @@ interface PlayerOption {
 
 const OVERS_PRESETS = [5, 10, 20, 50];
 
+// ── Inline-editable guest player pill ────────────────────────────────────────
+function GuestPill({
+  player,
+  onRename,
+  onRemove,
+}: {
+  player: PlayerOption;
+  onRename: (oldName: string, newName: string) => void;
+  onRemove: (displayName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(player.displayName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== player.displayName) {
+      onRename(player.displayName, trimmed);
+    } else {
+      setDraft(player.displayName);
+    }
+    setEditing(false);
+  };
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/50 text-blue-200">
+        <span className="text-[10px] opacity-70">guest</span>
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { setDraft(player.displayName); setEditing(false); }
+          }}
+          className="bg-transparent text-xs font-body text-blue-200 outline-none w-24 min-w-0"
+          maxLength={40}
+        />
+        <button type="button" onClick={commit} className="text-blue-300 hover:text-white transition-colors">
+          <Check className="w-3 h-3" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-body border bg-blue-500/15 border-blue-500/30 text-blue-300">
+      <span className="text-[10px] opacity-70">guest</span>
+      <button
+        type="button"
+        onClick={() => { setDraft(player.displayName); setEditing(true); }}
+        className="hover:text-white transition-colors underline-offset-2 hover:underline"
+        title="Click to rename"
+      >
+        {player.displayName}
+      </button>
+      <button type="button" onClick={() => onRemove(player.displayName)}
+        className="hover:text-red-400 transition-colors">
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  );
+}
+
 // ── Player selector ───────────────────────────────────────────────────────────
 function PlayerSelector({
   label,
   selected,
   onAdd,
   onRemove,
+  onRename,
   excludeIds,
 }: {
   label: string;
   selected: PlayerOption[];
   onAdd: (p: PlayerOption) => void;
   onRemove: (displayName: string) => void;
-  excludeIds: string[];   // registered user ids already in the other team
+  onRename: (oldName: string, newName: string) => void;
+  excludeIds: string[];
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerOption[]>([]);
@@ -74,9 +146,7 @@ function PlayerSelector({
 
   const canAddGuest =
     query.trim().length >= 2 &&
-    !selected.some(
-      (s) => s.displayName.toLowerCase() === query.trim().toLowerCase()
-    );
+    !selected.some((s) => s.displayName.toLowerCase() === query.trim().toLowerCase());
 
   const handleAddGuest = () => {
     const name = query.trim();
@@ -89,25 +159,30 @@ function PlayerSelector({
     <div>
       <p className="text-xs text-gray-400 font-body mb-2 uppercase tracking-wider">{label}</p>
 
-      {/* Selected pills */}
+      {/* Selected pills — guest pills support inline rename */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {selected.map((p) => (
-            <span key={p.displayName}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-body border',
-                p.isGuest
-                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
-                  : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-              )}>
-              {p.isGuest && <span className="text-[10px] opacity-70">guest</span>}
-              {p.displayName}
-              <button type="button" onClick={() => onRemove(p.displayName)}
-                className="hover:text-red-400 transition-colors">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+          {selected.map((p) =>
+            p.isGuest ? (
+              <GuestPill
+                key={p.displayName}
+                player={p}
+                onRename={onRename}
+                onRemove={onRemove}
+              />
+            ) : (
+              <span
+                key={p.id ?? p.displayName}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-body border bg-amber-500/15 border-amber-500/30 text-amber-300"
+              >
+                {p.displayName}
+                <button type="button" onClick={() => onRemove(p.displayName)}
+                  className="hover:text-red-400 transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )
+          )}
         </div>
       )}
 
@@ -132,7 +207,6 @@ function PlayerSelector({
             initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             className="mt-1 rounded-xl overflow-hidden border border-white/10 bg-gray-950/95 shadow-xl z-10"
           >
-            {/* Registered users */}
             {results.slice(0, 5).map((user) => (
               <button key={user.id} type="button"
                 onClick={() => { onAdd(user); setQuery(''); setResults([]); }}
@@ -145,8 +219,6 @@ function PlayerSelector({
                 <PlusCircle className="w-4 h-4 text-amber-400 ml-auto" />
               </button>
             ))}
-
-            {/* Guest option — shown when query doesn't match any registered user exactly */}
             {canAddGuest && (
               <button type="button" onClick={handleAddGuest}
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-500/10 transition-colors text-left border-t border-white/5"
@@ -167,6 +239,243 @@ function PlayerSelector({
   );
 }
 
+// ── Edit-team modal ───────────────────────────────────────────────────────────
+// Opens when user clicks the pencil icon on a saved team. Lets them rename
+// guest players, remove players, or add new ones before applying the roster.
+function EditTeamModal({
+  team,
+  onApply,
+  onClose,
+}: {
+  team: SavedTeam;
+  onApply: (edited: SavedTeam) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(team.name);
+  const [players, setPlayers] = useState<PlayerOption[]>(
+    team.players.map((p) =>
+      p.isGuest || !p.id
+        ? { guestName: p.displayName, displayName: p.displayName, isGuest: true }
+        : { id: p.id, displayName: p.displayName, isGuest: false }
+    )
+  );
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<PlayerOption[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Search registered users to add
+  useEffect(() => {
+    if (query.trim().length < 1) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const data = await api<{ users: { _id: string; username: string }[] }>(
+          `/auth/users/search?q=${encodeURIComponent(query.trim())}`
+        );
+        setResults(
+          (data.users || [])
+            .filter((u) => !players.some((p) => p.id === u._id))
+            .map((u) => ({ id: u._id, displayName: u.username, isGuest: false }))
+        );
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, players]);
+
+  const canAddGuest =
+    query.trim().length >= 2 &&
+    !players.some((p) => p.displayName.toLowerCase() === query.trim().toLowerCase());
+
+  const addGuest = () => {
+    const n = query.trim();
+    setPlayers((prev) => [...prev, { guestName: n, displayName: n, isGuest: true }]);
+    setQuery(''); setResults([]);
+  };
+
+  const removePlayer = (displayName: string) =>
+    setPlayers((prev) => prev.filter((p) => p.displayName !== displayName));
+
+  const renameGuest = (oldName: string, newName: string) =>
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.displayName === oldName && p.isGuest
+          ? { ...p, displayName: newName, guestName: newName }
+          : p
+      )
+    );
+
+  const handleApply = () => {
+    onApply({
+      name: name.trim() || team.name,
+      lastUsed: team.lastUsed,
+      players: players.map((p) => ({
+        id: p.id ?? null,
+        displayName: p.displayName,
+        isGuest: p.isGuest,
+      })),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+        className="relative z-10 w-full max-w-md glass-dark rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <Pencil className="w-4 h-4 text-amber-400" />
+          <h3 className="text-sm font-display font-bold text-white flex-1">Edit Team</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          {/* Team name */}
+          <div>
+            <label className="block text-xs text-gray-400 font-body mb-1.5 uppercase tracking-wider">Team Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 font-body text-sm transition-all"
+            />
+          </div>
+
+          {/* Current roster */}
+          <div>
+            <p className="text-xs text-gray-400 font-body mb-2 uppercase tracking-wider">
+              Players ({players.length})
+            </p>
+            {players.length === 0 ? (
+              <p className="text-xs text-gray-600 font-body py-2">No players yet — add some below.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {players.map((p) => (
+                  <div
+                    key={p.id ?? p.displayName}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-xl border',
+                      p.isGuest
+                        ? 'bg-blue-500/8 border-blue-500/20'
+                        : 'bg-amber-500/8 border-amber-500/20'
+                    )}
+                  >
+                    <div className={cn(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0',
+                      p.isGuest ? 'bg-blue-500/60' : 'bg-gradient-to-br from-amber-400 to-orange-600'
+                    )}>
+                      {p.displayName[0].toUpperCase()}
+                    </div>
+
+                    {/* Guest: inline rename input; registered: just the name */}
+                    {p.isGuest ? (
+                      <GuestPill
+                        player={p}
+                        onRename={renameGuest}
+                        onRemove={removePlayer}
+                      />
+                    ) : (
+                      <>
+                        <span className="text-sm font-body text-amber-300 flex-1 truncate">{p.displayName}</span>
+                        <button
+                          type="button"
+                          onClick={() => removePlayer(p.displayName)}
+                          className="ml-auto text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add player */}
+          <div>
+            <p className="text-xs text-gray-400 font-body mb-2 uppercase tracking-wider">Add Player</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && canAddGuest) { e.preventDefault(); addGuest(); } }}
+                placeholder="Search username or type guest name…"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 font-body text-sm transition-all"
+              />
+              {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400 animate-spin" />}
+            </div>
+            <AnimatePresence>
+              {(results.length > 0 || canAddGuest) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="mt-1 rounded-xl overflow-hidden border border-white/10 bg-gray-950 shadow-xl"
+                >
+                  {results.slice(0, 5).map((u) => (
+                    <button key={u.id} type="button"
+                      onClick={() => { setPlayers((prev) => [...prev, u]); setQuery(''); setResults([]); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+                        {u.displayName[0].toUpperCase()}
+                      </div>
+                      <span className="text-sm font-body text-gray-200">{u.displayName}</span>
+                      <PlusCircle className="w-4 h-4 text-amber-400 ml-auto" />
+                    </button>
+                  ))}
+                  {canAddGuest && (
+                    <button type="button" onClick={addGuest}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-500/10 transition-colors text-left border-t border-white/5"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                        <UserPlus className="w-3 h-3" />
+                      </div>
+                      <span className="text-sm font-body text-blue-300">Add &quot;{query.trim()}&quot; as guest</span>
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-white/10 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold text-sm hover:bg-white/10 transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            disabled={players.length === 0}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold text-sm shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4" /> Use this team
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Load a previous team ──────────────────────────────────────────────────────
 function LoadTeamButton({
   teams,
@@ -178,51 +487,98 @@ function LoadTeamButton({
   onPick: (team: SavedTeam) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<SavedTeam | null>(null);
+
+  const handleEdit = (e: React.MouseEvent, team: SavedTeam) => {
+    e.stopPropagation();
+    setEditingTeam(team);
+    setOpen(false);
+  };
+
+  const handleApplyEdited = (edited: SavedTeam) => {
+    onPick(edited);
+    setEditingTeam(null);
+  };
 
   return (
-    <div className="relative ml-auto">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body text-gray-400 border border-white/10 bg-white/5 hover:text-amber-400 hover:border-amber-500/30 transition-all"
-      >
-        <History className="w-3.5 h-3.5" />
-        Load team
-      </button>
+    <>
+      <div className="relative ml-auto">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body text-gray-400 border border-white/10 bg-white/5 hover:text-amber-400 hover:border-amber-500/30 transition-all"
+        >
+          <History className="w-3.5 h-3.5" />
+          Load team
+        </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 mt-1 w-64 rounded-xl overflow-hidden border border-white/10 bg-gray-950/95 shadow-xl z-20 max-h-72 overflow-y-auto"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
-              </div>
-            ) : teams.length === 0 ? (
-              <p className="text-xs text-gray-500 font-body text-center py-6 px-4">
-                No previous teams yet — they appear here after you create a match.
-              </p>
-            ) : (
-              teams.map((t) => (
-                <button
-                  key={t.name}
-                  type="button"
-                  onClick={() => { onPick(t); setOpen(false); }}
-                  className="w-full px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-b-0"
-                >
-                  <p className="text-sm font-body text-gray-200 truncate">{t.name}</p>
-                  <p className="text-[10px] text-gray-500 font-body">
-                    {t.players.length} player{t.players.length === 1 ? '' : 's'}
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              className="absolute right-0 mt-1 w-72 rounded-xl overflow-hidden border border-white/10 bg-gray-950/95 shadow-xl z-20 max-h-72 overflow-y-auto"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                </div>
+              ) : teams.length === 0 ? (
+                <p className="text-xs text-gray-500 font-body text-center py-6 px-4">
+                  No previous teams yet — they appear here after you create a match.
+                </p>
+              ) : (
+                <>
+                  <p className="text-[10px] text-gray-500 font-body px-4 pt-3 pb-1 uppercase tracking-wider">
+                    Click name to load · ✏️ to edit first
                   </p>
-                </button>
-              ))
-            )}
-          </motion.div>
+                  {teams.map((t) => (
+                    <div
+                      key={t.name}
+                      className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/3 transition-colors group"
+                    >
+                      {/* Click the name/info area to load directly */}
+                      <button
+                        type="button"
+                        onClick={() => { onPick(t); setOpen(false); }}
+                        className="flex-1 text-left min-w-0"
+                      >
+                        <p className="text-sm font-body text-gray-200 truncate group-hover:text-white transition-colors">{t.name}</p>
+                        <p className="text-[10px] text-gray-500 font-body">
+                          {t.players.length} player{t.players.length === 1 ? '' : 's'}
+                          {t.players.some((p) => p.isGuest) && (
+                            <span className="ml-1 text-blue-500">· has guests</span>
+                          )}
+                        </p>
+                      </button>
+                      {/* Edit button opens the EditTeamModal */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleEdit(e, t)}
+                        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-amber-400 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/30 transition-all"
+                        title="Edit before loading"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Edit modal — rendered at root level, outside the dropdown */}
+      <AnimatePresence>
+        {editingTeam && (
+          <EditTeamModal
+            team={editingTeam}
+            onApply={handleApplyEdited}
+            onClose={() => setEditingTeam(null)}
+          />
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
@@ -480,6 +836,15 @@ export default function CreateMatchPage() {
                   selected={teamAPlayers}
                   onAdd={(p) => setTeamAPlayers((prev) => [...prev, p])}
                   onRemove={(name) => setTeamAPlayers((prev) => prev.filter((p) => p.displayName !== name))}
+                  onRename={(oldName, newName) =>
+                    setTeamAPlayers((prev) =>
+                      prev.map((p) =>
+                        p.displayName === oldName && p.isGuest
+                          ? { ...p, displayName: newName, guestName: newName }
+                          : p
+                      )
+                    )
+                  }
                   excludeIds={teamBRegisteredIds}
                 />
               </div>
@@ -507,6 +872,15 @@ export default function CreateMatchPage() {
                   selected={teamBPlayers}
                   onAdd={(p) => setTeamBPlayers((prev) => [...prev, p])}
                   onRemove={(name) => setTeamBPlayers((prev) => prev.filter((p) => p.displayName !== name))}
+                  onRename={(oldName, newName) =>
+                    setTeamBPlayers((prev) =>
+                      prev.map((p) =>
+                        p.displayName === oldName && p.isGuest
+                          ? { ...p, displayName: newName, guestName: newName }
+                          : p
+                      )
+                    )
+                  }
                   excludeIds={teamARegisteredIds}
                 />
               </div>

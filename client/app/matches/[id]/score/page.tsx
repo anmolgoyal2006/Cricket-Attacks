@@ -285,11 +285,13 @@ export default function ScorePage() {
   const [matchResultText, setMatchResultText] = useState('');
 
   // ── Load match on mount ───────────────────────────────────────────────────────
+  // Waits for auth to resolve: the authorization check below compares against
+  // user.id, and on a cold load that is still undefined for the first moment.
   useEffect(() => {
-    if (!matchId) return;
+    if (!matchId || authLoading) return;
     fetchMatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchId]);
+  }, [matchId, authLoading, user?.id]);
 
   async function fetchMatch() {
     setLoadingMatch(true);

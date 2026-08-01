@@ -14,11 +14,11 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Users, Shuffle, ChevronRight, AlertCircle,
-  Loader2, X, Search, PlusCircle, UserPlus,
+  Loader2, X, Search, PlusCircle, UserPlus, History,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
-import { scoringApi, CreateMatchPlayerPayload } from '@/lib/scoringApi';
+import { scoringApi, CreateMatchPlayerPayload, SavedTeam } from '@/lib/scoringApi';
 import { cn } from '@/lib/utils';
 
 interface PlayerOption {
@@ -167,6 +167,65 @@ function PlayerSelector({
   );
 }
 
+// ── Load a previous team ──────────────────────────────────────────────────────
+function LoadTeamButton({
+  teams,
+  loading,
+  onPick,
+}: {
+  teams: SavedTeam[];
+  loading: boolean;
+  onPick: (team: SavedTeam) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative ml-auto">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body text-gray-400 border border-white/10 bg-white/5 hover:text-amber-400 hover:border-amber-500/30 transition-all"
+      >
+        <History className="w-3.5 h-3.5" />
+        Load team
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            className="absolute right-0 mt-1 w-64 rounded-xl overflow-hidden border border-white/10 bg-gray-950/95 shadow-xl z-20 max-h-72 overflow-y-auto"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+              </div>
+            ) : teams.length === 0 ? (
+              <p className="text-xs text-gray-500 font-body text-center py-6 px-4">
+                No previous teams yet — they appear here after you create a match.
+              </p>
+            ) : (
+              teams.map((t) => (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => { onPick(t); setOpen(false); }}
+                  className="w-full px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-b-0"
+                >
+                  <p className="text-sm font-body text-gray-200 truncate">{t.name}</p>
+                  <p className="text-[10px] text-gray-500 font-body">
+                    {t.players.length} player{t.players.length === 1 ? '' : 's'}
+                  </p>
+                </button>
+              ))
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function CreateMatchPage() {
   const router = useRouter();
@@ -186,8 +245,60 @@ export default function CreateMatchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // ── Previous teams ──────────────────────────────────────────────────────────
+  const [savedTeams, setSavedTeams] = useState<SavedTeam[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [loadNotice, setLoadNotice] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    scoringApi
+      .getMyTeams()
+      .then(({ teams }) => { if (!cancelled) setSavedTeams(teams); })
+      .catch(() => { if (!cancelled) setSavedTeams([]); })
+      .finally(() => { if (!cancelled) setTeamsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const teamARegisteredIds = teamAPlayers.filter((p) => p.id).map((p) => p.id!);
   const teamBRegisteredIds = teamBPlayers.filter((p) => p.id).map((p) => p.id!);
+
+  /**
+   * Fill a team slot from a saved roster. Players already on the opposing side are
+   * dropped — the server rejects duplicates outright, since one player on both teams
+   * would merge their batting and bowling into a single stats row.
+   */
+  const applyTeam = (team: SavedTeam, slot: 'A' | 'B') => {
+    const otherPlayers = slot === 'A' ? teamBPlayers : teamAPlayers;
+    const otherIds = new Set(otherPlayers.filter((p) => p.id).map((p) => p.id!));
+    const otherNames = new Set(otherPlayers.map((p) => p.displayName.toLowerCase()));
+
+    const seen = new Set<string>();
+    const players: PlayerOption[] = [];
+    let skipped = 0;
+
+    for (const p of team.players) {
+      const nameKey = p.displayName.toLowerCase();
+      // Pills are keyed and removed by displayName, so duplicates must not survive
+      if (seen.has(nameKey)) { skipped++; continue; }
+      if ((p.id && otherIds.has(p.id)) || otherNames.has(nameKey)) { skipped++; continue; }
+      seen.add(nameKey);
+      players.push(
+        p.isGuest || !p.id
+          ? { guestName: p.displayName, displayName: p.displayName, isGuest: true }
+          : { id: p.id, displayName: p.displayName, isGuest: false }
+      );
+    }
+
+    if (slot === 'A') { setTeamAName(team.name); setTeamAPlayers(players); }
+    else { setTeamBName(team.name); setTeamBPlayers(players); }
+
+    setLoadNotice(
+      skipped > 0
+        ? `Loaded ${team.name} — ${skipped} player${skipped === 1 ? '' : 's'} skipped (already in the other team or duplicated)`
+        : `Loaded ${team.name} (${players.length} player${players.length === 1 ? '' : 's'})`
+    );
+  };
 
   const finalOvers = useCustomOvers ? parseInt(customOvers, 10) || 0 : oversFormat;
 
@@ -275,6 +386,19 @@ export default function CreateMatchPage() {
             )}
           </AnimatePresence>
 
+          <AnimatePresence>
+            {loadNotice && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+                <History className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <p className="text-xs text-amber-300 font-body flex-1">{loadNotice}</p>
+                <button type="button" onClick={() => setLoadNotice('')} className="text-amber-400/60 hover:text-amber-400 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Teams */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Team A */}
@@ -284,6 +408,7 @@ export default function CreateMatchPage() {
                   <Users className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="text-base font-display font-bold text-white">Team A</h2>
+                <LoadTeamButton teams={savedTeams} loading={teamsLoading} onPick={(t) => applyTeam(t, 'A')} />
               </div>
               <div className="space-y-4">
                 <div>
@@ -310,6 +435,7 @@ export default function CreateMatchPage() {
                   <Users className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="text-base font-display font-bold text-white">Team B</h2>
+                <LoadTeamButton teams={savedTeams} loading={teamsLoading} onPick={(t) => applyTeam(t, 'B')} />
               </div>
               <div className="space-y-4">
                 <div>

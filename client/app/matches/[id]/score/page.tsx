@@ -11,7 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader2, AlertCircle, RotateCcw, ChevronRight,
-  Trophy, X, Check, Users, ClipboardList, RefreshCw,
+  Trophy, X, Check, Users, ClipboardList, RefreshCw, RefreshCcw,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { scoringApi, scoringSpectatorApi, ScoringMatch, BallResult, MatchPlayer, PlayerMatchStat } from '@/lib/scoringApi';
@@ -60,6 +60,9 @@ type ModalType =
   | 'undoConfirm'     // confirm undo
   | 'inningsBreak'    // between innings
   | 'matchComplete'   // final result
+  | 'changeStriker'   // manually change striker mid-play
+  | 'changeNonStriker'// manually change non-striker mid-play
+  | 'changeBowler'    // manually change bowler mid-play
   | null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -279,6 +282,9 @@ export default function ScorePage() {
   const [fielderId, setFielderId] = useState('');
   const [incomingBatsmanId, setIncomingBatsmanId] = useState('');
   const [newBowlerId, setNewBowlerId] = useState('');
+
+  // Change-player picker selections (used by changeStriker / changeNonStriker / changeBowler modals)
+  const [changePickerId, setChangePickerId] = useState('');
 
   // Innings break / match complete info
   const [inningsBreakData, setInningsBreakData] = useState<{ target: number | null; resultText: string | null } | null>(null);
@@ -820,18 +826,35 @@ export default function ScorePage() {
           <p className="text-xs text-gray-500 font-body uppercase tracking-wider mb-3">Current Players</p>
           <div className="grid grid-cols-3 gap-3 text-center mb-3">
             {/* Striker */}
-            <div
-              className={cn('p-2 rounded-xl cursor-pointer transition-all border', striker ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-amber-500/30')}
-              onClick={() => {
-                if (!battingTeam) return;
-                const next = toPlayers(battingTeam.players).find((p) => p._id !== nonStriker?._id && !outPlayerIds.has(p._id));
-                if (!striker && next) setStriker(next);
-              }}
-            >
-              <p className="text-[10px] text-amber-400 font-body mb-1">Striker *</p>
-              <p className="text-xs font-display font-bold text-white truncate">
-                {striker ? striker.username : <span className="text-gray-500">Pick player</span>}
-              </p>
+            <div className="relative">
+              <div
+                className={cn('p-2 rounded-xl cursor-pointer transition-all border', striker ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-amber-500/30')}
+                onClick={() => {
+                  if (striker) {
+                    setChangePickerId('');
+                    setActiveModal('changeStriker');
+                  } else {
+                    if (!battingTeam) return;
+                    const next = toPlayers(battingTeam.players).find((p) => p._id !== nonStriker?._id && !outPlayerIds.has(p._id));
+                    if (next) setStriker(next);
+                  }
+                }}
+              >
+                <p className="text-[10px] text-amber-400 font-body mb-1">Striker *</p>
+                <p className="text-xs font-display font-bold text-white truncate">
+                  {striker ? striker.username : <span className="text-gray-500">Pick player</span>}
+                </p>
+              </div>
+              {striker && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setStriker(null); }}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-700 border border-white/20 flex items-center justify-center text-gray-300 hover:bg-red-500/80 hover:text-white transition-all"
+                  title="Unselect striker"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
             </div>
             {/* Non-striker — hidden in single-batsman mode */}
             {singleBatsmanMode ? (
@@ -839,32 +862,66 @@ export default function ScorePage() {
                 <p className="text-[10px] text-gray-500 font-body text-center">Solo<br/>mode</p>
               </div>
             ) : (
-              <div
-                className={cn('p-2 rounded-xl cursor-pointer transition-all border', nonStriker ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/30')}
-                onClick={() => {
-                  if (!battingTeam) return;
-                  const next = toPlayers(battingTeam.players).find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
-                  if (!nonStriker && next) setNonStriker(next);
-                }}
-              >
-                <p className="text-[10px] text-blue-400 font-body mb-1">Non-Striker</p>
-                <p className="text-xs font-display font-bold text-white truncate">
-                  {nonStriker ? nonStriker.username : <span className="text-gray-500">Pick player</span>}
-                </p>
+              <div className="relative">
+                <div
+                  className={cn('p-2 rounded-xl cursor-pointer transition-all border', nonStriker ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/30')}
+                  onClick={() => {
+                    if (nonStriker) {
+                      setChangePickerId('');
+                      setActiveModal('changeNonStriker');
+                    } else {
+                      if (!battingTeam) return;
+                      const next = toPlayers(battingTeam.players).find((p) => p._id !== striker?._id && !outPlayerIds.has(p._id));
+                      if (next) setNonStriker(next);
+                    }
+                  }}
+                >
+                  <p className="text-[10px] text-blue-400 font-body mb-1">Non-Striker</p>
+                  <p className="text-xs font-display font-bold text-white truncate">
+                    {nonStriker ? nonStriker.username : <span className="text-gray-500">Pick player</span>}
+                  </p>
+                </div>
+                {nonStriker && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setNonStriker(null); }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-700 border border-white/20 flex items-center justify-center text-gray-300 hover:bg-red-500/80 hover:text-white transition-all"
+                    title="Unselect non-striker"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                )}
               </div>
             )}
             {/* Bowler */}
-            <div
-              className={cn('p-2 rounded-xl cursor-pointer transition-all border', bowler ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-green-500/30')}
-              onClick={() => {
-                if (!bowlingTeam) return;
-                if (!bowler && bowlingTeam.players[0]) setBowler(toPlayer(bowlingTeam.players[0]));
-              }}
-            >
-              <p className="text-[10px] text-green-400 font-body mb-1">Bowler</p>
-              <p className="text-xs font-display font-bold text-white truncate">
-                {bowler ? bowler.username : <span className="text-gray-500">Pick player</span>}
-              </p>
+            <div className="relative">
+              <div
+                className={cn('p-2 rounded-xl cursor-pointer transition-all border', bowler ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-dashed border-white/20 hover:border-green-500/30')}
+                onClick={() => {
+                  if (bowler) {
+                    setChangePickerId('');
+                    setActiveModal('changeBowler');
+                  } else {
+                    if (!bowlingTeam) return;
+                    if (bowlingTeam.players[0]) setBowler(toPlayer(bowlingTeam.players[0]));
+                  }
+                }}
+              >
+                <p className="text-[10px] text-green-400 font-body mb-1">Bowler</p>
+                <p className="text-xs font-display font-bold text-white truncate">
+                  {bowler ? bowler.username : <span className="text-gray-500">Pick player</span>}
+                </p>
+              </div>
+              {bowler && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setBowler(null); }}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-700 border border-white/20 flex items-center justify-center text-gray-300 hover:bg-red-500/80 hover:text-white transition-all"
+                  title="Unselect bowler"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -1349,11 +1406,166 @@ export default function ScorePage() {
             <p className="text-xl font-display font-black text-white mb-1">{matchResultText}</p>
             <p className="text-sm text-gray-400 font-body">Final result</p>
           </div>
-          <button
-            onClick={() => router.push(`/matches/${matchId}`)}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2">
-            <Users className="w-5 h-5" /> View Match Summary
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push(`/matches/${matchId}`)}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2">
+              <Users className="w-5 h-5" /> View Match Summary
+            </button>
+            <button
+              onClick={() => {
+                if (!match) return;
+                // Pass teams + settings as query params to pre-fill the create page
+                const params = new URLSearchParams({
+                  rematch: '1',
+                  teamAName: match.teamA.name,
+                  teamBName: match.teamB.name,
+                  overs: String(match.oversFormat),
+                  // Swap toss winner for rematch
+                  tossWonBy: match.tossWonBy === 'teamA' ? 'teamB' : 'teamA',
+                });
+                router.push(`/matches/create?${params.toString()}`);
+              }}
+              className="w-full py-3 rounded-xl bg-white/8 border border-white/15 text-gray-300 font-display font-bold hover:bg-white/12 transition-all flex items-center justify-center gap-2">
+              <RefreshCcw className="w-4 h-4" /> Rematch
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Change striker (mid-match correction) */}
+      {activeModal === 'changeStriker' && (
+        <Modal title="Change Striker" onClose={() => setActiveModal(null)}>
+          <p className="text-xs text-gray-400 font-body mb-3">Select the correct striker</p>
+          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar mb-4">
+            {toPlayers(battingTeam?.players ?? [])
+              .filter((p) => !outPlayerIds.has(p._id) && (singleBatsmanMode || p._id !== nonStriker?._id))
+              .map((p) => (
+                <button key={p._id} type="button"
+                  onClick={() => setChangePickerId(p._id)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all border text-left',
+                    changePickerId === p._id
+                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                      : p._id === striker?._id
+                      ? 'bg-amber-500/8 border-amber-500/20 text-amber-400'
+                      : 'bg-white/5 border-white/10 text-gray-300 hover:border-amber-500/20'
+                  )}>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {p.username[0].toUpperCase()}
+                  </div>
+                  <span className="text-sm font-body">{p.username}</span>
+                  {p._id === striker?._id && <span className="text-[10px] text-amber-500 ml-auto font-body">current</span>}
+                  {changePickerId === p._id && p._id !== striker?._id && <Check className="w-4 h-4 text-amber-400 ml-auto" />}
+                </button>
+              ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setActiveModal(null)}
+              className="py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold hover:bg-white/10 transition-all">
+              Cancel
+            </button>
+            <button
+              disabled={!changePickerId || changePickerId === striker?._id}
+              onClick={() => {
+                const p = toPlayers(battingTeam?.players ?? []).find((x) => x._id === changePickerId);
+                if (p) setStriker(p);
+                setActiveModal(null);
+              }}
+              className="py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-display font-bold shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              Confirm
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Change non-striker (mid-match correction) */}
+      {activeModal === 'changeNonStriker' && (
+        <Modal title="Change Non-Striker" onClose={() => setActiveModal(null)}>
+          <p className="text-xs text-gray-400 font-body mb-3">Select the correct non-striker</p>
+          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar mb-4">
+            {toPlayers(battingTeam?.players ?? [])
+              .filter((p) => !outPlayerIds.has(p._id) && p._id !== striker?._id)
+              .map((p) => (
+                <button key={p._id} type="button"
+                  onClick={() => setChangePickerId(p._id)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all border text-left',
+                    changePickerId === p._id
+                      ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                      : p._id === nonStriker?._id
+                      ? 'bg-blue-500/8 border-blue-500/20 text-blue-400'
+                      : 'bg-white/5 border-white/10 text-gray-300 hover:border-blue-500/20'
+                  )}>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {p.username[0].toUpperCase()}
+                  </div>
+                  <span className="text-sm font-body">{p.username}</span>
+                  {p._id === nonStriker?._id && <span className="text-[10px] text-blue-500 ml-auto font-body">current</span>}
+                  {changePickerId === p._id && p._id !== nonStriker?._id && <Check className="w-4 h-4 text-blue-400 ml-auto" />}
+                </button>
+              ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setActiveModal(null)}
+              className="py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold hover:bg-white/10 transition-all">
+              Cancel
+            </button>
+            <button
+              disabled={!changePickerId || changePickerId === nonStriker?._id}
+              onClick={() => {
+                const p = toPlayers(battingTeam?.players ?? []).find((x) => x._id === changePickerId);
+                if (p) setNonStriker(p);
+                setActiveModal(null);
+              }}
+              className="py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-display font-bold shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              Confirm
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Change bowler (mid-match correction) */}
+      {activeModal === 'changeBowler' && (
+        <Modal title="Change Bowler" onClose={() => setActiveModal(null)}>
+          <p className="text-xs text-gray-400 font-body mb-3">Select the correct bowler</p>
+          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar mb-4">
+            {toPlayers(bowlingTeam?.players ?? []).map((p) => (
+              <button key={p._id} type="button"
+                onClick={() => setChangePickerId(p._id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all border text-left',
+                  changePickerId === p._id
+                    ? 'bg-green-500/15 border-green-500/40 text-green-300'
+                    : p._id === bowler?._id
+                    ? 'bg-green-500/8 border-green-500/20 text-green-400'
+                    : 'bg-white/5 border-white/10 text-gray-300 hover:border-green-500/20'
+                )}>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                  {p.username[0].toUpperCase()}
+                </div>
+                <span className="text-sm font-body">{p.username}</span>
+                {p._id === bowler?._id && <span className="text-[10px] text-green-500 ml-auto font-body">current</span>}
+                {changePickerId === p._id && p._id !== bowler?._id && <Check className="w-4 h-4 text-green-400 ml-auto" />}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setActiveModal(null)}
+              className="py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-display font-bold hover:bg-white/10 transition-all">
+              Cancel
+            </button>
+            <button
+              disabled={!changePickerId || changePickerId === bowler?._id}
+              onClick={() => {
+                const p = toPlayers(bowlingTeam?.players ?? []).find((x) => x._id === changePickerId);
+                if (p) setBowler(p);
+                setActiveModal(null);
+              }}
+              className="py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-display font-bold shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              Confirm
+            </button>
+          </div>
         </Modal>
       )}
 

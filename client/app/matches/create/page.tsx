@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Users, Shuffle, ChevronRight, AlertCircle,
@@ -229,6 +229,7 @@ function LoadTeamButton({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function CreateMatchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
 
   const [teamAName, setTeamAName] = useState('');
@@ -254,10 +255,62 @@ export default function CreateMatchPage() {
     let cancelled = false;
     scoringApi
       .getMyTeams()
-      .then(({ teams }) => { if (!cancelled) setSavedTeams(teams); })
+      .then(({ teams }) => {
+        if (!cancelled) {
+          setSavedTeams(teams);
+          // ── Rematch pre-fill ──────────────────────────────────────────────
+          // When coming from the score page's "Rematch" button, query params carry
+          // the previous match's settings. We wait until savedTeams are loaded so
+          // applyTeam can run the cross-team deduplication check properly.
+          const isRematch = searchParams.get('rematch') === '1';
+          if (isRematch) {
+            const prevTeamAName = searchParams.get('teamAName') ?? '';
+            const prevTeamBName = searchParams.get('teamBName') ?? '';
+            const overs = parseInt(searchParams.get('overs') ?? '20', 10);
+            const tossParam = searchParams.get('tossWonBy') as 'teamA' | 'teamB' | null;
+
+            if (prevTeamAName) setTeamAName(prevTeamAName);
+            if (prevTeamBName) setTeamBName(prevTeamBName);
+            if (!isNaN(overs) && overs > 0) {
+              if (OVERS_PRESETS.includes(overs)) {
+                setOversFormat(overs);
+                setUseCustomOvers(false);
+              } else {
+                setCustomOvers(String(overs));
+                setUseCustomOvers(true);
+              }
+            }
+            if (tossParam) setTossWonBy(tossParam);
+
+            // Auto-load rosters from saved teams if names match
+            const matchA = teams.find((t) => t.name.toLowerCase() === prevTeamAName.toLowerCase());
+            const matchB = teams.find((t) => t.name.toLowerCase() === prevTeamBName.toLowerCase());
+            if (matchA) {
+              const players: PlayerOption[] = matchA.players.map((p) =>
+                p.isGuest || !p.id
+                  ? { guestName: p.displayName, displayName: p.displayName, isGuest: true }
+                  : { id: p.id, displayName: p.displayName, isGuest: false }
+              );
+              setTeamAPlayers(players);
+            }
+            if (matchB) {
+              const players: PlayerOption[] = matchB.players.map((p) =>
+                p.isGuest || !p.id
+                  ? { guestName: p.displayName, displayName: p.displayName, isGuest: true }
+                  : { id: p.id, displayName: p.displayName, isGuest: false }
+              );
+              setTeamBPlayers(players);
+            }
+            if (matchA || matchB) {
+              setLoadNotice(`Rematch loaded — adjust players or settings as needed`);
+            }
+          }
+        }
+      })
       .catch(() => { if (!cancelled) setSavedTeams([]); })
       .finally(() => { if (!cancelled) setTeamsLoading(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const teamARegisteredIds = teamAPlayers.filter((p) => p.id).map((p) => p.id!);
@@ -369,9 +422,13 @@ export default function CreateMatchPage() {
             <Trophy className="w-4 h-4 text-amber-400 mr-2" />
             <span className="text-sm text-amber-400 font-body font-semibold">Live Scoring</span>
           </div>
-          <h1 className="text-4xl font-display font-black gradient-text mb-2">New Match</h1>
+          <h1 className="text-4xl font-display font-black gradient-text mb-2">
+            {searchParams.get('rematch') === '1' ? 'Rematch' : 'New Match'}
+          </h1>
           <p className="text-gray-400 font-body text-sm">
-            Players without accounts can be added as guests — their stats link automatically when they register.
+            {searchParams.get('rematch') === '1'
+              ? 'Teams pre-loaded from the previous match — adjust players or settings before starting.'
+              : 'Players without accounts can be added as guests — their stats link automatically when they register.'}
           </p>
         </motion.div>
 

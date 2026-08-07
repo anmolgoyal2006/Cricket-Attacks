@@ -113,7 +113,6 @@ export default function MatchDetailPage() {
   const [inningsTab, setInningsTab] = useState<InningsTab>(1);
   const [wicketToast, setWicketToast] = useState<string | null>(null);
   const [inningsBreakMsg, setInningsBreakMsg] = useState<string | null>(null);
-  const [showAllBalls, setShowAllBalls] = useState(false);
 
   // ── Fetch everything ──────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -289,7 +288,6 @@ export default function MatchDetailPage() {
 
   const isLive = match?.status === 'live' || match?.status === 'innings_break';
   const isCompleted = match?.status === 'completed';
-  const displayBalls = showAllBalls ? filteredBalls : filteredBalls.slice(0, 20);
 
   // ── Guard renders ─────────────────────────────────────────────────────────────
   if (loading) return (
@@ -525,83 +523,6 @@ export default function MatchDetailPage() {
 
         {/* -- SCORECARD -- */}
         <MatchScorecard match={match} stats={stats} innings={innings} balls={balls} />
-
-        {/* ── BALL-BY-BALL FEED ─────────────────────────────────────────────── */}
-        <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-            <p className="text-xs text-gray-500 font-body uppercase tracking-wider">Ball by Ball</p>
-            {balls.length > 20 && (
-              <button
-                onClick={() => setShowAllBalls((v) => !v)}
-                className="text-xs text-amber-400 font-body hover:text-amber-300 transition-colors"
-              >
-                {showAllBalls ? 'Show less' : `Show all ${balls.length} balls`}
-              </button>
-            )}
-          </div>
-
-          {balls.length === 0 ? (
-            <p className="text-xs text-gray-600 font-body text-center py-8">
-              {match.status === 'upcoming' ? 'Match hasn\'t started yet' : 'No balls recorded yet'}
-            </p>
-          ) : (
-            <div className="divide-y divide-white/5">
-              <AnimatePresence initial={false}>
-                {displayBalls.map((ball, idx) => (
-                  <motion.div
-                    key={ball._id}
-                    initial={idx === 0 ? { opacity: 0, x: -10 } : false}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
-                  >
-                    {/* Pill */}
-                    <div className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-display font-bold border flex-shrink-0 mt-0.5',
-                      ballPillClass(ball)
-                    )}>
-                      {ballPillLabel(ball)}
-                    </div>
-
-                    {/* Over.ball label + commentary */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] text-gray-600 font-body tabular-nums">
-                          {ball.over}.{ball.ballNumber}
-                        </span>
-                        {ball.isWicket && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 font-body font-bold">
-                            WICKET
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-300 font-body leading-snug">
-                        {generateCommentary(ball)}
-                      </p>
-                      {/* Players line */}
-                      <p className="text-[10px] text-gray-600 font-body mt-0.5">
-                        {(ball.batsmanOnStrikeId as { username?: string } | null)?.username ?? ball.guestBatsman ?? '—'}
-                        {' vs '}
-                        {(ball.bowlerId as { username?: string } | null)?.username ?? ball.guestBowler ?? '—'}
-                      </p>
-                    </div>
-
-                    {/* Run badge */}
-                    <div className="text-right flex-shrink-0">
-                      <span className={cn(
-                        'text-sm font-display font-bold',
-                        ball.runsScored === 6 ? 'text-purple-400' :
-                        ball.runsScored === 4 ? 'text-blue-400' :
-                        ball.runsScored > 0  ? 'text-green-400' : 'text-gray-600'
-                      )}>
-                        {ball.runsScored > 0 ? `+${ball.runsScored}` : '·'}
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
 
         {/* Bottom padding for mobile scrolling comfort */}
         <div className="h-8" />

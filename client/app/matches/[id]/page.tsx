@@ -524,7 +524,7 @@ export default function MatchDetailPage() {
         )}
 
         {/* -- SCORECARD -- */}
-        <MatchScorecard match={match} stats={stats} innings={innings} />
+        <MatchScorecard match={match} stats={stats} innings={innings} balls={balls} />
 
         {/* ── BALL-BY-BALL FEED ─────────────────────────────────────────────── */}
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">

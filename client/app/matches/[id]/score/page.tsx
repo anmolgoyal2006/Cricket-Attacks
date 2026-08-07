@@ -253,17 +253,31 @@ export default function ScorePage() {
   const [statsLoading, setStatsLoading] = useState(false);
   // Bumped to force a refetch while the scorecard stays open
   const [statsNonce, setStatsNonce] = useState(0);
+  // Balls for the Commentary tab (fetched when scorecard opens)
+  const [scorecardBalls, setScorecardBalls] = useState<import('@/lib/scoringApi').BallRecord[]>([]);
 
-  // Stats are fetched only while the scorecard is open — keeping them out of the
+  // Stats + balls are fetched only while the scorecard is open — keeping them out of the
   // per-ball path. The `view` dependency also refetches on every reopen.
   useEffect(() => {
     if (view !== 'scorecard') return;
     let cancelled = false;
     setStatsLoading(true);
-    scoringSpectatorApi
-      .getMatchStats(matchId)
-      .then(({ stats: s }) => { if (!cancelled) setStats(s); })
-      .catch(() => { if (!cancelled) setStats([]); })
+    Promise.all([
+      scoringSpectatorApi.getMatchStats(matchId),
+      scoringSpectatorApi.getBalls(matchId, 0, 200),
+    ])
+      .then(([{ stats: s }, { balls: b }]) => {
+        if (!cancelled) {
+          setStats(s);
+          setScorecardBalls(b);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStats([]);
+          setScorecardBalls([]);
+        }
+      })
       .finally(() => { if (!cancelled) setStatsLoading(false); });
     return () => { cancelled = true; };
   }, [view, matchId, statsNonce]);
@@ -814,7 +828,7 @@ export default function ScorePage() {
                 Refresh
               </button>
             </div>
-            <MatchScorecard match={match} stats={stats} innings={innings} />
+            <MatchScorecard match={match} stats={stats} innings={innings} balls={scorecardBalls} />
           </>
         )}
 

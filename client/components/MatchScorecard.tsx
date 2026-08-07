@@ -1,12 +1,13 @@
 'use client';
 
 /**
- * Shared match scorecard — batting and bowling tables for a match innings.
+ * Shared match scorecard — batting, bowling tables, and live commentary.
  * Used by the spectator page and by the Scorecard tab on the live scoring page.
  */
 
 import { useState } from 'react';
-import { ScoringMatch, PlayerMatchStat, MatchPlayer } from '@/lib/scoringApi';
+import { ScoringMatch, PlayerMatchStat, MatchPlayer, BallRecord } from '@/lib/scoringApi';
+import { generateCommentary, ballPillLabel, ballPillClass } from '@/lib/commentary';
 import { cn } from '@/lib/utils';
 
 export interface ScorecardInnings {
@@ -18,7 +19,7 @@ export interface ScorecardInnings {
   target?: number | null;
 }
 
-type ScorecardTab = 'batting' | 'bowling';
+type ScorecardTab = 'batting' | 'bowling' | 'commentary';
 type InningsTab = 1 | 2;
 
 function oversStr(oc: number, bic: number) { return `${oc}.${bic}`; }
@@ -53,15 +54,25 @@ interface MatchScorecardProps {
   stats: PlayerMatchStat[];
   /** Totals for the CURRENT innings — used for the Extras/Total footer. */
   innings: ScorecardInnings | null;
+  /** All ball records for this match — drives the Commentary tab. */
+  balls?: BallRecord[];
 }
 
-export default function MatchScorecard({ match, stats, innings }: MatchScorecardProps) {
+export default function MatchScorecard({ match, stats, innings, balls = [] }: MatchScorecardProps) {
   const [scorecardTab, setScorecardTab] = useState<ScorecardTab>('batting');
   const [inningsTab, setInningsTab] = useState<InningsTab>(
     (match.currentInnings === 2 ? 2 : 1) as InningsTab
   );
 
+  // Filter balls to the selected innings tab
   const activeCi = match.currentInningsSummary;
+  const commentaryBalls = balls.filter((b) => {
+    if (!activeCi) return true;
+    if (match.currentInnings === 1) return true;
+    const currentInningsId = activeCi._id;
+    if (inningsTab === 2) return b.inningsId === currentInningsId;
+    return b.inningsId !== currentInningsId;
+  });
 
   // Which team bats in the selected innings. The active innings comes straight from
   // the innings record; the historical innings-1 tab is its inverse.
@@ -112,9 +123,9 @@ export default function MatchScorecard({ match, stats, innings }: MatchScorecard
         </div>
       )}
 
-      {/* Batting / Bowling tab switcher */}
+      {/* Batting / Bowling / Commentary tab switcher */}
       <div className="flex border-b border-white/10">
-        {(['batting', 'bowling'] as ScorecardTab[]).map((tab) => (
+        {(['batting', 'bowling', 'commentary'] as ScorecardTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setScorecardTab(tab)}
@@ -247,6 +258,70 @@ export default function MatchScorecard({ match, stats, innings }: MatchScorecard
                   ))}
               </tbody>
             </table>
+          )}
+        </div>
+      )}
+
+      {/* Commentary tab */}
+      {scorecardTab === 'commentary' && (
+        <div className="divide-y divide-white/5 max-h-[480px] overflow-y-auto">
+          {commentaryBalls.length === 0 ? (
+            <p className="text-xs text-gray-600 font-body text-center py-8">
+              No balls recorded yet
+            </p>
+          ) : (
+            commentaryBalls.map((ball) => (
+              <div
+                key={ball._id}
+                className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+              >
+                {/* Ball pill */}
+                <div
+                  className={cn(
+                    'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-display font-bold border flex-shrink-0 mt-0.5',
+                    ballPillClass(ball)
+                  )}
+                >
+                  {ballPillLabel(ball)}
+                </div>
+
+                {/* Over.ball + commentary text */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] text-gray-600 font-body tabular-nums">
+                      {ball.over}.{ball.ballNumber}
+                    </span>
+                    {ball.isWicket && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 font-body font-bold">
+                        WICKET
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-300 font-body leading-snug">
+                    {generateCommentary(ball)}
+                  </p>
+                  <p className="text-[10px] text-gray-600 font-body mt-0.5">
+                    {(ball.batsmanOnStrikeId as { username?: string } | null)?.username ?? ball.guestBatsman ?? '—'}
+                    {' vs '}
+                    {(ball.bowlerId as { username?: string } | null)?.username ?? ball.guestBowler ?? '—'}
+                  </p>
+                </div>
+
+                {/* Run badge */}
+                <div className="text-right flex-shrink-0">
+                  <span
+                    className={cn(
+                      'text-sm font-display font-bold',
+                      ball.runsScored === 6 ? 'text-purple-400' :
+                      ball.runsScored === 4 ? 'text-blue-400' :
+                      ball.runsScored > 0   ? 'text-green-400' : 'text-gray-600'
+                    )}
+                  >
+                    {ball.runsScored > 0 ? `+${ball.runsScored}` : '·'}
+                  </span>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}

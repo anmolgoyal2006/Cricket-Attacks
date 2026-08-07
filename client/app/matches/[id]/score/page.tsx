@@ -338,6 +338,34 @@ export default function ScorePage() {
           extras: ci.extras,
           target: ci.target,
         });
+
+        // Rebuild current-over pills from actual ball records so a page
+        // reload mid-innings always shows the correct pills (not stale
+        // client state from a previous innings).
+        if (m.status === 'live' && ci.ballsInCurrentOver > 0) {
+          try {
+            const { balls } = await scoringSpectatorApi.getBalls(matchId, 0, 100);
+            // Balls arrive newest-first; filter to current innings + current over
+            const overBalls = balls
+              .filter((b) => b.inningsId === ci._id && b.over === ci.oversCompleted)
+              .reverse(); // oldest-first for pill display
+            setCurrentOverBalls(
+              overBalls.map((b) =>
+                buildOverBall(
+                  b.runsScored,
+                  b.extraType as 'wide' | 'noBall' | 'bye' | 'legBye' | null,
+                  b.isWicket,
+                  0 // wide delta not needed for static rebuild
+                )
+              )
+            );
+          } catch {
+            // Non-fatal — pills just won't show on reload
+          }
+        } else {
+          // Start of an over or innings — ensure pills are clear
+          setCurrentOverBalls([]);
+        }
       }
 
       if (m.status === 'completed' && m.result) {

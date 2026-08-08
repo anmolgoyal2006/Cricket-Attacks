@@ -133,7 +133,7 @@ function WelcomeModal({ cards, onContinue }: { cards: BonusCard[]; onContinue: (
                           <img
                             src={card.image}
                             alt={card.name}
-                            className="absolute inset-0 w-full h-full object-cover object-top z-10"
+                            className="absolute inset-0 w-full h-full object-cover object-[center_20%] z-10"
                             onError={() => setImgError(prev => ({ ...prev, [i]: true }))}
                           />
                         )}

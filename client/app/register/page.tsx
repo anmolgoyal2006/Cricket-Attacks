@@ -256,14 +256,6 @@ export default function RegisterPage() {
               <p className="text-gray-400 font-body mt-2">Create your account and start collecting</p>
             </div>
 
-            {/* Welcome bonus teaser */}
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/20 flex items-center space-x-3">
-              <Gift className="w-5 h-5 text-amber-400 flex-shrink-0" />
-              <p className="text-sm text-amber-300 font-body">
-                <strong>New player bonus:</strong> Get a free 💎 Rare + 👑 Legend card on signup!
-              </p>
-            </div>
-
             {/* Error */}
             {error && (
               <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center space-x-3">

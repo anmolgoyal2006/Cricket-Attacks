@@ -121,22 +121,28 @@ function WelcomeModal({ cards, onContinue }: { cards: BonusCard[]; onContinue: (
                         card.rarity === 'Rare'   ? 'bg-gradient-to-br from-blue-600 to-blue-900' :
                                                    'bg-gradient-to-br from-gray-600 to-gray-900'
                       )}>
+                        {/* Initials fallback — shown only when no image */}
+                        {!card.image && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-5xl font-display font-black text-white/30 select-none">
+                              {card.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </span>
+                          </div>
+                        )}
                         {card.image ? (
                           <img
                             src={card.image}
                             alt={card.name}
                             className="w-full h-full object-cover object-top"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              // show initials sibling
+                              const fallback = target.previousElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = 'flex';
                             }}
                           />
                         ) : null}
-                        {/* Initials fallback always rendered behind the image */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-5xl font-display font-black text-white/30 select-none">
-                            {card.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                          </span>
-                        </div>
                         {/* Sparkles overlay on reveal */}
                         <motion.div
                           initial={{ opacity: 1 }}

@@ -47,6 +47,7 @@ interface BonusCard {
 
 function WelcomeModal({ cards, onContinue }: { cards: BonusCard[]; onContinue: () => void }) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [imgError, setImgError] = useState<Record<number, boolean>>({});
   const allRevealed = cards.every((_, i) => revealed[i]);
 
   const reveal = (i: number) => setRevealed((prev) => ({ ...prev, [i]: true }));
@@ -121,34 +122,27 @@ function WelcomeModal({ cards, onContinue }: { cards: BonusCard[]; onContinue: (
                         card.rarity === 'Rare'   ? 'bg-gradient-to-br from-blue-600 to-blue-900' :
                                                    'bg-gradient-to-br from-gray-600 to-gray-900'
                       )}>
-                        {/* Initials fallback — shown only when no image */}
-                        {!card.image && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-5xl font-display font-black text-white/30 select-none">
-                              {card.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </span>
-                          </div>
+                        {/* Initials fallback — visible only when no image or image failed */}
+                        {(!card.image || imgError[i]) && (
+                          <span className="text-5xl font-display font-black text-white/40 select-none z-0">
+                            {card.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </span>
                         )}
-                        {card.image ? (
+                        {/* Player photo — sits on top of initials */}
+                        {card.image && !imgError[i] && (
                           <img
                             src={card.image}
                             alt={card.name}
-                            className="w-full h-full object-cover object-top"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              // show initials sibling
-                              const fallback = target.previousElementSibling as HTMLElement | null;
-                              if (fallback) fallback.style.display = 'flex';
-                            }}
+                            className="absolute inset-0 w-full h-full object-cover object-top z-10"
+                            onError={() => setImgError(prev => ({ ...prev, [i]: true }))}
                           />
-                        ) : null}
+                        )}
                         {/* Sparkles overlay on reveal */}
                         <motion.div
                           initial={{ opacity: 1 }}
                           animate={{ opacity: 0 }}
                           transition={{ delay: 0.5, duration: 0.6 }}
-                          className="absolute inset-0 bg-white/30 pointer-events-none"
+                          className="absolute inset-0 bg-white/30 pointer-events-none z-20"
                         />
                       </div>
                       {/* Card info footer */}

@@ -52,6 +52,11 @@ const ballSchema = new mongoose_1.Schema({
         default: null,
     },
     extraRuns: { type: Number, default: 0 },
+    noballExtraKind: {
+        type: String,
+        enum: ['bye', 'legbye', 'overthrow', null],
+        default: null,
+    },
     isWicket: { type: Boolean, default: false },
     wicketType: {
         type: String,

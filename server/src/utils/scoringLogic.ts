@@ -15,17 +15,50 @@ export function isLegalDelivery(extraType: ExtraType): boolean {
 }
 
 /**
- * Strike rotates after a legal delivery if the runs scored off the bat are odd
- * AND it is not the last ball of the over (end-of-over rotation is handled separately).
+ * Total runs physically RUN by the batters during a delivery.
+ * The automatic 1-run penalty for a wide or no-ball is NOT run between wickets,
+ * so it never contributes here (and therefore never rotates strike).
+ *
+ *   wide   → extraRuns only (overthrow runs); the 1-run penalty is not run
+ *   noball → bat runs + any additional field runs (batters ran them all)
+ *   bye    → extraRuns (batters ran these)
+ *   legbye → extraRuns (batters ran these)
+ *   normal → runsScored
+ */
+export function calculateRunsRun(
+  runsScored: number,
+  extraType: ExtraType,
+  extraRuns: number
+): number {
+  switch (extraType) {
+    case 'wide':
+      return extraRuns || 0;
+    case 'noball':
+      return (runsScored || 0) + (extraRuns || 0);
+    case 'bye':
+    case 'legbye':
+      return extraRuns || 0;
+    default:
+      return runsScored || 0;
+  }
+}
+
+/**
+ * Strike rotates whenever the batters completed an ODD number of runs during
+ * the delivery AND it is not the last ball of the over (the end-of-over swap
+ * handles that case separately).
+ *
+ * Real-cricket behaviour (fixed — previously illegal deliveries never rotated):
+ *  - Odd BAT runs off a NO-BALL rotate strike (illegal delivery, but batters still ran).
+ *  - Odd BYES / LEG-BYES rotate strike (runsScored is 0 there; batters ran extraRuns).
+ *  - Wide/no-ball PENALTY runs never rotate strike on their own (nobody ran them).
  */
 export function shouldRotateStrike(
-  runsScored: number,
-  legal: boolean,
+  runsRun: number,
   isEndOfOver: boolean
 ): boolean {
-  if (!legal) return false;
   if (isEndOfOver) return false; // end-of-over swap handled separately
-  return runsScored % 2 === 1;
+  return (runsRun || 0) % 2 === 1;
 }
 
 /**

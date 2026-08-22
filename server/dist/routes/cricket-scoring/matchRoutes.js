@@ -12,6 +12,8 @@ const matchController_1 = require("../../controllers/cricket-scoring/matchContro
 const router = (0, express_1.Router)();
 router.post('/', auth_1.authenticate, matchController_1.createMatch);
 router.get('/', auth_1.authenticate, matchController_1.listMatches);
+// Must precede GET /:id, otherwise "my-teams" is parsed as a match id
+router.get('/my-teams', auth_1.authenticate, matchController_1.getMyTeams);
 router.get('/:id', auth_1.authenticate, matchController_1.getMatch);
 router.patch('/:id/scorers', auth_1.authenticate, matchController_1.updateScorers); // only creator — checked inside controller
 router.patch('/:id/start', auth_1.authenticate, isScorerOrCreator_1.isScorerOrCreator, matchController_1.startMatch);

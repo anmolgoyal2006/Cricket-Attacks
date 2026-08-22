@@ -41,6 +41,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createMatch = createMatch;
+exports.getMyTeams = getMyTeams;
 exports.listMatches = listMatches;
 exports.getMatch = getMatch;
 exports.updateScorers = updateScorers;
@@ -56,7 +57,7 @@ const Innings_1 = __importDefault(require("../../models/cricket-scoring/Innings"
 // ── POST /api/scoring/matches ─────────────────────────────────────────────────
 async function createMatch(req, res, next) {
     try {
-        const { teamA, teamB, oversFormat, tossWonBy, tossDecision, venue, scorers } = req.body;
+        const { teamA, teamB, oversFormat, tossWonBy, tossDecision, venue, scorers, individualBattingMode } = req.body;
         if (!teamA?.name || !teamA?.players?.length) {
             throw new errors_1.BadRequestError('teamA must have a name and at least one player');
         }
@@ -83,17 +84,79 @@ async function createMatch(req, res, next) {
                 return { userId: null, guestName: name, displayName: name };
             });
         }
+        // A player appearing twice — in one team or across both — silently corrupts
+        // stats, because PlayerMatchStats is keyed on { matchId, playerId } and would
+        // fold that player's batting and bowling into a single row.
+        const seenPlayers = new Map();
+        function normalisePlayersChecked(raw, teamKey) {
+            const players = normalisePlayers(raw);
+            for (const p of players) {
+                const key = p.userId ? `uid:${p.userId.toString()}` : `g:${(p.guestName ?? '').toLowerCase()}`;
+                const previous = seenPlayers.get(key);
+                if (previous) {
+                    const label = p.displayName || p.guestName || 'A player';
+                    throw new errors_1.BadRequestError(previous === teamKey
+                        ? `${label} is listed twice in the same team`
+                        : `${label} cannot be in both teams`);
+                }
+                seenPlayers.set(key, teamKey);
+            }
+            return players;
+        }
         const match = await ScoringMatch_1.default.create({
-            teamA: { name: teamA.name, players: normalisePlayers(teamA.players) },
-            teamB: { name: teamB.name, players: normalisePlayers(teamB.players) },
+            teamA: { name: teamA.name, players: normalisePlayersChecked(teamA.players, 'teamA') },
+            teamB: { name: teamB.name, players: normalisePlayersChecked(teamB.players, 'teamB') },
             oversFormat,
             tossWonBy,
             tossDecision,
+            individualBattingMode: !!individualBattingMode,
             venue: venue || null,
             createdBy: req.userId,
             scorers: scorers || [],
         });
         res.status(201).json({ match });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+// ── GET /api/scoring/matches/my-teams ─────────────────────────────────────────
+// Rosters are already stored in full on every match, so previous teams are derived
+// rather than kept in their own collection. Must be routed BEFORE GET /:id.
+async function getMyTeams(req, res, next) {
+    try {
+        const matches = await ScoringMatch_1.default.find({ createdBy: req.userId })
+            .sort({ createdAt: -1 })
+            .limit(40)
+            .select('teamA teamB createdAt')
+            .populate('teamA.players.userId', 'username')
+            .populate('teamB.players.userId', 'username')
+            .lean();
+        // Dedupe by team name, newest first. Rosters drift between matches, so keying
+        // on the roster itself would return near-identical entries a picker can't tell apart.
+        const seen = new Map();
+        for (const m of matches) {
+            for (const team of [m.teamA, m.teamB]) {
+                const name = (team?.name ?? '').trim();
+                if (!name)
+                    continue;
+                const key = name.toLowerCase();
+                if (seen.has(key))
+                    continue;
+                seen.set(key, {
+                    name,
+                    lastUsed: m.createdAt,
+                    players: (team.players ?? []).map((p) => ({
+                        id: p.userId?._id?.toString() ?? null,
+                        // displayName is a snapshot taken at match creation, so prefer the
+                        // current username when the player is registered.
+                        displayName: p.userId?.username ?? p.guestName ?? p.displayName,
+                        isGuest: !p.userId,
+                    })),
+                });
+            }
+        }
+        res.json({ teams: Array.from(seen.values()).slice(0, 20) });
     }
     catch (err) {
         next(err);
@@ -182,12 +245,21 @@ async function startSecondInnings(req, res, next) {
         }
         match.status = 'live';
         await match.save();
+        // Re-read with the same populates getMatch uses. The client replaces its whole
+        // match object with this response, and it needs userId populated to tell
+        // registered players from guests.
+        const populated = await ScoringMatch_1.default.findById(match._id)
+            .populate('teamA.players.userId', 'username')
+            .populate('teamB.players.userId', 'username')
+            .populate('createdBy', 'username')
+            .populate('scorers', 'username')
+            .lean();
         // Attach current innings summary
         const currentInnings = await Innings_1.default.findOne({
             matchId: match._id,
             inningsNumber: match.currentInnings,
         }).lean();
-        res.json({ match: { ...match.toObject(), currentInningsSummary: currentInnings || null } });
+        res.json({ match: { ...populated, currentInningsSummary: currentInnings || null } });
     }
     catch (err) {
         next(err);

@@ -27,75 +27,86 @@ function isGuestKey(player) {
 }
 /**
  * Filter for finding the stat document.
- * Guests: match on { matchId, guestName } — no playerId in filter.
- * Registered: match on { matchId, playerId }.
+ * Guests: match on { matchId, inningsNumber, guestName }.
+ * Registered: match on { matchId, inningsNumber, playerId }.
  */
 function playerFilter(matchId, inningsNumber, player) {
+    // Cast explicitly — pipeline updates skip Mongoose casting, and the upsert
+    // seeds the new document from these equality predicates.
+    const matchObjectId = typeof matchId === 'string' ? new mongoose_1.default.Types.ObjectId(matchId) : matchId;
     if (isGuestKey(player)) {
-        return { matchId, inningsNumber, guestName: player.guestName };
+        return { matchId: matchObjectId, inningsNumber, guestName: player.guestName };
     }
-    return { matchId, inningsNumber, playerId: player };
+    const playerObjectId = typeof player === 'string' ? new mongoose_1.default.Types.ObjectId(player) : player;
+    return { matchId: matchObjectId, inningsNumber, playerId: playerObjectId };
 }
 /**
- * Fields set only on INSERT (not on update).
- * Guests: only guestName — playerId field stays fully absent.
- * Registered: only playerId — guestName field stays fully absent.
- * Both: initialize all numeric stat sub-fields to 0 so $inc always works.
+ * Pipeline updates have no $setOnInsert, so every field an upsert might create
+ * must be defaulted with $ifNull. These seed the stat groups a given update
+ * isn't otherwise touching, so the document always has a complete shape.
+ * The upsert seeds matchId / inningsNumber / playerId|guestName from the filter,
+ * which is what keeps the partial unique indexes intact (no null playerId on
+ * guest docs, no null guestName on registered docs).
  */
-function setOnInsertFields(player, inningsNumber) {
-    const statsDefaults = {
-        'battingStats.runs': 0,
-        'battingStats.ballsFaced': 0,
-        'battingStats.fours': 0,
-        'battingStats.sixes': 0,
-        'battingStats.isOut': false,
-        'battingStats.dismissalType': null,
-        'battingStats.strikeRate': 0,
-        'bowlingStats.ballsBowled': 0,
-        'bowlingStats.runsConceded': 0,
-        'bowlingStats.wickets': 0,
-        'bowlingStats.maidens': 0,
-        'bowlingStats.oversBowled': 0,
-        'bowlingStats.economy': 0,
-        'fieldingStats.catches': 0,
-        'fieldingStats.runOuts': 0,
-        'fieldingStats.stumpings': 0,
-    };
-    if (isGuestKey(player)) {
-        return { guestName: player.guestName, inningsNumber, ...statsDefaults };
-    }
-    return { playerId: player, inningsNumber, ...statsDefaults };
-}
+const SEED_BATTING = {
+    'battingStats.runs': { $ifNull: ['$battingStats.runs', 0] },
+    'battingStats.ballsFaced': { $ifNull: ['$battingStats.ballsFaced', 0] },
+    'battingStats.fours': { $ifNull: ['$battingStats.fours', 0] },
+    'battingStats.sixes': { $ifNull: ['$battingStats.sixes', 0] },
+    'battingStats.isOut': { $ifNull: ['$battingStats.isOut', false] },
+    'battingStats.dismissalType': { $ifNull: ['$battingStats.dismissalType', null] },
+    'battingStats.strikeRate': { $ifNull: ['$battingStats.strikeRate', 0] },
+};
+const SEED_BOWLING = {
+    'bowlingStats.ballsBowled': { $ifNull: ['$bowlingStats.ballsBowled', 0] },
+    'bowlingStats.runsConceded': { $ifNull: ['$bowlingStats.runsConceded', 0] },
+    'bowlingStats.wickets': { $ifNull: ['$bowlingStats.wickets', 0] },
+    'bowlingStats.maidens': { $ifNull: ['$bowlingStats.maidens', 0] },
+    'bowlingStats.oversBowled': { $ifNull: ['$bowlingStats.oversBowled', 0] },
+    'bowlingStats.economy': { $ifNull: ['$bowlingStats.economy', 0] },
+};
+// careerStatsService reads ms.fieldingStats, so it must always exist.
+const SEED_FIELDING = {
+    'fieldingStats.catches': { $ifNull: ['$fieldingStats.catches', 0] },
+    'fieldingStats.runOuts': { $ifNull: ['$fieldingStats.runOuts', 0] },
+    'fieldingStats.stumpings': { $ifNull: ['$fieldingStats.stumpings', 0] },
+};
+// Mongoose applies updatedAt to pipeline updates but never createdAt.
+const SEED_CREATED_AT = { createdAt: { $ifNull: ['$createdAt', '$$NOW'] } };
 async function incrementBattingStats(matchId, inningsNumber, player, delta, session) {
     if (!player || (typeof player === 'string' && !player))
         return;
     const filter = playerFilter(matchId, inningsNumber, player);
-    // Step 1: ensure doc exists with all fields initialized
-    await PlayerMatchStats_1.default.findOneAndUpdate(filter, { $setOnInsert: setOnInsertFields(player, inningsNumber) }, { upsert: true, new: false, session, setDefaultsOnInsert: false });
-    // Step 2: increment with plain $inc / $set — always safe since fields are initialized
-    const incUpdate = {
-        'battingStats.runs': delta.runs,
-        'battingStats.ballsFaced': delta.ballFaced,
-        'battingStats.fours': delta.isBoundaryFour ? 1 : 0,
-        'battingStats.sixes': delta.isBoundarySix ? 1 : 0,
-    };
-    // Remove zero-value increments to keep the update clean
-    const cleanInc = Object.fromEntries(Object.entries(incUpdate).filter(([, v]) => v !== 0));
-    const setUpdate = {};
-    if (delta.isOut) {
-        setUpdate['battingStats.isOut'] = true;
-        setUpdate['battingStats.dismissalType'] = delta.dismissalType || null;
-    }
-    const update = {};
-    if (Object.keys(cleanInc).length > 0)
-        update.$inc = cleanInc;
-    if (Object.keys(setUpdate).length > 0)
-        update.$set = setUpdate;
-    if (Object.keys(update).length > 0) {
-        await PlayerMatchStats_1.default.findOneAndUpdate(filter, update, { session });
-    }
-    // Recalculate strikeRate after the inc
-    await recalcBattingDerived(filter, session);
+    // One round trip: upsert, increment, and recompute strikeRate in a single pass.
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
+        {
+            $set: {
+                ...SEED_CREATED_AT,
+                ...SEED_BOWLING,
+                ...SEED_FIELDING,
+                'battingStats.runs': { $add: [{ $ifNull: ['$battingStats.runs', 0] }, delta.runs] },
+                'battingStats.ballsFaced': { $add: [{ $ifNull: ['$battingStats.ballsFaced', 0] }, delta.ballFaced] },
+                'battingStats.fours': { $add: [{ $ifNull: ['$battingStats.fours', 0] }, delta.isBoundaryFour ? 1 : 0] },
+                'battingStats.sixes': { $add: [{ $ifNull: ['$battingStats.sixes', 0] }, delta.isBoundarySix ? 1 : 0] },
+                'battingStats.isOut': delta.isOut ? true : { $ifNull: ['$battingStats.isOut', false] },
+                'battingStats.dismissalType': delta.isOut
+                    ? (delta.dismissalType || null)
+                    : { $ifNull: ['$battingStats.dismissalType', null] },
+            },
+        },
+        {
+            // Second stage so it reads the values the first stage just wrote
+            $set: {
+                'battingStats.strikeRate': {
+                    $cond: [
+                        { $gt: ['$battingStats.ballsFaced', 0] },
+                        { $multiply: [{ $divide: ['$battingStats.runs', '$battingStats.ballsFaced'] }, 100] },
+                        0,
+                    ],
+                },
+            },
+        },
+    ], { upsert: true, session });
 }
 async function decrementBattingStats(matchId, inningsNumber, player, delta, session) {
     if (!player || (typeof player === 'string' && !player))
@@ -129,19 +140,33 @@ async function incrementBowlingStats(matchId, inningsNumber, player, delta, sess
     if (!player || (typeof player === 'string' && !player))
         return;
     const filter = playerFilter(matchId, inningsNumber, player);
-    // Ensure doc exists
-    await PlayerMatchStats_1.default.findOneAndUpdate(filter, { $setOnInsert: setOnInsertFields(player, inningsNumber) }, { upsert: true, new: false, session, setDefaultsOnInsert: false });
-    const incUpdate = {
-        'bowlingStats.ballsBowled': delta.ballBowled,
-        'bowlingStats.runsConceded': delta.runsConceded,
-        'bowlingStats.wickets': delta.isWicket ? 1 : 0,
-        'bowlingStats.maidens': delta.isMaiden ? 1 : 0,
-    };
-    const cleanInc = Object.fromEntries(Object.entries(incUpdate).filter(([, v]) => v !== 0));
-    if (Object.keys(cleanInc).length > 0) {
-        await PlayerMatchStats_1.default.findOneAndUpdate(filter, { $inc: cleanInc }, { session });
-    }
-    await recalcBowlingDerived(filter, session);
+    // One round trip: upsert, increment, and recompute oversBowled/economy together.
+    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
+        {
+            $set: {
+                ...SEED_CREATED_AT,
+                ...SEED_BATTING,
+                ...SEED_FIELDING,
+                'bowlingStats.ballsBowled': { $add: [{ $ifNull: ['$bowlingStats.ballsBowled', 0] }, delta.ballBowled] },
+                'bowlingStats.runsConceded': { $add: [{ $ifNull: ['$bowlingStats.runsConceded', 0] }, delta.runsConceded] },
+                'bowlingStats.wickets': { $add: [{ $ifNull: ['$bowlingStats.wickets', 0] }, delta.isWicket ? 1 : 0] },
+                'bowlingStats.maidens': { $add: [{ $ifNull: ['$bowlingStats.maidens', 0] }, delta.isMaiden ? 1 : 0] },
+            },
+        },
+        {
+            // Second stage so it reads the values the first stage just wrote
+            $set: {
+                'bowlingStats.oversBowled': { $divide: ['$bowlingStats.ballsBowled', 6] },
+                'bowlingStats.economy': {
+                    $cond: [
+                        { $gt: ['$bowlingStats.ballsBowled', 0] },
+                        { $divide: ['$bowlingStats.runsConceded', { $divide: ['$bowlingStats.ballsBowled', 6] }] },
+                        0,
+                    ],
+                },
+            },
+        },
+    ], { upsert: true, session });
 }
 async function decrementBowlingStats(matchId, inningsNumber, player, delta, session) {
     if (!player || (typeof player === 'string' && !player))
@@ -163,43 +188,6 @@ async function decrementBowlingStats(matchId, inningsNumber, player, delta, sess
                     $cond: [
                         { $gt: [{ $ifNull: ['$bowlingStats.ballsBowled', 0] }, 0] },
                         { $divide: ['$bowlingStats.runsConceded', { $divide: ['$bowlingStats.ballsBowled', 6] }] },
-                        0,
-                    ],
-                },
-            },
-        },
-    ], { session });
-}
-// ─── Derived field recalculations ─────────────────────────────────────────────
-async function recalcBattingDerived(filter, session) {
-    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
-        {
-            $set: {
-                'battingStats.strikeRate': {
-                    $cond: [
-                        { $gt: [{ $ifNull: ['$battingStats.ballsFaced', 0] }, 0] },
-                        { $multiply: [{ $divide: [{ $ifNull: ['$battingStats.runs', 0] }, { $ifNull: ['$battingStats.ballsFaced', 1] }] }, 100] },
-                        0,
-                    ],
-                },
-            },
-        },
-    ], { session });
-}
-async function recalcBowlingDerived(filter, session) {
-    await PlayerMatchStats_1.default.findOneAndUpdate(filter, [
-        {
-            $set: {
-                'bowlingStats.oversBowled': { $divide: [{ $ifNull: ['$bowlingStats.ballsBowled', 0] }, 6] },
-                'bowlingStats.economy': {
-                    $cond: [
-                        { $gt: [{ $ifNull: ['$bowlingStats.ballsBowled', 0] }, 0] },
-                        {
-                            $divide: [
-                                { $ifNull: ['$bowlingStats.runsConceded', 0] },
-                                { $divide: [{ $ifNull: ['$bowlingStats.ballsBowled', 0] }, 6] },
-                            ],
-                        },
                         0,
                     ],
                 },

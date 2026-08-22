@@ -16,7 +16,9 @@ async function checkAndHandleCompletion(innings, match, session) {
     const battingPlayers = innings.battingTeam === 'teamA'
         ? match.teamA.players.length
         : match.teamB.players.length;
-    const allOutWickets = Math.max(0, battingPlayers - 1); // 10 wickets for 11-player team
+    const allOutWickets = match.individualBattingMode
+        ? battingPlayers // solo mode: all players must be dismissed
+        : Math.max(0, battingPlayers - 1); // normal: N-1 wickets (last man can't bat alone)
     const inningsOver = innings.oversCompleted >= match.oversFormat ||
         innings.totalWickets >= allOutWickets;
     // Also check target-chased for 2nd innings (caller may already have done this, but safe to repeat)

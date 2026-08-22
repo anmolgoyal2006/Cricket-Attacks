@@ -23,6 +23,7 @@ import BallModel from '../../models/cricket-scoring/Ball';
 import {
   isLegalDelivery,
   shouldRotateStrike,
+  calculateRunsRun,
   calculateOverBall,
   calculateExtrasBreakdown,
   totalDeliveryRuns,
@@ -243,7 +244,10 @@ export async function recordBall(req: AuthRequest, res: Response, next: NextFunc
       );
 
       // ── Strike rotation ─────────────────────────────────────────────────────
-      const rotate = shouldRotateStrike(runsScored, legal, isEndOfOver);
+      // Rotation depends on runs physically RUN (bat + byes/leg-byes + overthrows),
+      // not on the penalty runs. Odd no-ball bat runs and odd byes/leg-byes rotate.
+      const runsRun = calculateRunsRun(runsScored, extraTypeMapped, extraRuns);
+      const rotate = shouldRotateStrike(runsRun, isEndOfOver);
       // End-of-over always swaps; mid-over swap only on odd runs
       strikeSwapped = isEndOfOver || rotate;
 

@@ -14,7 +14,8 @@ const ScoringMatch_1 = __importDefault(require("../models/cricket-scoring/Scorin
 async function isScorerOrCreator(req, _res, next) {
     try {
         const matchId = req.params.matchId || req.params.id;
-        const match = await ScoringMatch_1.default.findById(matchId).select('createdBy scorers').lean();
+        // Not .lean() — downstream handlers mutate and .save() this document.
+        const match = await ScoringMatch_1.default.findById(matchId);
         if (!match)
             throw new errors_1.NotFoundError('Match');
         const userId = req.userId;
@@ -23,6 +24,7 @@ async function isScorerOrCreator(req, _res, next) {
         if (!isCreator && !isScorer) {
             throw new errors_1.UnauthorizedError('You are not authorized to score this match');
         }
+        req.scoringMatch = match;
         next();
     }
     catch (err) {

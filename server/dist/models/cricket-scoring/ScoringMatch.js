@@ -59,6 +59,10 @@ const scoringMatchSchema = new mongoose_1.Schema({
         enum: ['bat', 'bowl'],
         required: true,
     },
+    individualBattingMode: {
+        type: Boolean,
+        default: false,
+    },
     status: {
         type: String,
         enum: ['upcoming', 'live', 'innings_break', 'completed'],

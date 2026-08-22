@@ -82,7 +82,9 @@ const playerMatchStatsSchema = new mongoose_1.Schema({
     timestamps: true,
 });
 playerMatchStatsSchema.index({ matchId: 1, inningsNumber: 1 });
+// Unique index for registered players, scoped to innings
 playerMatchStatsSchema.index({ matchId: 1, inningsNumber: 1, playerId: 1 }, { unique: true, partialFilterExpression: { playerId: { $type: 'objectId' } } });
+// Guest player uniqueness, scoped to innings
 playerMatchStatsSchema.index({ matchId: 1, inningsNumber: 1, guestName: 1 }, { unique: true, partialFilterExpression: { guestName: { $type: 'string' } } });
 exports.default = mongoose_1.default.model('PlayerMatchStats', playerMatchStatsSchema);
 //# sourceMappingURL=PlayerMatchStats.js.map

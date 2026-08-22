@@ -89,6 +89,8 @@ interface PvPBattleState {
   roundHistory: any[];
   status: 'in_progress' | 'completed';
   timer: ReturnType<typeof setTimeout> | null;
+  /** Server-only: pending forfeit timer started on disconnect. Cleared on reconnect or battle end. */
+  forfeitTimer: ReturnType<typeof setTimeout> | null;
   mongoId?: string;
   // Turn-based: which player picks first this round ('player1' | 'player2')
   roundPicker: 'player1' | 'player2';
@@ -237,6 +239,12 @@ export function setupBattleRooms(io: Server) {
 
   async function endBattle(io: Server, battle: PvPBattleState) {
     battle.status = 'completed';
+
+    // Clear any pending disconnect-forfeit timer — the battle is ending normally.
+    if (battle.forfeitTimer !== null) {
+      clearTimeout(battle.forfeitTimer);
+      battle.forfeitTimer = null;
+    }
 
     // Apply 10-minute cooldown on used cards for both players
     const p1CardIds = battle.player1.cards.map((c) => c.userCardId);
@@ -556,6 +564,7 @@ export function setupBattleRooms(io: Server) {
         roundHistory: [],
         status: 'in_progress',
         timer: null,
+        forfeitTimer: null,
         roundPicker: firstPicker,
       };
 
@@ -658,6 +667,16 @@ export function setupBattleRooms(io: Server) {
     handleDisconnect(socket: AuthenticatedSocket) {
       for (const [battleId, battle] of activeBattles) {
         if (battle.player1.userId === socket.userId || battle.player2.userId === socket.userId) {
+          // Do not start a forfeit timer if the battle is already over.
+          if (battle.status !== 'in_progress') return;
+
+          // Guard against duplicate timers: if one is already running for this player
+          // (e.g. rapid disconnect events), cancel the old one before creating a new one.
+          if (battle.forfeitTimer !== null) {
+            clearTimeout(battle.forfeitTimer);
+            battle.forfeitTimer = null;
+          }
+
           const opponentId =
             battle.player1.userId === socket.userId
               ? battle.player2.socketId
@@ -668,59 +687,88 @@ export function setupBattleRooms(io: Server) {
             opponentSocket.emit('battle:opponent-disconnected');
           }
 
-          const reconnectKey = `reconnect:${battleId}:${socket.userId}`;
+          // Capture which player disconnected at the moment of disconnect.
+          const disconnectedUserId = socket.userId!;
 
-          setTimeout(async () => {
-            const stillDisconnected = !io.sockets.sockets.get(socket.id)?.connected;
-            if (stillDisconnected && battle.status === 'in_progress') {
-              const disconnectedPlayer =
-                battle.player1.userId === socket.userId ? 'player1' : 'player2';
-              const winner = disconnectedPlayer === 'player1' ? 'player2' : 'player1';
+          console.log(`[Battle ${battleId}] Disconnect grace timer started for user ${disconnectedUserId}`);
 
-              battle.status = 'completed';
+          battle.forfeitTimer = setTimeout(async () => {
+            // Clear the stored reference so it's not double-cleared elsewhere.
+            battle.forfeitTimer = null;
 
-              io.to(battleId).emit('battle:opponent-forfeit', {
-                winner,
-                reason: 'opponent_disconnected',
-              });
+            // Defensive check 1: battle may have been cleaned up already.
+            if (!activeBattles.has(battleId)) {
+              console.log(`[Battle ${battleId}] Forfeit timer fired but battle no longer exists — skipping.`);
+              return;
+            }
 
-              try {
-                const UserModel = (await import('../models/User')).default;
-                const winnerUserId =
-                  winner === 'player1' ? battle.player1.userId : battle.player2.userId;
-                const loserUserId =
-                  winner === 'player1' ? battle.player2.userId : battle.player1.userId;
+            // Defensive check 2: battle may have ended normally while disconnected.
+            if (battle.status !== 'in_progress') {
+              console.log(`[Battle ${battleId}] Forfeit timer fired but battle already completed — skipping.`);
+              return;
+            }
 
-                const [winnerDoc, loserDoc] = await Promise.all([
-                  UserModel.findById(winnerUserId),
-                  UserModel.findById(loserUserId),
-                ]);
+            // Defensive check 3: verify the reconnected socket ID in battle state.
+            // If handleReconnect() ran, the socketId in battle state will be the NEW
+            // socket's id, and that new socket will be connected. If the socketId is
+            // still the OLD one (disconnected), the player never came back.
+            const playerRole = battle.player1.userId === disconnectedUserId ? 'player1' : 'player2';
+            const currentSocketId =
+              playerRole === 'player1' ? battle.player1.socketId : battle.player2.socketId;
+            const currentSocket = io.sockets.sockets.get(currentSocketId);
 
-                if (winnerDoc && loserDoc) {
-                  const eloResult = calculateElo(winnerDoc.eloRating, loserDoc.eloRating, 1, 0);
-                  const newTier = getTier(eloResult.newRatingA);
+            if (currentSocket?.connected) {
+              // Player reconnected — their socketId was updated in handleReconnect.
+              console.log(`[Battle ${battleId}] Forfeit timer fired but player ${disconnectedUserId} already reconnected — skipping.`);
+              return;
+            }
 
-                  await UserModel.findByIdAndUpdate(winnerUserId, {
-                    $set: { eloRating: eloResult.newRatingA, rankTier: newTier, battleStreak: (winnerDoc.battleStreak || 0) + 1 },
-                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
-                  });
-                  await UserModel.findByIdAndUpdate(loserUserId, {
-                    $set: { eloRating: eloResult.newRatingB, rankTier: getTier(eloResult.newRatingB), battleStreak: 0 },
-                    $inc: { battlesPlayed: 1, losses: 1, pvpPlayed: 1, pvpLosses: 1 },
-                  });
-                } else {
-                  await UserModel.findByIdAndUpdate(winnerUserId, {
-                    $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
-                  });
-                }
+            console.log(`[Battle ${battleId}] Player ${disconnectedUserId} forfeited after disconnect timeout.`);
 
-                await updateLeaderboardForUser(winnerUserId);
-              } catch (err) {
-                console.error('Failed to save forfeit:', err);
+            const winner = playerRole === 'player1' ? 'player2' : 'player1';
+            battle.status = 'completed';
+
+            io.to(battleId).emit('battle:opponent-forfeit', {
+              winner,
+              reason: 'opponent_disconnected',
+            });
+
+            try {
+              const UserModel = (await import('../models/User')).default;
+              const winnerUserId =
+                winner === 'player1' ? battle.player1.userId : battle.player2.userId;
+              const loserUserId =
+                winner === 'player1' ? battle.player2.userId : battle.player1.userId;
+
+              const [winnerDoc, loserDoc] = await Promise.all([
+                UserModel.findById(winnerUserId),
+                UserModel.findById(loserUserId),
+              ]);
+
+              if (winnerDoc && loserDoc) {
+                const eloResult = calculateElo(winnerDoc.eloRating, loserDoc.eloRating, 1, 0);
+                const newTier = getTier(eloResult.newRatingA);
+
+                await UserModel.findByIdAndUpdate(winnerUserId, {
+                  $set: { eloRating: eloResult.newRatingA, rankTier: newTier, battleStreak: (winnerDoc.battleStreak || 0) + 1 },
+                  $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
+                });
+                await UserModel.findByIdAndUpdate(loserUserId, {
+                  $set: { eloRating: eloResult.newRatingB, rankTier: getTier(eloResult.newRatingB), battleStreak: 0 },
+                  $inc: { battlesPlayed: 1, losses: 1, pvpPlayed: 1, pvpLosses: 1 },
+                });
+              } else {
+                await UserModel.findByIdAndUpdate(winnerUserId, {
+                  $inc: { coins: 100, xp: 50, battlesPlayed: 1, wins: 1, pvpPlayed: 1, pvpWins: 1 },
+                });
               }
 
-              setTimeout(() => activeBattles.delete(battleId), 30000);
+              await updateLeaderboardForUser(winnerUserId);
+            } catch (err) {
+              console.error('Failed to save forfeit:', err);
             }
+
+            setTimeout(() => activeBattles.delete(battleId), 30000);
           }, 30000);
         }
       }
@@ -736,6 +784,15 @@ export function setupBattleRooms(io: Server) {
       if (socket.userId !== battle.player1.userId && socket.userId !== battle.player2.userId) {
         socket.emit('error', { message: 'Not part of this battle' });
         return;
+      }
+
+      // ── Critical fix: cancel any pending forfeit timer immediately. ──
+      // This must happen before any await or async work so the timer cannot
+      // fire between now and the socketId swap below.
+      if (battle.forfeitTimer !== null) {
+        clearTimeout(battle.forfeitTimer);
+        battle.forfeitTimer = null;
+        console.log(`[Battle ${battleId}] Disconnect grace timer cancelled on reconnect for user ${socket.userId}`);
       }
 
       socket.join(battleId);
